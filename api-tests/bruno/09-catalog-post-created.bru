@@ -1,0 +1,30 @@
+meta {
+  name: Catalog POST with create permission
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/catalog/items
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "sku": "BRUNO-CREATED",
+    "name": "Bruno item"
+  }
+}
+
+script:post-response {
+  bru.setVar("itemId", res.body.id)
+}
+
+assert {
+  res.status: eq 201
+}

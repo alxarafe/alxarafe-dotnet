@@ -1,0 +1,24 @@
+meta {
+  name: Catalog missing item in English
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/catalog/items/00000000-0000-0000-0000-000000000003
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept-Language: en
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq catalog.item_not_found
+}

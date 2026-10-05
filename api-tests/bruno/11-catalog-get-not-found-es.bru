@@ -1,0 +1,24 @@
+meta {
+  name: Catalog missing item in Spanish
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/catalog/items/00000000-0000-0000-0000-000000000002
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept-Language: es
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq catalog.item_not_found
+}

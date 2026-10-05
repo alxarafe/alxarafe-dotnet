@@ -1,0 +1,26 @@
+meta {
+  name: Catalog POST without create permission
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/catalog/items
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "sku": "BRUNO-FORBIDDEN",
+    "name": "Forbidden item"
+  }
+}
+
+assert {
+  res.status: eq 403
+}

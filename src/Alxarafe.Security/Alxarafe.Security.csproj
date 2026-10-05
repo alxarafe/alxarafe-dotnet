@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Alxarafe.Security</AssemblyName><RootNamespace>Alxarafe.Security</RootNamespace></PropertyGroup>
+</Project>

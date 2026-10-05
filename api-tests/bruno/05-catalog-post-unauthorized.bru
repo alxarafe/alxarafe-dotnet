@@ -1,0 +1,22 @@
+meta {
+  name: Catalog POST without authentication
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/catalog/items
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "sku": "BRUNO-UNAUTH",
+    "name": "Unauthenticated item"
+  }
+}
+
+assert {
+  res.status: eq 401
+}

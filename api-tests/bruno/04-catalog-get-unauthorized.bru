@@ -1,0 +1,15 @@
+meta {
+  name: Catalog GET without authentication
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/catalog/items/00000000-0000-0000-0000-000000000001
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}

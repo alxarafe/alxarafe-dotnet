@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Alxarafe.AspNetCore</AssemblyName><RootNamespace>Alxarafe.AspNetCore</RootNamespace></PropertyGroup>
+  <ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /><ProjectReference Include="../Alxarafe.Modularity/Alxarafe.Modularity.csproj" /></ItemGroup>
+</Project>

@@ -1,0 +1,26 @@
+meta {
+  name: Login creator seed
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{creatorEmail}}",
+    "password": "{{creatorPassword}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("token", res.body.accessToken)
+}
+
+assert {
+  res.status: eq 200
+}

@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Alxarafe.Core</AssemblyName><RootNamespace>Alxarafe.Core</RootNamespace></PropertyGroup>
+</Project>

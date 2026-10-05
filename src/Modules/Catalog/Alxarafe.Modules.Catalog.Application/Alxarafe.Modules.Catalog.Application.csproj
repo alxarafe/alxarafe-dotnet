@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><AssemblyName>Alxarafe.Modules.Catalog.Application</AssemblyName><RootNamespace>Alxarafe.Modules.Catalog.Application</RootNamespace></PropertyGroup><ItemGroup><ProjectReference Include="../Alxarafe.Modules.Catalog.Domain/Alxarafe.Modules.Catalog.Domain.csproj" /></ItemGroup></Project>
