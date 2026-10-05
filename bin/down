@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+case "${1:-}" in
+    "") docker compose down ;;
+    -v|--volumes) docker compose down -v ;;
+    *) echo "Usage: $0 [--volumes]" >&2; exit 2 ;;
+esac

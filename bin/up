@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+dump_diagnostics() {
+    docker compose ps || true
+    docker compose logs --no-color app postgres || true
+}
+
+trap dump_diagnostics ERR
+
+echo "==> Validating Docker Compose configuration"
+docker compose config >/dev/null
+echo "==> Building application images"
+docker compose build
+echo "==> Starting PostgreSQL and application"
+docker compose up -d
+
+deadline=$((SECONDS + 120))
+while (( SECONDS < deadline )); do
+    status="$(docker compose ps --format '{{.Service}} {{.Health}} {{.State}}' 2>/dev/null || true)"
+    printf '%s\n' "$status"
+    if grep -q '^postgres healthy ' <<<"$status" && grep -q '^app healthy ' <<<"$status"; then
+        echo "==> PostgreSQL and application are healthy"
+        exit 0
+    fi
+    sleep 2
+done
+
+echo "ERROR: services did not become healthy within 120 seconds" >&2
+dump_diagnostics
+exit 1
