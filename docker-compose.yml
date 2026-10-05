@@ -9,13 +9,14 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-security.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U alxarafe -d alxarafe"]
+      test: ["CMD-SHELL", "pg_isready -U alxarafe -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 20
     networks: [alxarafe]
 
   app:
+    image: alxarafe-dotnet-app
     build:
       context: .
       target: development
@@ -36,6 +37,30 @@ services:
       - .:/workspace
       - nuget-cache:/root/.nuget/packages
       - data-protection-keys:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [alxarafe]
+
+  validation-app:
+    image: alxarafe-dotnet-app
+    profiles: [validation]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Testing
+      ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
+      ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security_test;Username=alxarafe;Password=alxarafe_dev_only
+      SecuritySeed__ReaderPassword: Reader_dev_only_123!
+      SecuritySeed__CreatorPassword: Creator_dev_only_123!
+    command: ["dotnet", "run", "--no-launch-profile", "--no-build", "--project", "src/Alxarafe.Host/Alxarafe.Host.csproj", "--urls", "http://0.0.0.0:8080"]
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - nuget-cache:/root/.nuget/packages
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     depends_on:
       postgres:
         condition: service_healthy

@@ -6,6 +6,7 @@
 !bin/test
 !bin/bruno
 !bin/check
+!bin/validation-db
 .vs/
 .idea/
 *.user
@@ -13,3 +14,4 @@
 TestResults/
 coverage/
 .env
+docs/private/

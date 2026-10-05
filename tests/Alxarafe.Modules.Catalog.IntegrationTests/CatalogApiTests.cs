@@ -4,15 +4,35 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Alxarafe.Modules.Catalog.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Npgsql;
 using Xunit;
 
 namespace Alxarafe.Modules.Catalog.IntegrationTests;
 
 public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
+    private static readonly bool IsIsolated =
+        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing" &&
+        UsesDatabase("ConnectionStrings__Catalog", "alxarafe_test") &&
+        UsesDatabase("ConnectionStrings__Security", "alxarafe_security_test");
+
+    private static bool UsesDatabase(string variable, string database)
+    {
+        var connectionString = Environment.GetEnvironmentVariable(variable);
+        return !string.IsNullOrWhiteSpace(connectionString) &&
+            string.Equals(new NpgsqlConnectionStringBuilder(connectionString).Database, database, StringComparison.Ordinal);
+    }
+
+    private static void RequireIsolation()
+    {
+        if (!IsIsolated)
+            throw new InvalidOperationException("Integration tests require Testing and the two _test databases.");
+    }
+
     [Fact]
     public async Task HealthEndpointIsAvailable()
     {
+        RequireIsolation();
         using var client = factory.CreateClient();
         var response = await client.GetAsync("/health");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -21,6 +41,7 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public async Task ProtectedEndpointWithoutCredentialsReturns401()
     {
+        RequireIsolation();
         using var client = factory.CreateClient();
         var response = await client.GetAsync($"/api/catalog/items/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -29,6 +50,7 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public async Task CreateWithoutCredentialsReturns401()
     {
+        RequireIsolation();
         using var client = factory.CreateClient();
         var response = await client.PostAsJsonAsync("/api/catalog/items", new { sku = "NO-AUTH", name = "No auth" });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -37,6 +59,7 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public async Task RegisterAndLoginUseIdentityApiEndpoints()
     {
+        RequireIsolation();
         using var client = factory.CreateClient();
         var email = $"user-{Guid.NewGuid():N}@example.test";
         var register = await client.PostAsJsonAsync("/api/auth/register", new { email, password = "Password123" });
@@ -50,6 +73,7 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public async Task AuthenticatedUserWithoutPermissionReturns403()
     {
+        RequireIsolation();
         using var client = factory.CreateClient();
         var token = await RegisterAndLoginAsync(client);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -60,6 +84,7 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public async Task SeededCreatorCanCreateAndReadItem()
     {
+        RequireIsolation();
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync(client, "creator@example.test", "Creator_dev_only_123!"));
         var create = await client.PostAsJsonAsync("/api/catalog/items", new { sku = $"TEST-{Guid.NewGuid():N}"[..20], name = "Integration item" });
@@ -73,6 +98,7 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public async Task MissingItemReturnsLocalizedProblemDetails()
     {
+        RequireIsolation();
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync(client, "reader@example.test", "Reader_dev_only_123!"));
         var id = Guid.NewGuid();

@@ -4,35 +4,23 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-TEST_CATALOG_DB="alxarafe_test"
-TEST_SECURITY_DB="alxarafe_security_test"
-TEST_DB_PASSWORD="alxarafe_dev_only"
+source ./bin/validation-db
 
-drop_test_databases() {
-    docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 \
-        -c "DROP DATABASE IF EXISTS \"$TEST_CATALOG_DB\" WITH (FORCE)" \
-        -c "DROP DATABASE IF EXISTS \"$TEST_SECURITY_DB\" WITH (FORCE)" >/dev/null || true
-}
+if [[ "${1:-}" != "--prepared" ]]; then
+    if [[ $# -ne 0 ]]; then echo "Usage: $0 [--prepared]" >&2; exit 2; fi
+    docker compose up -d postgres
+    docker compose build app
+    validation_host_stop
+    trap 'validation_db_drop' EXIT
+    validation_db_create
+elif [[ $# -ne 1 ]]; then
+    echo "Usage: $0 [--prepared]" >&2
+    exit 2
+fi
 
-create_test_database() {
-    local database="$1"
-    docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 \
-        -c "CREATE DATABASE \"$database\""
-}
-
-trap drop_test_databases EXIT
-
-docker compose exec -T app dotnet restore Alxarafe.sln
-docker compose exec -T app dotnet build Alxarafe.sln --no-restore
-
-echo "==> Preparing ephemeral test databases"
-drop_test_databases
-create_test_database "$TEST_CATALOG_DB"
-create_test_database "$TEST_SECURITY_DB"
-
-echo "==> Running tests against ephemeral databases"
-docker compose exec -T \
+echo "==> Restoring, building and testing against ephemeral databases"
+docker compose run --rm --no-deps \
     -e ASPNETCORE_ENVIRONMENT=Testing \
-    -e "ConnectionStrings__Catalog=Host=postgres;Port=5432;Database=$TEST_CATALOG_DB;Username=alxarafe;Password=$TEST_DB_PASSWORD" \
-    -e "ConnectionStrings__Security=Host=postgres;Port=5432;Database=$TEST_SECURITY_DB;Username=alxarafe;Password=$TEST_DB_PASSWORD" \
-    app dotnet test Alxarafe.sln --no-build
+    -e "ConnectionStrings__Catalog=Host=postgres;Port=5432;Database=$validation_catalog_db;Username=alxarafe;Password=alxarafe_dev_only" \
+    -e "ConnectionStrings__Security=Host=postgres;Port=5432;Database=$validation_security_db;Username=alxarafe;Password=alxarafe_dev_only" \
+    app sh -c 'dotnet restore Alxarafe.sln && dotnet build Alxarafe.sln --no-restore && dotnet test Alxarafe.sln --no-build'

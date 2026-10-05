@@ -4,4 +4,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-docker compose run --rm bruno
+source ./bin/validation-db
+
+cleanup() {
+    validation_host_stop
+    validation_db_drop
+}
+
+if [[ "${1:-}" != "--prepared" ]]; then
+    if [[ $# -ne 0 ]]; then echo "Usage: $0 [--prepared]" >&2; exit 2; fi
+    docker compose up -d postgres
+    docker compose build app
+    trap cleanup EXIT
+    validation_host_stop
+    validation_db_create
+    docker compose up -d --wait validation-app
+elif [[ $# -ne 1 ]]; then
+    echo "Usage: $0 [--prepared]" >&2
+    exit 2
+fi
+
+docker compose run --rm --no-deps bruno

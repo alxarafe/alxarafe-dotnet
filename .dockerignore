@@ -1,0 +1,9 @@
+.git/
+docs/private/
+**/bin/
+**/obj/
+TestResults/
+coverage/
+.vs/
+.idea/
+.env

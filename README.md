@@ -18,19 +18,19 @@ The reproducible validation flow for the platform foundation uses one command:
 ./bin/check
 ```
 
-The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all 14 Bruno scenarios, authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command with `CI=true` and removes containers and volumes when it finishes.
+The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all 14 Bruno scenarios, authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test` and `alxarafe_security_test` databases in the existing PostgreSQL service and preserves development volumes.
 
 The helper scripts are:
 
 ```bash
 ./bin/up       # validates Compose, builds, and waits for PostgreSQL/app healthy
-./bin/test     # restores, builds, and tests inside app
-./bin/bruno    # runs api-tests/bruno inside the bruno service
+./bin/test     # restores, builds, and tests in an isolated container and temporary databases
+./bin/bruno    # starts the isolated Host, runs Bruno, and removes temporary databases
 ./bin/down     # stops services and preserves volumes
 ./bin/down -v  # stops services and removes development volumes
 ```
 
-`./bin/test` creates two temporary databases (`alxarafe_test` and `alxarafe_security_test`) inside the Compose PostgreSQL container, runs the .NET tests against them, and drops them on exit. The development databases remain isolated from integration-test data.
+`./bin/test` creates two temporary databases (`alxarafe_test` and `alxarafe_security_test`) inside the Compose PostgreSQL container, runs the .NET tests against them, and drops them on exit. `./bin/check` retains them for the validation Host, Bruno, and SQL checks, then drops them even after failure. Development databases `alxarafe` and `alxarafe_security` are outside this flow.
 
 Ports and network addresses:
 
@@ -50,11 +50,11 @@ docker compose build
 docker compose up -d
 docker compose exec app dotnet restore
 docker compose exec app dotnet build
-docker compose exec app dotnet test
+./bin/test
 curl http://localhost:8081/health
 ```
 
-The PostgreSQL init script creates a separate `alxarafe_security` database. On a fresh environment, the app creates the Identity schema and applies the Catalog EF Core migration during startup. If the database volume predates this iteration, run `docker compose down -v` before starting again.
+The PostgreSQL init script creates a separate `alxarafe_security` database. On a fresh environment, the app creates the Identity schema and applies the Catalog EF Core migration during startup.
 
 Development seed users exist only in Development or Testing:
 
@@ -80,13 +80,13 @@ curl http://localhost:8081/api/catalog/items/<id> \
   -H 'Authorization: Bearer <token>'
 ```
 
-OpenAPI is available at `http://localhost:8081/openapi/v1.json`. Run all 14 Bruno requests reproducibly through Docker after the app is up:
+OpenAPI is available at `http://localhost:8081/openapi/v1.json`. Run all 14 Bruno requests reproducibly through Docker:
 
 ```bash
-docker compose run --rm bruno
+./bin/bruno
 ```
 
-The Docker runner uses the `docker` environment and reaches the app by its Compose service name. The `local` environment is for a CLI running outside Compose and uses `http://localhost:8081`. The collection covers authentication, 401/403, permissions, CRUD access, ProblemDetails, localization, and health.
+The Docker runner uses the `docker` environment and reaches `validation-app`, which connects only to the temporary databases. The collection covers authentication, 401/403, permissions, CRUD access, ProblemDetails, localization, and health.
 
 View logs with `docker compose logs -f app`. Stop with `docker compose down`; remove the development databases too with `docker compose down -v`.
 

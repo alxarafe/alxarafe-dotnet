@@ -9,8 +9,23 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    RequireValidationDatabase("Catalog", "alxarafe_test");
+    RequireValidationDatabase("Security", "alxarafe_security_test");
+}
+
+void RequireValidationDatabase(string connectionName, string expectedDatabase)
+{
+    var connectionString = builder.Configuration.GetConnectionString(connectionName);
+    if (string.IsNullOrWhiteSpace(connectionString) ||
+        !string.Equals(new NpgsqlConnectionStringBuilder(connectionString).Database, expectedDatabase, StringComparison.Ordinal))
+        throw new InvalidOperationException($"Testing requires the {connectionName} connection to use {expectedDatabase}.");
+}
+
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
     context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier);

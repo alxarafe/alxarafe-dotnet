@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# Fixed names prevent validation from reaching the development databases.
+validation_catalog_db=alxarafe_test
+validation_security_db=alxarafe_security_test
+
+validation_host_stop() {
+    docker compose stop validation-app >/dev/null || true
+    docker compose rm -f validation-app >/dev/null || true
+}
+
+validation_db_drop() {
+    docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 \
+        -c "DROP DATABASE IF EXISTS \"$validation_catalog_db\" WITH (FORCE)" \
+        -c "DROP DATABASE IF EXISTS \"$validation_security_db\" WITH (FORCE)" >/dev/null
+}
+
+validation_db_create() {
+    validation_db_drop
+    docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 \
+        -c "CREATE DATABASE \"$validation_catalog_db\"" \
+        -c "CREATE DATABASE \"$validation_security_db\"" >/dev/null
+}
+
+validation_db_removed() {
+    local remaining
+    remaining="$(docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 -tAc \
+        "SELECT count(*) FROM pg_database WHERE datname IN ('$validation_catalog_db', '$validation_security_db')")"
+    [[ "$remaining" == "0" ]]
+}
