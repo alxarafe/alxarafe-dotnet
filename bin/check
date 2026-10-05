@@ -46,7 +46,7 @@ echo "==> Verifying persisted data in PostgreSQL"
 docker compose exec -T postgres psql -U alxarafe -d alxarafe -tAc \
     "SELECT to_regclass('public.catalog_items')" | grep -Fxq 'catalog_items'
 docker compose exec -T postgres psql -U alxarafe -d alxarafe -tAc \
-    "SELECT 1 FROM catalog_items WHERE sku = 'BRUNO-CREATED'" | grep -Fxq '1'
+    "SELECT 1 FROM catalog_items WHERE \"Name\" = 'Bruno item'" | grep -Fxq '1'
 docker compose exec -T postgres psql -U alxarafe -d alxarafe_security -tAc \
     "SELECT 1 FROM information_schema.tables WHERE table_name = 'AspNetUsers'" | grep -Fxq '1'
 docker compose exec -T postgres psql -U alxarafe -d alxarafe_security -tAc \
