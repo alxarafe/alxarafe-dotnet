@@ -1,5 +1,11 @@
 # Alxarafe.NET
 
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square)](https://dotnet.microsoft.com/)
+[![CI](https://img.shields.io/github/actions/workflow/status/alxarafe/alxarafe-dotnet/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/alxarafe/alxarafe-dotnet/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/Docker-supported-2496ED?style=flat-square)](https://www.docker.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=flat-square)](https://www.postgresql.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](https://github.com/alxarafe/alxarafe-dotnet/pulls)
+
 > Alxarafe.NET is not a port of Alxarafe PHP. It is an independent modular application framework for .NET, sharing architectural principles while being designed natively for the .NET ecosystem.
 
 This experimental foundation uses .NET 10, ASP.NET Core Minimal APIs, EF Core, PostgreSQL, native dependency injection, explicit modules, and hexagonal boundaries. It has no Orchard dependency and does not aim to clone another framework. Platform features use native ASP.NET Core Identity bearer authentication, policies, localization, ProblemDetails, and OpenAPI.
