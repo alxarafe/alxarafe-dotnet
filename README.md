@@ -6,36 +6,38 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=flat-square)](https://www.postgresql.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](https://github.com/alxarafe/alxarafe-dotnet/pulls)
 
-> Alxarafe.NET is not a port of Alxarafe PHP. It is an independent modular application framework for .NET, sharing architectural principles while being designed natively for the .NET ecosystem.
+> Alxarafe.NET is an independent modular application framework for .NET, designed natively for the .NET ecosystem.
 
-This experimental foundation uses .NET 10, ASP.NET Core Minimal APIs, EF Core, PostgreSQL, native dependency injection, explicit modules, and hexagonal boundaries. It has no Orchard dependency and does not aim to clone another framework. Platform features use native ASP.NET Core Identity bearer authentication, policies, localization, ProblemDetails, and OpenAPI.
+This experimental foundation uses .NET 10, ASP.NET Core Minimal APIs, EF Core, PostgreSQL, native dependency injection, explicit modules, and hexagonal boundaries. Platform features use native ASP.NET Core Identity bearer authentication, policies, localization, ProblemDetails, and OpenAPI.
 
-## Validación completa
+## Full validation
 
-La comprobación reproducible de la iteración 0.2 se ejecuta con un único comando:
+The reproducible validation flow for the platform foundation uses one command:
 
 ```bash
 ./bin/check
 ```
 
-Sólo requiere Docker y Docker Compose en el host. No requiere instalar .NET, Node.js, Bruno ni PostgreSQL. El flujo valida Compose, build, tests .NET, health, OpenAPI, los 14 escenarios Bruno, autenticación/autorización, ProblemDetails, localización, persistencia PostgreSQL y tests arquitectónicos. En CI se ejecuta el mismo comando con `CI=true` y limpia los contenedores y volúmenes al terminar.
+The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all 14 Bruno scenarios, authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command with `CI=true` and removes containers and volumes when it finishes.
 
-Los scripts auxiliares son:
+The helper scripts are:
 
 ```bash
-./bin/up       # valida Compose, construye y espera a PostgreSQL/app healthy
-./bin/test     # restore, build y test dentro de app
-./bin/bruno    # ejecuta api-tests/bruno dentro del servicio bruno
-./bin/down     # detiene servicios y conserva volúmenes
-./bin/down -v  # detiene servicios y elimina volúmenes de desarrollo
+./bin/up       # validates Compose, builds, and waits for PostgreSQL/app healthy
+./bin/test     # restores, builds, and tests inside app
+./bin/bruno    # runs api-tests/bruno inside the bruno service
+./bin/down     # stops services and preserves volumes
+./bin/down -v  # stops services and removes development volumes
 ```
 
-Puertos y nombres de red:
+`./bin/test` creates two temporary databases (`alxarafe_test` and `alxarafe_security_test`) inside the Compose PostgreSQL container, runs the .NET tests against them, and drops them on exit. The development databases remain isolated from integration-test data.
 
-- Desde el host: `http://localhost:8081`.
-- Dentro de la red Docker: `http://app:8080`.
-- El endpoint de salud desde el host es `http://localhost:8081/health`.
-- OpenAPI desde el host es `http://localhost:8081/openapi/v1.json`.
+Ports and network addresses:
+
+- From the host: `http://localhost:8081`.
+- Inside the Docker network: `http://app:8080`.
+- The health endpoint from the host is `http://localhost:8081/health`.
+- OpenAPI from the host is `http://localhost:8081/openapi/v1.json`.
 
 ## Linux development with Docker only
 
@@ -70,10 +72,12 @@ Use the returned bearer token for Catalog calls. Create and retrieve an item:
 
 ```bash
 curl -X POST http://localhost:8081/api/catalog/items \
+  -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"sku":"CHAIR-001","name":"Office chair"}'
 
-curl http://localhost:8081/api/catalog/items/<id>
+curl http://localhost:8081/api/catalog/items/<id> \
+  -H 'Authorization: Bearer <token>'
 ```
 
 OpenAPI is available at `http://localhost:8081/openapi/v1.json`. Run all 14 Bruno requests reproducibly through Docker after the app is up:

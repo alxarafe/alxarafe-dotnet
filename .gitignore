@@ -1,4 +1,10 @@
-bin/
+bin/*
+!bin/
+!bin/up
+!bin/down
+!bin/test
+!bin/bruno
+!bin/check
 obj/
 .vs/
 .idea/

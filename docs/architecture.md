@@ -1,6 +1,6 @@
 # Architecture
 
-Alxarafe.NET is a small, independent modular application framework for .NET. It is not a port of Alxarafe PHP, and it has no Orchard dependency. Its first goal is to prove explicit composition, replaceable adapters, and a runnable module.
+Alxarafe.NET is a small, independent modular application framework for .NET. Its first goal is to prove explicit composition, replaceable adapters, and a runnable module.
 
 ## Structure and dependency direction
 

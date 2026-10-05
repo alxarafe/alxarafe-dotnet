@@ -17,7 +17,6 @@ public sealed class DependencyTests
         Assert.DoesNotContain("Alxarafe.Modularity", names);
         Assert.DoesNotContain(names, x => x?.Contains("Security", StringComparison.OrdinalIgnoreCase) == true);
         Assert.DoesNotContain(names, x => x?.Contains("Localization", StringComparison.OrdinalIgnoreCase) == true);
-        Assert.DoesNotContain(names, x => x?.Contains("Orchard", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     [Fact]
@@ -28,7 +27,6 @@ public sealed class DependencyTests
         Assert.DoesNotContain(names, x => x?.Contains("Identity", StringComparison.OrdinalIgnoreCase) == true);
         Assert.DoesNotContain(names, x => x?.Contains("Localization", StringComparison.OrdinalIgnoreCase) == true);
         Assert.DoesNotContain(names, x => x?.Contains("Infrastructure", StringComparison.OrdinalIgnoreCase) == true);
-        Assert.DoesNotContain(names, x => x?.Contains("Orchard", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     [Fact]

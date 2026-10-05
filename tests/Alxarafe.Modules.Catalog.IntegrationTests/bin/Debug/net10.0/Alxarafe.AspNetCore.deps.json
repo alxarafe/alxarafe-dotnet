@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Alxarafe.AspNetCore/1.0.0": {
+        "dependencies": {
+          "Alxarafe.Modularity": "1.0.0"
+        },
+        "runtime": {
+          "Alxarafe.AspNetCore.dll": {}
+        }
+      },
+      "Alxarafe.Modularity/1.0.0": {
+        "runtime": {
+          "Alxarafe.Modularity.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Alxarafe.AspNetCore/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Alxarafe.Modularity/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

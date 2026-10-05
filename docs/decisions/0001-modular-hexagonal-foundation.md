@@ -8,7 +8,7 @@ Alxarafe.NET starts directly from ASP.NET Core and uses a small, explicit modula
 
 ASP.NET Core provides the host, configuration, DI, health checks, and Minimal APIs needed by the first executable slice. Hexagonal boundaries keep domain rules independent of transport and persistence, while an explicit module assembly list makes discovery predictable and testable. EF Core and Npgsql are adapters, not domain abstractions.
 
-Alxarafe.NET deliberately does not depend on Orchard Core. Orchard and other frameworks may be studied later as architectural references, but preserving independent design and freedom of implementation is the reason for maintaining a small native core.
+Alxarafe.NET preserves an independent design and freedom of implementation by maintaining a small native core with explicit boundaries.
 
 ## Consequences
 
