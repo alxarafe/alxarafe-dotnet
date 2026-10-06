@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Alxarafe.NET Platform",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

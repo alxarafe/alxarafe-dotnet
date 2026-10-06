@@ -11,7 +11,7 @@ get {
 }
 
 auth:bearer {
-  token: {{token}}
+  token: {{creatorToken}}
 }
 
 headers {
@@ -21,4 +21,5 @@ headers {
 assert {
   res.status: eq 404
   res.body.code: eq catalog.item_not_found
+  res.body.title: eq The requested catalog item was not found.
 }

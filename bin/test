@@ -8,7 +8,7 @@ source ./bin/validation-db
 
 if [[ "${1:-}" != "--prepared" ]]; then
     if [[ $# -ne 0 ]]; then echo "Usage: $0 [--prepared]" >&2; exit 2; fi
-    docker compose up -d postgres
+    docker compose up -d --wait --wait-timeout 120 postgres
     docker compose build app
     validation_host_stop
     trap 'validation_db_drop' EXIT
@@ -19,8 +19,10 @@ elif [[ $# -ne 1 ]]; then
 fi
 
 echo "==> Restoring, building and testing against ephemeral databases"
+# Test projects each bootstrap a Host against the same ephemeral databases.
+# Serialize projects to avoid concurrent schema/seed initialization.
 docker compose run --rm --no-deps \
     -e ASPNETCORE_ENVIRONMENT=Testing \
     -e "ConnectionStrings__Catalog=Host=postgres;Port=5432;Database=$validation_catalog_db;Username=alxarafe;Password=alxarafe_dev_only" \
     -e "ConnectionStrings__Security=Host=postgres;Port=5432;Database=$validation_security_db;Username=alxarafe;Password=alxarafe_dev_only" \
-    app sh -c 'dotnet restore Alxarafe.sln && dotnet build Alxarafe.sln --no-restore && dotnet test Alxarafe.sln --no-build'
+    app sh -c 'dotnet restore Alxarafe.sln && dotnet build Alxarafe.sln --no-restore && dotnet test Alxarafe.sln --no-build -m:1'

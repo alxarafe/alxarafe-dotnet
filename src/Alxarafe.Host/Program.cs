@@ -3,8 +3,8 @@ using Alxarafe.AspNetCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Catalog.ModuleDefinition;
-using Alxarafe.Security.EntityFrameworkCore;
 using Alxarafe.Security.AspNetCore;
+using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +14,6 @@ using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsEnvironment("Testing"))
 {
-    RequireValidationDatabase("Catalog", "alxarafe_test");
     RequireValidationDatabase("Security", "alxarafe_security_test");
 }
 
@@ -29,7 +28,6 @@ void RequireValidationDatabase(string connectionName, string expectedDatabase)
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
     context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier);
-builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddDbContext<SecurityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Security")));
 builder.Services.AddIdentityCore<AlxarafeUser>(options =>
@@ -44,7 +42,10 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
     options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
 }).AddBearerToken(IdentityConstants.BearerScheme);
+// Temporary static composition: only the module entry assembly is known here.
 builder.Services.AddAlxarafeModules(typeof(CatalogModule).Assembly);
+// Module handlers run first; this handler only handles transversal validation.
+builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddAlxarafePermissionAuthorization();
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
@@ -57,12 +58,13 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+// Keep the request culture active while exception handlers build their response.
+app.UseRequestLocalization();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
-app.UseRequestLocalization();
 app.UseAuthentication();
 app.UseAuthorization();
-await SecuritySeed.InitializeAsync(app.Services, app.Environment, app.Configuration);
+await SecuritySeed.InitializeAsync(app.Services, app.Environment);
 await app.Services.GetRequiredService<ModuleRuntime>().InitializeAsync(app.Services);
 app.MapOpenApi();
 AuthEndpoints.Map(app);

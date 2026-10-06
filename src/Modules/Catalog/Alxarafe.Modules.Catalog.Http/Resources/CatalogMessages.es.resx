@@ -5,4 +5,5 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0</value></resheader>
   <data name="catalog.item_not_found" xml:space="preserve"><value>No se encontró el artículo del catálogo solicitado.</value></data>
+  <data name="catalog.sku_already_exists" xml:space="preserve"><value>Ya existe un artículo con este SKU.</value></data>
 </root>

@@ -5,5 +5,4 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0</value></resheader>
   <data name="validation_error" xml:space="preserve"><value>La solicitud contiene datos no válidos.</value></data>
-  <data name="catalog.sku_already_exists" xml:space="preserve"><value>Ya existe un artículo con este SKU.</value></data>
 </root>

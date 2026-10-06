@@ -17,8 +17,12 @@ body:json {
   }
 }
 
+script:pre-request {
+  bru.setVar("sku", `BRUNO-${Date.now()}`)
+}
+
 script:post-response {
-  bru.setVar("token", res.body.accessToken)
+  bru.setVar("creatorToken", res.body.accessToken)
 }
 
 assert {

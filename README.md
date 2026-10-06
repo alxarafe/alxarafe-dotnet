@@ -18,7 +18,7 @@ The reproducible validation flow for the platform foundation uses one command:
 ./bin/check
 ```
 
-The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all 14 Bruno scenarios, authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test` and `alxarafe_security_test` databases in the existing PostgreSQL service and preserves development volumes.
+The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all platform and module Bruno scenarios (16 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test` and `alxarafe_security_test` databases in the existing PostgreSQL service and preserves development volumes.
 
 The helper scripts are:
 
@@ -31,6 +31,8 @@ The helper scripts are:
 ```
 
 `./bin/test` creates two temporary databases (`alxarafe_test` and `alxarafe_security_test`) inside the Compose PostgreSQL container, runs the .NET tests against them, and drops them on exit. `./bin/check` retains them for the validation Host, Bruno, and SQL checks, then drops them even after failure. Development databases `alxarafe` and `alxarafe_security` are outside this flow.
+
+All validation entry points wait for PostgreSQL to be healthy (up to 120 seconds) before running `psql`. Its healthcheck uses TCP so a fresh volume cannot report readiness from the temporary Unix-socket server used during initialization. CI runs the same flow against a fresh Compose environment.
 
 Ports and network addresses:
 
@@ -80,13 +82,13 @@ curl http://localhost:8081/api/catalog/items/<id> \
   -H 'Authorization: Bearer <token>'
 ```
 
-OpenAPI is available at `http://localhost:8081/openapi/v1.json`. Run all 14 Bruno requests reproducibly through Docker:
+OpenAPI is available at `http://localhost:8081/openapi/v1.json`. Run all platform and module Bruno requests reproducibly through Docker:
 
 ```bash
 ./bin/bruno
 ```
 
-The Docker runner uses the `docker` environment and reaches `validation-app`, which connects only to the temporary databases. The collection covers authentication, 401/403, permissions, CRUD access, ProblemDetails, localization, and health.
+The Docker runner uses the `docker` environment and reaches `validation-app`, which connects only to the temporary databases. The independent platform and Catalog suites cover authentication, 401/403, permissions, CRUD access, ProblemDetails, localization, and health.
 
 View logs with `docker compose logs -f app`. Stop with `docker compose down`; remove the development databases too with `docker compose down -v`.
 

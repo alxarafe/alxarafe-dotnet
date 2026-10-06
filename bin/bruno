@@ -6,22 +6,41 @@ cd "$ROOT_DIR"
 
 source ./bin/validation-db
 
+prepared=false
+if [[ "${1:-}" == "--prepared" ]]; then
+    prepared=true
+    shift
+fi
+suite="${1:-all}"
+if [[ $# -gt 1 || ( "$suite" != "all" && ! -f "api-tests/$suite/bruno.json" ) || "$suite" == *..* ]]; then
+    echo "Usage: $0 [--prepared] [all|platform|modules/<module>]" >&2
+    exit 2
+fi
+
 cleanup() {
     validation_host_stop
     validation_db_drop
 }
 
-if [[ "${1:-}" != "--prepared" ]]; then
-    if [[ $# -ne 0 ]]; then echo "Usage: $0 [--prepared]" >&2; exit 2; fi
-    docker compose up -d postgres
+if [[ "$prepared" == false ]]; then
+    docker compose up -d --wait --wait-timeout 120 postgres
     docker compose build app
     trap cleanup EXIT
     validation_host_stop
     validation_db_create
     docker compose up -d --wait validation-app
-elif [[ $# -ne 1 ]]; then
-    echo "Usage: $0 [--prepared]" >&2
-    exit 2
 fi
 
-docker compose run --rm --no-deps bruno
+if [[ "$suite" == "all" ]]; then
+    suites=(api-tests/platform)
+    for directory in api-tests/modules/*; do
+        [[ ! -f "$directory/bruno.json" ]] || suites+=("$directory")
+    done
+else
+    suites=("api-tests/$suite")
+fi
+
+for directory in "${suites[@]}"; do
+    echo "==> Bruno suite: ${directory#api-tests/}"
+    docker compose run --rm --no-deps --workdir "/workspace/$directory" bruno run . --env docker
+done

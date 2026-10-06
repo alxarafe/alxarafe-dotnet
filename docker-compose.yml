@@ -9,7 +9,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-security.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U alxarafe -d postgres"]
+      # The initdb temporary server only accepts Unix-socket connections.
+      # TCP readiness means initialization has finished and the final server is up.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U alxarafe -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -69,13 +71,10 @@ services:
   bruno:
     image: usebruno/cli:4.2.0
     profiles: [tools]
-    working_dir: /workspace/api-tests/bruno
+    working_dir: /workspace/api-tests/platform
     volumes:
       - .:/workspace:ro
     command: ["run", ".", "--env", "docker"]
-    depends_on:
-      app:
-        condition: service_started
     networks: [alxarafe]
 
 volumes:

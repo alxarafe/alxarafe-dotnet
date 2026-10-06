@@ -3,12 +3,13 @@ using Alxarafe.Security;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Alxarafe.Host;
 
 public static class SecuritySeed
 {
-    public static async Task InitializeAsync(IServiceProvider services, IHostEnvironment environment, IConfiguration configuration)
+    public static async Task InitializeAsync(IServiceProvider services, IHostEnvironment environment)
     {
         if (!environment.IsDevelopment() && !environment.IsEnvironment("Testing")) return;
 
@@ -17,8 +18,8 @@ public static class SecuritySeed
         await provider.GetRequiredService<SecurityDbContext>().Database.EnsureCreatedAsync();
         var userManager = provider.GetRequiredService<UserManager<AlxarafeUser>>();
 
-        await EnsureUserAsync(userManager, "reader@example.test", configuration["SecuritySeed:ReaderPassword"] ?? "Reader_dev_only_123!", ["catalog.items.read"]);
-        await EnsureUserAsync(userManager, "creator@example.test", configuration["SecuritySeed:CreatorPassword"] ?? "Creator_dev_only_123!", ["catalog.items.read", "catalog.items.create"]);
+        foreach (var user in provider.GetRequiredService<IOptions<DevelopmentUsersOptions>>().Value.Users)
+            await EnsureUserAsync(userManager, user.Email, user.Password, user.Permissions);
     }
 
     private static async Task EnsureUserAsync(UserManager<AlxarafeUser> userManager, string email, string password, IReadOnlyCollection<string> permissions)

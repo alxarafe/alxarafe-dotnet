@@ -13,6 +13,7 @@ public sealed class DependencyTests
     {
         var names = typeof(Item).Assembly.GetReferencedAssemblies().Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
         Assert.DoesNotContain("Microsoft.AspNetCore.App", names);
+        Assert.DoesNotContain(names, x => x?.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal) == true);
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", names);
         Assert.DoesNotContain("Alxarafe.Modularity", names);
         Assert.DoesNotContain(names, x => x?.Contains("Security", StringComparison.OrdinalIgnoreCase) == true);
@@ -24,6 +25,8 @@ public sealed class DependencyTests
     {
         var names = typeof(CreateItemHandler).Assembly.GetReferencedAssemblies().Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
         Assert.DoesNotContain("Microsoft.AspNetCore.App", names);
+        Assert.DoesNotContain(names, x => x?.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal) == true);
+        Assert.DoesNotContain(names, x => x?.EndsWith(".Http", StringComparison.Ordinal) == true);
         Assert.DoesNotContain(names, x => x?.Contains("Identity", StringComparison.OrdinalIgnoreCase) == true);
         Assert.DoesNotContain(names, x => x?.Contains("Localization", StringComparison.OrdinalIgnoreCase) == true);
         Assert.DoesNotContain(names, x => x?.Contains("Infrastructure", StringComparison.OrdinalIgnoreCase) == true);

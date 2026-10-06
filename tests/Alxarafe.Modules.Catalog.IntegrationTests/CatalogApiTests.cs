@@ -30,15 +30,6 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     }
 
     [Fact]
-    public async Task HealthEndpointIsAvailable()
-    {
-        RequireIsolation();
-        using var client = factory.CreateClient();
-        var response = await client.GetAsync("/health");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
     public async Task ProtectedEndpointWithoutCredentialsReturns401()
     {
         RequireIsolation();
@@ -54,20 +45,6 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
         using var client = factory.CreateClient();
         var response = await client.PostAsJsonAsync("/api/catalog/items", new { sku = "NO-AUTH", name = "No auth" });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task RegisterAndLoginUseIdentityApiEndpoints()
-    {
-        RequireIsolation();
-        using var client = factory.CreateClient();
-        var email = $"user-{Guid.NewGuid():N}@example.test";
-        var register = await client.PostAsJsonAsync("/api/auth/register", new { email, password = "Password123" });
-        Assert.Equal(HttpStatusCode.OK, register.StatusCode);
-        var login = await client.PostAsJsonAsync("/api/auth/login", new { email, password = "Password123" });
-        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        var token = await login.Content.ReadFromJsonAsync<TokenResponse>();
-        Assert.False(string.IsNullOrWhiteSpace(token?.AccessToken));
     }
 
     [Fact]
@@ -119,6 +96,43 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
         using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/catalog/items/{id}");
         request.Headers.AcceptLanguage.ParseAdd(language);
         return await client.SendAsync(request);
+    }
+
+    [Theory]
+    [InlineData("es", "Ya existe un artículo con este SKU.")]
+    [InlineData("en", "An item with this SKU already exists.")]
+    [InlineData(null, "Ya existe un artículo con este SKU.")]
+    public async Task CreateItemWhenDuplicatedReturnsLocalizedConflict(string? language, string expectedTitle)
+    {
+        RequireIsolation();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync(client, "creator@example.test", "Creator_dev_only_123!"));
+        if (language is not null) client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
+        var request = new { sku = $"DUP-{Guid.NewGuid():N}", name = "Duplicate item" };
+        var created = await client.PostAsJsonAsync("/api/catalog/items", request);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var response = await client.PostAsJsonAsync("/api/catalog/items", request);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(409, problem.GetProperty("status").GetInt32());
+        Assert.Equal("catalog.sku_already_exists", problem.GetProperty("code").GetString());
+        Assert.Equal("https://alxarafe.dev/problems/catalog.sku_already_exists", problem.GetProperty("type").GetString());
+        Assert.Equal(expectedTitle, problem.GetProperty("title").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+        Assert.DoesNotContain(request.sku, problem.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateItemWhenInvalidPlatformStillHandlesValidation()
+    {
+        RequireIsolation();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync(client, "creator@example.test", "Creator_dev_only_123!"));
+        var response = await client.PostAsJsonAsync("/api/catalog/items", new { sku = "", name = "Invalid item" });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_error", problem.GetProperty("code").GetString());
     }
 
     private static async Task<string> RegisterAndLoginAsync(HttpClient client)

@@ -20,7 +20,6 @@ body:json {
 script:pre-request {
   const runId = Date.now().toString()
   bru.setVar("email", `bruno-user-${runId}@example.test`)
-  bru.setVar("sku", `BRUNO-${runId}`)
 }
 
 assert {

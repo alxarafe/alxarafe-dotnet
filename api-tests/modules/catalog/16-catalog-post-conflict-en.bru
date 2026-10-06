@@ -1,0 +1,33 @@
+meta {
+  name: Catalog duplicate item in English
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/catalog/items
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{creatorToken}}
+}
+
+headers {
+  Accept-Language: en
+}
+
+body:json {
+  {
+    "sku": "{{sku}}",
+    "name": "Duplicate item"
+  }
+}
+
+assert {
+  res.status: eq 409
+  res.body.status: eq 409
+  res.body.code: eq catalog.sku_already_exists
+  res.body.title: eq An item with this SKU already exists.
+}

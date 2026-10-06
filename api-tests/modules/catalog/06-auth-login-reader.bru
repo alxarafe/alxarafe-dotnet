@@ -1,7 +1,7 @@
 meta {
-  name: Catalog GET with reader permission
+  name: Login reader seed
   type: http
-  seq: 13
+  seq: 6
 }
 
 post {
@@ -18,7 +18,7 @@ body:json {
 }
 
 script:post-response {
-  bru.setVar("token", res.body.accessToken)
+  bru.setVar("readerToken", res.body.accessToken)
 }
 
 assert {

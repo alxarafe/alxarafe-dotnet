@@ -11,5 +11,5 @@ jobs:
       CI: true
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Alxarafe.NET 0.2
+      - name: Validate platform and module suites
         run: ./bin/check

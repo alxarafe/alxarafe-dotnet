@@ -1,13 +1,34 @@
 # Bruno API tests
 
-The collection in `bruno/` complements the .NET unit, architecture, and integration tests. It targets the isolated validation Host at `http://validation-app:8080` inside Compose.
+The independent collections complement .NET domain, architecture, and integration tests. They target the isolated validation Host at `http://validation-app:8080` inside Compose.
 
-The collection uses test-only credentials. Each run generates a unique registration email and catalog SKU; the login scripts store the returned bearer token in the `token` variable and the create request stores its identifier in `itemId`.
+```text
+api-tests/
+    platform/                 # health, registration, login (3 requests)
+    modules/
+        catalog/              # Catalog permissions and functionality (13 requests)
+            assert-persistence.sh
+    shared/
+        environments/docker.bru
+```
 
-Run all 14 requests without installing Bruno, Node.js, or the .NET SDK on the host:
+Each collection has its own `bruno.json`. The `environments` directories are relative symlinks to the shared environment, so the CLI and Bruno UI use the same base URL and test-only identity credentials without duplicated files. Shared infrastructure contains no module entity, error, or request state.
+
+Platform generates a unique registration email and verifies its own login. Catalog prepares reader and creator sessions explicitly in its collection, uses `readerToken` and `creatorToken`, and generates its own unique SKU. Create/read/duplicate scenarios use `itemId`/`sku` from Catalog's own create flow. No variable or token is inherited from another collection, so Catalog can run before or without Platform. Its local create/read ordering is intentional. The original 14 scenarios are preserved; two duplicate-item cases add localized 409 coverage. Missing-item cases also assert the Spanish/English titles.
+
+Run all 16 requests without installing Bruno, Node.js, or the .NET SDK on the host:
 
 ```bash
 ./bin/bruno
 ```
 
-`bin/bruno` creates `alxarafe_test` and `alxarafe_security_test`, starts the validation Host, runs the collection and removes the test databases even after a failure. `./bin/check` runs the same collection after the .NET tests.
+Run a single collection independently:
+
+```bash
+./bin/bruno platform
+./bin/bruno modules/catalog
+```
+
+`bin/bruno` provisions `alxarafe_test` and `alxarafe_security_test`, starts the validation Host, runs the selected suites in separate CLI invocations, and removes the databases on exit. Development databases/volumes are preserved. The internal `--prepared` mode reuses the lifecycle managed by `bin/check`.
+
+`./bin/check` is the authoritative full validation entry point. It runs .NET tests, every module collection with a `bruno.json`, platform checks, and each module's `assert-persistence.sh`. Catalog owns its SQL and endpoint OpenAPI assertions; the global runner only orchestrates module scripts. Add new suites under `modules/<name>` with a `bruno.json` and a link to the shared environment. Keep any module-specific test setup and assertions inside that suite.
