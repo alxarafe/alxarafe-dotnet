@@ -1,0 +1,25 @@
+{
+    "name": "Alxarafe.NET",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "app",
+    "runServices": ["postgres", "app"],
+    "workspaceFolder": "/workspace",
+    "overrideCommand": true,
+    "shutdownAction": "none",
+    "forwardPorts": [8081],
+    "portsAttributes": {
+        "8081": {
+            "label": "Alxarafe.NET development API",
+            "onAutoForward": "notify"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csharp",
+                "ms-dotnettools.csdevkit"
+            ]
+        }
+    },
+    "postCreateCommand": "dotnet restore Alxarafe.sln"
+}
