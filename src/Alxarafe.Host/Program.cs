@@ -2,6 +2,7 @@ using System.Globalization;
 using Alxarafe.AspNetCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
+using Alxarafe.Modules.AiAgent.ModuleDefinition;
 using Alxarafe.Modules.Catalog.ModuleDefinition;
 using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
@@ -42,8 +43,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
     options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
 }).AddBearerToken(IdentityConstants.BearerScheme);
-// Temporary static composition: only the module entry assembly is known here.
-builder.Services.AddAlxarafeModules(typeof(CatalogModule).Assembly);
+// Temporary static composition: only the module entry assemblies are known here.
+builder.Services.AddAlxarafeModules(typeof(CatalogModule).Assembly, typeof(AiAgentModule).Assembly);
 // Module handlers run first; this handler only handles transversal validation.
 builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddAlxarafePermissionAuthorization();

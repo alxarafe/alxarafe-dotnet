@@ -1,0 +1,27 @@
+meta {
+  name: Prepare AiAgent writer session
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "ai-writer@example.test",
+    "password": "{{creatorPassword}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("aiWriterToken", res.body.accessToken)
+}
+
+assert {
+  res.status: eq 200
+  res.body.accessToken: isString
+}

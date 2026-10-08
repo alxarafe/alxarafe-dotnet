@@ -36,6 +36,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.Catalog.In
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Host.IntegrationTests", "tests/Alxarafe.Host.IntegrationTests/Alxarafe.Host.IntegrationTests.csproj", "{10000000-0000-0000-0000-000000000017}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.AiAgent.Domain", "src/Modules/AiAgent/Alxarafe.Modules.AiAgent.Domain/Alxarafe.Modules.AiAgent.Domain.csproj", "{10000000-0000-0000-0000-000000000018}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.AiAgent.Application", "src/Modules/AiAgent/Alxarafe.Modules.AiAgent.Application/Alxarafe.Modules.AiAgent.Application.csproj", "{10000000-0000-0000-0000-000000000019}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.AiAgent.Infrastructure", "src/Modules/AiAgent/Alxarafe.Modules.AiAgent.Infrastructure/Alxarafe.Modules.AiAgent.Infrastructure.csproj", "{10000000-0000-0000-0000-000000000020}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.AiAgent.Http", "src/Modules/AiAgent/Alxarafe.Modules.AiAgent.Http/Alxarafe.Modules.AiAgent.Http.csproj", "{10000000-0000-0000-0000-000000000021}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.AiAgent.Module", "src/Modules/AiAgent/Alxarafe.Modules.AiAgent.Module/Alxarafe.Modules.AiAgent.Module.csproj", "{10000000-0000-0000-0000-000000000022}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.AiAgent.Domain.Tests", "tests/Alxarafe.Modules.AiAgent.Domain.Tests/Alxarafe.Modules.AiAgent.Domain.Tests.csproj", "{10000000-0000-0000-0000-000000000023}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.AiAgent.IntegrationTests", "tests/Alxarafe.Modules.AiAgent.IntegrationTests/Alxarafe.Modules.AiAgent.IntegrationTests.csproj", "{10000000-0000-0000-0000-000000000024}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -110,6 +124,34 @@ Global
 		{10000000-0000-0000-0000-000000000017}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10000000-0000-0000-0000-000000000017}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10000000-0000-0000-0000-000000000017}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000018}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000018}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000018}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000018}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000019}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000019}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000019}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000019}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000020}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000020}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000020}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000020}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000021}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000021}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000021}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000021}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000022}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000022}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000022}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000022}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000023}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000023}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000023}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000023}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000024}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000024}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000024}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000024}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

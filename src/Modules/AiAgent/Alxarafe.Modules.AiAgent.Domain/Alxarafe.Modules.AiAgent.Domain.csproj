@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Alxarafe.Modules.AiAgent.Domain</AssemblyName>
+        <RootNamespace>Alxarafe.Modules.AiAgent.Domain</RootNamespace>
+    </PropertyGroup>
+</Project>

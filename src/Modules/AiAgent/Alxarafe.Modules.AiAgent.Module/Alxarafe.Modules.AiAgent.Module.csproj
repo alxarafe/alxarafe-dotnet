@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Alxarafe.Modules.AiAgent.Module</AssemblyName>
+        <RootNamespace>Alxarafe.Modules.AiAgent.Module</RootNamespace>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Alxarafe.Modules.AiAgent.Infrastructure/Alxarafe.Modules.AiAgent.Infrastructure.csproj" />
+        <ProjectReference Include="../Alxarafe.Modules.AiAgent.Http/Alxarafe.Modules.AiAgent.Http.csproj" />
+        <ProjectReference Include="../../../Alxarafe.Modularity/Alxarafe.Modularity.csproj" />
+        <ProjectReference Include="../../../Alxarafe.Security/Alxarafe.Security.csproj" />
+    </ItemGroup>
+</Project>

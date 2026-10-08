@@ -1,0 +1,20 @@
+meta {
+  name: Reader reads persisted knowledge
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/ai/knowledge/{{knowledgeId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiReaderToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.answer: eq Bruno knowledge answer
+}

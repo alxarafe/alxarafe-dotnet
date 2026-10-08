@@ -1,0 +1,22 @@
+meta {
+  name: Knowledge POST without authentication
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/ai/knowledge
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "question": "Question",
+    "answer": "Answer"
+  }
+}
+
+assert {
+  res.status: eq 401
+}

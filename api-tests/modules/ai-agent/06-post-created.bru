@@ -1,0 +1,36 @@
+meta {
+  name: Writer creates knowledge
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/ai/knowledge
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiWriterToken}}
+}
+
+body:json {
+  {
+    "question": "{{knowledgeQuestion}}",
+    "answer": "Bruno knowledge answer"
+  }
+}
+
+script:pre-request {
+  bru.setVar("knowledgeQuestion", `Bruno knowledge question ${Date.now()}`)
+}
+
+script:post-response {
+  bru.setVar("knowledgeId", res.body.id)
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isString
+  res.body.answer: eq Bruno knowledge answer
+}

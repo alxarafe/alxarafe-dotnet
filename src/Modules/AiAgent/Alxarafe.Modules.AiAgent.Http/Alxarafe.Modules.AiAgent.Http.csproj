@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Alxarafe.Modules.AiAgent.Http</AssemblyName>
+        <RootNamespace>Alxarafe.Modules.AiAgent.Http</RootNamespace>
+    </PropertyGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="../Alxarafe.Modules.AiAgent.Application/Alxarafe.Modules.AiAgent.Application.csproj" />
+        <ProjectReference Include="../../../Alxarafe.AspNetCore/Alxarafe.AspNetCore.csproj" />
+    </ItemGroup>
+</Project>
