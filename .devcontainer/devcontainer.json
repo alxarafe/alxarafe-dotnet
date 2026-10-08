@@ -6,11 +6,11 @@
     "workspaceFolder": "/workspace",
     "overrideCommand": true,
     "shutdownAction": "none",
-    "forwardPorts": [8081],
+    "forwardPorts": [],
     "portsAttributes": {
-        "8081": {
+        "8080": {
             "label": "Alxarafe.NET development API",
-            "onAutoForward": "notify"
+            "onAutoForward": "ignore"
         }
     },
     "customizations": {
