@@ -199,6 +199,82 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
         Assert.Equal(before, await db.Knowledge.CountAsync());
     }
 
+    [Theory]
+    [InlineData(true, "es")]
+    [InlineData(true, "en")]
+    [InlineData(false, "es")]
+    [InlineData(false, "en")]
+    public async Task EscapedNullScalarReachesDomainValidationWithoutLeakingOrPersistingText(bool inQuestion, string language)
+    {
+        RequireIsolation();
+        using var client = await CreateAuthenticatedClientAsync("ai-writer@example.test", "Creator_dev_only_123!");
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
+        var json = inQuestion
+            ? "{\"question\":\"nul-before\\u0000nul-after\",\"answer\":\"Valid answer\"}"
+            : "{\"question\":\"Valid question\",\"answer\":\"nul-before\\u0000nul-after\"}";
+        // This is valid JSON containing an escaped scalar, not a parser-error request.
+        using var parsed = JsonDocument.Parse(json);
+        Assert.Equal("nul-before\u0000nul-after", parsed.RootElement.GetProperty(inQuestion ? "question" : "answer").GetString());
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AiAgentDbContext>();
+        var before = await db.Knowledge.CountAsync();
+        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync("/api/ai/knowledge", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(body);
+        var problem = document.RootElement;
+        Assert.Equal(400, problem.GetProperty("status").GetInt32());
+        Assert.Equal("validation_error", problem.GetProperty("code").GetString());
+        Assert.Equal("https://alxarafe.dev/problems/validation_error", problem.GetProperty("type").GetString());
+        Assert.Equal(language == "es" ? "La solicitud contiene datos no válidos." : "The request contains invalid data.", problem.GetProperty("title").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+        Assert.DoesNotContain("nul-before", body);
+        Assert.DoesNotContain("nul-after", body);
+        Assert.Equal(before, await db.Knowledge.CountAsync());
+    }
+
+    [Fact]
+    public async Task WriteOnlyUserCannotReadAnExistingEntryEvenWhenTheyCreatedIt()
+    {
+        RequireIsolation();
+        using var bootstrap = factory.CreateClient();
+        await using var scope = factory.Services.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Alxarafe.Security.EntityFrameworkCore.AlxarafeUser>>();
+        var email = $"ai-write-only-{Guid.NewGuid():N}@example.test";
+        var user = new Alxarafe.Security.EntityFrameworkCore.AlxarafeUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true
+        };
+        Assert.True((await users.CreateAsync(user, "Creator_dev_only_123!")).Succeeded);
+        Assert.True((await users.AddClaimAsync(user, new System.Security.Claims.Claim(
+            Alxarafe.Security.PermissionClaim.Type, "ai.knowledge.write"))).Succeeded);
+        var claim = Assert.Single(await users.GetClaimsAsync(user));
+        Assert.Equal(Alxarafe.Security.PermissionClaim.Type, claim.Type);
+        Assert.Equal("ai.knowledge.write", claim.Value);
+        using var writer = await CreateAuthenticatedClientAsync(email, "Creator_dev_only_123!");
+        var created = await writer.PostAsJsonAsync("/api/ai/knowledge", new
+        {
+            question = "Write-only confidential question",
+            answer = "Write-only confidential answer"
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var entry = await created.Content.ReadFromJsonAsync<KnowledgeEntryDto>();
+        Assert.NotNull(entry);
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AiAgentDbContext>().Knowledge.AnyAsync(row => row.Id == entry.Id));
+        using var reader = await CreateAuthenticatedClientAsync("ai-reader@example.test", "Reader_dev_only_123!");
+        Assert.Equal(HttpStatusCode.OK, (await reader.GetAsync(created.Headers.Location)).StatusCode);
+        var denied = await writer.GetAsync(created.Headers.Location);
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        var body = await denied.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(entry.Question, body);
+        Assert.DoesNotContain(entry.Answer, body);
+    }
+
     private async Task<HttpClient> CreateAuthenticatedClientAsync(string email, string password)
     {
         var client = factory.CreateClient();

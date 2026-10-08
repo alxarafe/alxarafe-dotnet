@@ -41,6 +41,9 @@ else
 fi
 
 for directory in "${suites[@]}"; do
+    if [[ -f "$directory/prepare.sh" ]]; then
+        bash "$directory/prepare.sh"
+    fi
     echo "==> Bruno suite: ${directory#api-tests/}"
     docker compose run --rm --no-deps --workdir "/workspace/$directory" bruno run . --env docker
 done

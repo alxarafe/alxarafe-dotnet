@@ -1,5 +1,9 @@
+using System.Data.Common;
+using System.Text;
+using Alxarafe.Modules.AiAgent.Domain;
 using Alxarafe.Modules.AiAgent.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
@@ -87,18 +91,96 @@ public sealed class KnowledgePersistenceTests
     public async Task IncrementalMigrationRejectsInvalidLegacyDataWithoutChangingIt()
     {
         await using var database = await TemporaryKnowledgeDatabase.CreateAsync();
-        await using var db = database.CreateContext();
+        var observer = new QuestionConstraintObserver();
+        await using var db = new AiAgentDbContext(new DbContextOptionsBuilder<AiAgentDbContext>()
+            .UseNpgsql(database.ConnectionString).AddInterceptors(observer).Options);
         await db.GetService<IMigrator>().MigrateAsync(db.GetService<IMigrationsIdGenerator>().GetName(_migrations[0]));
         var id = Guid.NewGuid();
-        var question = new string('a', 1001);
-        await InsertAsync(database.ConnectionString, id, question, "Earlier answer");
+        const string question = "Valid earlier question";
+        var answer = new string('a', 20001);
+        await InsertAsync(database.ConnectionString, id, question, answer);
+        var historyBefore = await ReadHistoryAsync(database.ConnectionString);
+        var dataBefore = await db.Knowledge.AsNoTracking().SingleAsync();
         var exception = await Assert.ThrowsAsync<PostgresException>(() => db.Database.MigrateAsync());
         Assert.Equal(PostgresErrorCodes.CheckViolation, exception.SqlState);
+        Assert.Equal("CK_ai_knowledge_Answer_Length", exception.ConstraintName);
+        // The first CHECK was actually visible inside this migration's transaction.
+        Assert.True(observer.QuestionCheckObservedInsideTransaction);
+        await using var connection = new NpgsqlConnection(database.ConnectionString);
+        await connection.OpenAsync();
+        await using var constraints = new NpgsqlCommand(
+            "SELECT count(*) FROM pg_constraint WHERE conrelid = 'public.ai_knowledge'::regclass AND contype = 'c'", connection);
+        Assert.Equal(0L, await constraints.ExecuteScalarAsync());
+        Assert.Equal(historyBefore, await ReadHistoryAsync(database.ConnectionString));
         Assert.Equal([_migrations[0]], await db.Database.GetAppliedMigrationsAsync());
         var row = await db.Knowledge.AsNoTracking().SingleAsync();
-        Assert.Equal(id, row.Id);
-        Assert.Equal(question, row.Question);
-        Assert.Equal("Earlier answer", row.Answer);
+        Assert.Equal((id, question, answer), (row.Id, row.Question, row.Answer));
+        Assert.Equal((dataBefore.Id, dataBefore.Question, dataBefore.Answer), (row.Id, row.Question, row.Answer));
+    }
+
+    [Fact]
+    public async Task CombiningSequenceHasTwoScalarsAndRoundTripsWithoutNormalization()
+    {
+        const string decomposed = "e\u0301";
+        Assert.Equal(2, decomposed.EnumerateRunes().Count());
+        var entry = KnowledgeEntry.Create(decomposed, decomposed);
+        // Boundary behavior proves that domain length counts both scalars.
+        var boundary = string.Concat(Enumerable.Repeat(decomposed, 500));
+        Assert.Equal(boundary, KnowledgeEntry.Create(boundary, "Answer").Question);
+        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(boundary + "e", "Answer"));
+        await using var database = await TemporaryKnowledgeDatabase.CreateAsync();
+        await using var db = database.CreateContext();
+        await db.Database.MigrateAsync();
+        var repository = new EfKnowledgeRepository(db);
+        await repository.AddAsync(entry, CancellationToken.None);
+        var restored = await repository.GetByIdAsync(entry.Id, CancellationToken.None);
+        Assert.NotNull(restored);
+        Assert.Equal(Encoding.UTF8.GetBytes(decomposed), Encoding.UTF8.GetBytes(restored.Question));
+        Assert.Equal(Encoding.UTF8.GetBytes(decomposed), Encoding.UTF8.GetBytes(restored.Answer));
+        Assert.NotEqual("\u00E9", restored.Question);
+        await using var connection = new NpgsqlConnection(database.ConnectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            "SELECT char_length(\"Question\"), char_length(\"Answer\"), encode(convert_to(\"Question\", 'UTF8'), 'hex'), encode(convert_to(\"Answer\", 'UTF8'), 'hex') FROM ai_knowledge WHERE \"Id\" = @id", connection);
+        command.Parameters.AddWithValue("id", entry.Id);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal(2, reader.GetInt32(0));
+        Assert.Equal(2, reader.GetInt32(1));
+        Assert.Equal("65cc81", reader.GetString(2));
+        Assert.Equal("65cc81", reader.GetString(3));
+        Assert.False(await reader.ReadAsync());
+    }
+
+    private static async Task<List<(string Id, string Version)>> ReadHistoryAsync(string connectionString)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            "SELECT \"MigrationId\", \"ProductVersion\" FROM \"__EFMigrationsHistory\" ORDER BY \"MigrationId\"", connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        var history = new List<(string, string)>();
+        while (await reader.ReadAsync()) history.Add((reader.GetString(0), reader.GetString(1)));
+        return history;
+    }
+
+    private sealed class QuestionConstraintObserver : DbCommandInterceptor
+    {
+        public bool QuestionCheckObservedInsideTransaction { get; private set; }
+
+        public override async ValueTask<int> NonQueryExecutedAsync(DbCommand command, CommandExecutedEventData eventData,
+            int result, CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains("ADD CONSTRAINT \"CK_ai_knowledge_Question_Length\"", StringComparison.Ordinal))
+            {
+                Assert.NotNull(command.Transaction);
+                await using var query = command.Connection!.CreateCommand();
+                query.Transaction = command.Transaction;
+                query.CommandText = "SELECT count(*) FROM pg_constraint WHERE conrelid = 'public.ai_knowledge'::regclass AND conname = 'CK_ai_knowledge_Question_Length'";
+                QuestionCheckObservedInsideTransaction = (long)(await query.ExecuteScalarAsync(cancellationToken))! == 1;
+            }
+            return result;
+        }
     }
 
     private static async Task InsertAsync(string connectionString, Guid id, string question, string answer)
@@ -124,7 +206,7 @@ public sealed class KnowledgePersistenceTests
                 string.IsNullOrWhiteSpace(configured) || new NpgsqlConnectionStringBuilder(configured).Database != "alxarafe_ai_test")
                 throw new InvalidOperationException("Persistence tests require Testing and the isolated AiAgent connection.");
 
-            var name = $"ai001b_{Guid.NewGuid():N}";
+            var name = $"ai001b1_{Guid.NewGuid():N}";
             var builder = new NpgsqlConnectionStringBuilder(configured) { Database = "postgres", Timeout = 15, CommandTimeout = 30 };
             var admin = builder.ConnectionString;
             await using var connection = new NpgsqlConnection(admin);

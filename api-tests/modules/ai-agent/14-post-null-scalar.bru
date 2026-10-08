@@ -1,0 +1,42 @@
+meta {
+  name: Valid JSON null scalar reaches domain validation
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/api/ai/knowledge
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiWriterToken}}
+}
+
+headers {
+  Accept-Language: en
+}
+
+body:json {
+  {
+    "question": "nul-before\u0000nul-after",
+    "answer": "Valid answer"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.status: eq 400
+  res.body.code: eq validation_error
+  res.body.type: eq https://alxarafe.dev/problems/validation_error
+  res.body.title: eq The request contains invalid data.
+}
+
+tests {
+  test("Domain ProblemDetails does not disclose rejected text", function () {
+    expect(res.getHeader("content-type")).to.include("application/problem+json");
+    expect(JSON.stringify(res.body)).not.to.include("nul-before");
+    expect(JSON.stringify(res.body)).not.to.include("nul-after");
+  });
+}

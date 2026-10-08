@@ -112,4 +112,29 @@ public sealed class KnowledgeEntryTests
         Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(invalid, "Answer"));
         Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create("Question", invalid));
     }
+
+    [Theory]
+    [InlineData("\u0000", "Answer", "question")]
+    [InlineData("Question", "\u0000", "answer")]
+    [InlineData("before\u0000after", "Answer", "question")]
+    [InlineData("Question", "before\u0000after", "answer")]
+    public void NullScalarIsRejectedRatherThanSilentlyRemoved(string question, string answer, string parameter)
+    {
+        var exception = Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(question, answer));
+        Assert.Equal(parameter, exception.ParamName);
+        Assert.Contains("U+0000", exception.Message);
+        Assert.DoesNotContain("before", exception.Message);
+        Assert.DoesNotContain("after", exception.Message);
+        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Rehydrate(Guid.NewGuid(), question, answer));
+    }
+
+    [Fact]
+    public void RepresentableTextIsPreservedWithoutReplacementOrNormalization()
+    {
+        const string question = "before\U0001F600e\u0301after";
+        const string answer = "before\t\U00010400after";
+        var entry = KnowledgeEntry.Create(question, answer);
+        Assert.Equal(question, entry.Question);
+        Assert.Equal(answer, entry.Answer);
+    }
 }

@@ -1,0 +1,29 @@
+meta {
+  name: Write permission does not allow reading existing knowledge
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/ai/knowledge/{{knowledgeId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiWriteOnlyToken}}
+}
+
+assert {
+  res.status: eq 403
+  res.body.status: eq 403
+}
+
+tests {
+  test("Known entry is not disclosed to a write-only identity", function () {
+    expect(bru.getVar("knowledgeId")).to.be.a("string").and.not.to.be.empty;
+    expect(res.getHeader("content-type")).to.include("application/problem+json");
+    expect(JSON.stringify(res.body)).not.to.include(bru.getVar("knowledgeQuestion"));
+    expect(JSON.stringify(res.body)).not.to.include("Bruno knowledge answer");
+  });
+}

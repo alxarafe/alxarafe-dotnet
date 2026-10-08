@@ -31,8 +31,10 @@ public sealed class KnowledgeEntry
         var length = 0;
         while (!remaining.IsEmpty)
         {
-            if (Rune.DecodeFromUtf16(remaining, out _, out var consumed) != OperationStatus.Done)
+            if (Rune.DecodeFromUtf16(remaining, out var rune, out var consumed) != OperationStatus.Done)
                 throw new ArgumentException("Knowledge text must contain valid Unicode scalar values.", parameter);
+            if (rune.Value == 0)
+                throw new ArgumentException("Knowledge text must not contain U+0000.", parameter);
             if (++length > maximumLength)
                 throw new ArgumentException($"Knowledge text must not exceed {maximumLength} Unicode scalar values.", parameter);
             remaining = remaining[consumed..];
