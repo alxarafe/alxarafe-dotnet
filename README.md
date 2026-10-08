@@ -36,10 +36,21 @@ All validation entry points wait for PostgreSQL to be healthy (up to 120 seconds
 
 Ports and network addresses:
 
-- From the host: `http://localhost:8081`.
+Development binds only to loopback. Override `ERBAS_DOTNET_PORT` to change the
+host port (for example, `ERBAS_DOTNET_PORT=49081 ./bin/up`); container port 8080
+stays unchanged. PostgreSQL is not published. Validation uses Docker-network
+URLs and does not require host port 48081. Dev Container forwarding of 8080 is
+disabled because Compose owns the publication. See the
+[shared port convention](https://github.com/alxarafe/erbas-contract/blob/main/docs/development-ports.md).
+
+The current `/health` response uses ASP.NET Core's health-check representation.
+Shared JSON conformance (`{"status":"ok"}`) is known debt for CONTRACT-001C;
+PLATFORM-001 preserves this behavior and checks HTTP 200 and existing validation.
+
+- From the host: `http://127.0.0.1:48081`.
 - Inside the Docker network: `http://app:8080`.
-- The health endpoint from the host is `http://localhost:8081/health`.
-- OpenAPI from the host is `http://localhost:8081/openapi/v1.json`.
+- The health endpoint from the host is `http://127.0.0.1:48081/health`.
+- OpenAPI from the host is `http://127.0.0.1:48081/openapi/v1.json`.
 
 ## Linux development with Docker only
 
@@ -53,7 +64,7 @@ docker compose up -d
 docker compose exec app dotnet restore
 docker compose exec app dotnet build
 ./bin/test
-curl http://localhost:8081/health
+curl http://127.0.0.1:48081/health
 ```
 
 The PostgreSQL init script creates a separate `alxarafe_security` database. On a fresh environment, the app creates the Identity schema and applies the Catalog EF Core migration during startup.
@@ -66,23 +77,23 @@ Development seed users exist only in Development or Testing:
 Register and log in through the native API endpoints:
 
 ```bash
-curl -X POST http://localhost:8081/api/auth/register -H 'Content-Type: application/json' -d '{"email":"new@example.test","password":"Password123"}'
-curl -X POST http://localhost:8081/api/auth/login -H 'Content-Type: application/json' -d '{"email":"creator@example.test","password":"Creator_dev_only_123!"}'
+curl -X POST http://127.0.0.1:48081/api/auth/register -H 'Content-Type: application/json' -d '{"email":"new@example.test","password":"Password123"}'
+curl -X POST http://127.0.0.1:48081/api/auth/login -H 'Content-Type: application/json' -d '{"email":"creator@example.test","password":"Creator_dev_only_123!"}'
 ```
 
 Use the returned bearer token for Catalog calls. Create and retrieve an item:
 
 ```bash
-curl -X POST http://localhost:8081/api/catalog/items \
+curl -X POST http://127.0.0.1:48081/api/catalog/items \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"sku":"CHAIR-001","name":"Office chair"}'
 
-curl http://localhost:8081/api/catalog/items/<id> \
+curl http://127.0.0.1:48081/api/catalog/items/<id> \
   -H 'Authorization: Bearer <token>'
 ```
 
-OpenAPI is available at `http://localhost:8081/openapi/v1.json`. Run all platform and module Bruno requests reproducibly through Docker:
+OpenAPI is available at `http://127.0.0.1:48081/openapi/v1.json`. Run all platform and module Bruno requests reproducibly through Docker:
 
 ```bash
 ./bin/bruno

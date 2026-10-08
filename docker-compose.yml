@@ -29,7 +29,7 @@ services:
       SecuritySeed__ReaderPassword: Reader_dev_only_123!
       SecuritySeed__CreatorPassword: Creator_dev_only_123!
     ports:
-      - "8081:8080"
+      - "127.0.0.1:${ERBAS_DOTNET_PORT:-48081}:8080"
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health"]
       interval: 5s

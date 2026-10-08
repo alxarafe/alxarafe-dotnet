@@ -31,6 +31,13 @@ No project Git history is available yet, so no existing commit convention can be
 
 ## Security & Configuration Tips
 
+Development publishes API container port 8080 only on
+`127.0.0.1:${ERBAS_DOTNET_PORT:-48081}`. Follow the shared local-infrastructure
+convention in `erbas-contract/docs/development-ports.md`; never fix host ports in
+HTTP contracts or Bruno requests. Keep PostgreSQL unpublished. Validation uses
+Docker network URLs and must not require the development host port. Avoid an
+additional automatic Dev Container forwarding of API port 8080.
+
 Never commit credentials, tokens, connection strings, or machine-specific settings. Use environment variables or an untracked local settings file, and provide safe examples through configuration templates or documentation.
 
 ## Abstraction Guidelines
