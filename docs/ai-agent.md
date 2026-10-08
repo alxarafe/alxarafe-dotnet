@@ -2,7 +2,7 @@
 
 ## Current state: 0.1 knowledge persistence
 
-AiAgent is a second optional module, independent of Catalog. It stores reusable knowledge; it does not run an AI model. Its five projects follow the existing Domain, Application, Infrastructure, Http, and Module boundaries.
+AiAgent remains the umbrella name of this optional module, independent of Catalog. Its current functionality is a preparatory knowledge base, not an operational agent. It stores reusable knowledge; it does not run an AI model. Its five projects follow the existing Domain, Application, Infrastructure, Http, and Module boundaries.
 
 The only entity is `KnowledgeEntry`, with `Id` (Guid), `Question`, and `Answer`. Creation generates an identifier, rejects empty/whitespace question or answer, and trims surrounding whitespace while preserving case and internal text. The EF adapter persists exactly these three required columns in `ai_knowledge` (`uuid`, `text`, `text`). There are no model, embedding, metadata, confidence, status, timestamps, source, conversation, or audit fields. Duplicate questions are allowed; no uniqueness policy is invented.
 
@@ -17,13 +17,32 @@ The HTTP adapter owns `ai.knowledge_not_found` and its Spanish/English resources
 
 Search is deliberately deferred to the next knowledge-retrieval phase. This iteration proves storage, retrieval by identifier, permissions, and module boundaries without designing pagination, matching, or ordering prematurely. No semantic search is present.
 
+## First knowledge increment decisions
+
+Knowledge is shared by the whole installation. `ai.knowledge.read` allows reading any entry in that installation, including entries created by another authorized user; `ai.knowledge.write` allows creating entries. There is no owner field, tenant field, or per-user filtering. Future multi-tenancy must be addressed consistently by the platform, outside this increment.
+
+| Field | Domain invariant | Maximum Unicode scalar values |
+| --- | --- | --- |
+| Question | `KnowledgeEntry.QuestionMaxLength` | 1,000 |
+| Answer | `KnowledgeEntry.AnswerMaxLength` | 20,000 |
+
+Both fields are trimmed before checking presence and length. They must contain text after trimming, and the normalized values are persisted and returned. Interior spaces, case, and line breaks remain unchanged; there is no linguistic or Unicode normalization and no deduplication. These limits are functional data invariants, not environment settings.
+
+Length means Unicode scalar values, not UTF-16 code units or grapheme clusters. A supplementary character such as `😀` counts as one; `e` followed by a combining accent counts as two. The domain uses native rune decoding and rejects unpaired UTF-16 surrogates. PostgreSQL `char_length` counts the corresponding stored characters in UTF-8. The API follows the domain validation path: empty or oversized values return HTTP 400 ProblemDetails with the existing `validation_error` code and Spanish/English platform title.
+
+Persistence retains the three `text`/UUID columns and adds `CK_ai_knowledge_Question_Length` and `CK_ai_knowledge_Answer_Length`, requiring stored lengths of 1–1,000 and 1–20,000 respectively. SQL writes outside these bounds are rejected. The application owns trim normalization; direct SQL does not automatically normalize text.
+
+Incremental migration `20261008000100_KnowledgeTextLimits` follows the unchanged `202610060001_InitialKnowledge` migration. A clean database applies both. Existing databases validate their data when adding the checks. If legacy data falls outside the bounds, migration fails without truncating or rewriting it; review and explicitly authorize any data remediation before retrying. No development database is changed by the validation tests.
+
+The generated OpenAPI response/status/security metadata remains known debt for AI-001C. This increment enforces the limits at runtime and does not claim to complete OpenAPI conformance.
+
 ## Composition, database configuration, and development
 
 Host knows only `typeof(AiAgentModule).Assembly`, alongside the existing Catalog entry assembly. It does not import AiAgent Application, Domain, Infrastructure, or Http types, declare its permissions, translate its messages, or validate its database. AiAgent checks its own connection and rejects any database other than `alxarafe_ai_test` when the environment is Testing.
 
 - Development connection: `ConnectionStrings__AiAgent`, database `alxarafe_ai` in the supplied Compose configuration.
 - Validation connection: the same key, database `alxarafe_ai_test`.
-- Initial migration: `202610060001_InitialKnowledge`, with a matching model snapshot and reversible Down operation.
+- Migrations: `202610060001_InitialKnowledge`, then `20261008000100_KnowledgeTextLimits`, with a matching current model snapshot and reversible schema operations.
 
 PostgreSQL initialization creates `alxarafe_ai` for a new development volume. Existing volumes do not rerun initialization scripts. Provision the new database explicitly before starting the updated development Host:
 
@@ -41,11 +60,11 @@ The application can be built and run without AiAgent by omitting its static asse
 
 ## Tests and validation
 
-`Alxarafe.Modules.AiAgent.Domain.Tests` verifies text invariants, identifier generation, and rehydration. `Alxarafe.Modules.AiAgent.IntegrationTests` verifies real PostgreSQL persistence, permissions (401/403), localized missing entries, invalid input without persistence, migration/model consistency, and repeated migration application. A separate native generic Host test initializes and uses AiAgent alone, without Catalog or Identity persistence.
+`Alxarafe.Modules.AiAgent.Domain.Tests` verifies mandatory text, trim, interior whitespace, exact/excess Unicode scalar limits, identifier generation, and rehydration. `Alxarafe.Modules.AiAgent.IntegrationTests` verifies normalized PostgreSQL readback, installation-wide access across authorized users, permissions (401/403), localized missing entries and length errors, invalid input without persistence, migration/model consistency, and repeated migration application. Its persistence fixtures create and remove uniquely named databases to test clean and incremental migration, preserved earlier data, check constraints, and rejected direct SQL writes with ASCII and supplementary Unicode text. Invalid legacy rows block the new migration without being changed. A separate native generic Host test initializes and uses AiAgent alone, without Catalog or Identity persistence.
 
 Architecture tests verify pure Domain/Application, module-owned permissions, no sibling assembly dependencies in either direction, separate module composition, and the controlled Host entry references. Shared Host source/resource tests now reject AiAgent details as well as Catalog details.
 
-The independent Bruno collection is `api-tests/modules/ai-agent`, with eleven requests. It explicitly logs in its reader/writer and creates its own knowledge data; it inherits no request state or token from Platform or Catalog. Its environment link reuses shared infrastructure without adding knowledge concepts there. The module's `assert-persistence.sh` verifies OpenAPI, the exact three-column schema, persisted data, and migration history.
+The independent Bruno collection is `api-tests/modules/ai-agent`, with thirteen requests. It explicitly logs in its reader/writer and creates its own knowledge data; it inherits no request state or token from Platform or Catalog. Readback by the different reader demonstrates the shared installation scope. Two extra requests cover oversized question/answer input without repeating the unit boundary matrix. Its environment link reuses shared infrastructure without adding knowledge concepts there. The module's `assert-persistence.sh` verifies OpenAPI route presence, the exact three-column schema, persisted data, both migrations, and the named length constraints.
 
 ```bash
 ./bin/check
@@ -130,4 +149,4 @@ Occurrences of `AiAgent`, `KnowledgeEntry`, `ai_knowledge`, and `ai.knowledge` o
 
 There are no AiAgent details in Host resources/exception handling, Core, Security, Modularity, generic adapters, or Catalog. Catalog's implementation and test suite remain unchanged.
 
-Deferred work includes search/pagination and input-size policy, knowledge editing/deletion, production permission provisioning, generic module database installation, dynamic plugins, and all real AI features. Existing platform seed reconciliation and concurrent bootstrap limitations are unchanged. No timestamps, metadata, or additional fields are added to anticipate those features.
+Deferred work includes search/pagination, knowledge editing/deletion, production permission provisioning, generic module database installation, dynamic plugins, and all real AI features. MCP would be a later transport adapter and must preserve the same effective identity, permissions, validation, and installation scope rather than bypass API controls. Existing platform seed reconciliation and concurrent bootstrap limitations are unchanged. No timestamps, metadata, or additional fields are added to anticipate those features.

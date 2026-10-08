@@ -18,7 +18,7 @@ The reproducible validation flow for the platform foundation uses one command:
 ./bin/check
 ```
 
-The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all platform and module Bruno scenarios (27 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
+The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all platform and module Bruno scenarios (29 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
 
 The helper scripts are:
 
@@ -113,6 +113,6 @@ Create Domain, Application, Infrastructure, Http, and Module projects under `src
 
 ## AiAgent 0.1
 
-The independent AiAgent module stores `KnowledgeEntry` (`Id`, `Question`, `Answer`) in its own database/table. It exposes `POST /api/ai/knowledge` and `GET /api/ai/knowledge/{id}`, protected by `ai.knowledge.write` and `ai.knowledge.read`. No AI provider or search is connected. See [the module architecture, setup for existing database volumes, and future roadmap](docs/ai-agent.md).
+AiAgent currently provides a preparatory knowledge base shared by the installation, with permission-protected creation/readback. No AI provider or search is connected. See [the module decisions, Unicode limits, migration requirements, and future roadmap](docs/ai-agent.md).
 
 Run its independent HTTP suite with `./bin/bruno modules/ai-agent`. `./bin/check` includes all three suites and all module tests.

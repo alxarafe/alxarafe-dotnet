@@ -12,7 +12,13 @@ public sealed class AiAgentDbContext(DbContextOptions<AiAgentDbContext> options)
     {
         modelBuilder.Entity<KnowledgeEntryRow>(entity =>
         {
-            entity.ToTable("ai_knowledge");
+            entity.ToTable("ai_knowledge", table =>
+            {
+                table.HasCheckConstraint("CK_ai_knowledge_Question_Length",
+                    $"char_length(\"Question\") BETWEEN 1 AND {KnowledgeEntry.QuestionMaxLength}");
+                table.HasCheckConstraint("CK_ai_knowledge_Answer_Length",
+                    $"char_length(\"Answer\") BETWEEN 1 AND {KnowledgeEntry.AnswerMaxLength}");
+            });
             entity.HasKey(entry => entry.Id);
             entity.Property(entry => entry.Id).ValueGeneratedNever();
             entity.Property(entry => entry.Question).IsRequired();

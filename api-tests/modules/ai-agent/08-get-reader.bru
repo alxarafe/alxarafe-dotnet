@@ -1,5 +1,5 @@
 meta {
-  name: Reader reads persisted knowledge
+  name: Reader reads knowledge shared across the installation
   type: http
   seq: 8
 }
@@ -16,5 +16,7 @@ auth:bearer {
 
 assert {
   res.status: eq 200
+  res.body.id: eq {{knowledgeId}}
+  res.body.question: eq {{knowledgeQuestion}}
   res.body.answer: eq Bruno knowledge answer
 }

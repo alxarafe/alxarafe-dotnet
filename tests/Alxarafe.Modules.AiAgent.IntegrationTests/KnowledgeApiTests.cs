@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.AiAgent.Application;
+using Alxarafe.Modules.AiAgent.Domain;
 using Alxarafe.Modules.AiAgent.Infrastructure;
 using Alxarafe.Modules.AiAgent.ModuleDefinition;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -45,7 +46,7 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
     }
 
     [Fact]
-    public async Task WriterCanPersistKnowledgeAndReaderCanReadButCannotWrite()
+    public async Task KnowledgeIsSharedAcrossInstallationForAuthorizedReaders()
     {
         RequireIsolation();
         using var writer = await CreateAuthenticatedClientAsync("ai-writer@example.test", "Creator_dev_only_123!");
@@ -58,6 +59,7 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
         Assert.Equal($"/api/ai/knowledge/{entry.Id}", response.Headers.Location?.OriginalString);
 
         using var reader = await CreateAuthenticatedClientAsync("ai-reader@example.test", "Reader_dev_only_123!");
+        // Reader is a different user: read permission applies to the whole installation.
         var read = await reader.GetAsync(response.Headers.Location);
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         Assert.Equal(entry, await read.Content.ReadFromJsonAsync<KnowledgeEntryDto>());
@@ -124,18 +126,77 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
     }
 
     [Fact]
-    public async Task InitialMigrationMatchesModelAndIsIdempotent()
+    public async Task MigrationsMatchModelAndAreIdempotent()
     {
         RequireIsolation();
         // Starting this fixture applies the module's migration.
         using var client = factory.CreateClient();
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AiAgentDbContext>();
-        Assert.Equal(["202610060001_InitialKnowledge"], await db.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610060001_InitialKnowledge", "20261008000100_KnowledgeTextLimits"], await db.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
         await db.Database.MigrateAsync();
-        Assert.Equal(["202610060001_InitialKnowledge"], await db.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610060001_InitialKnowledge", "20261008000100_KnowledgeTextLimits"], await db.Database.GetAppliedMigrationsAsync());
+    }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("\U0001F600")]
+    public async Task ExactScalarLimitsAreNormalizedPersistedAndShared(string scalar)
+    {
+        RequireIsolation();
+        using var writer = await CreateAuthenticatedClientAsync("ai-writer@example.test", "Creator_dev_only_123!");
+        var question = string.Concat(Enumerable.Repeat(scalar, KnowledgeEntry.QuestionMaxLength));
+        var answer = string.Concat(Enumerable.Repeat(scalar, KnowledgeEntry.AnswerMaxLength));
+        var response = await writer.PostAsJsonAsync("/api/ai/knowledge", new { question = $"  {question}  ", answer = $"\t{answer}\n" });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var entry = await response.Content.ReadFromJsonAsync<KnowledgeEntryDto>();
+        Assert.NotNull(entry);
+        Assert.Equal(question, entry.Question);
+        Assert.Equal(answer, entry.Answer);
+        using var reader = await CreateAuthenticatedClientAsync("ai-reader@example.test", "Reader_dev_only_123!");
+        var read = await reader.GetAsync(response.Headers.Location);
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        Assert.Equal(entry, await read.Content.ReadFromJsonAsync<KnowledgeEntryDto>());
+        await using var scope = factory.Services.CreateAsyncScope();
+        var stored = await scope.ServiceProvider.GetRequiredService<AiAgentDbContext>().Knowledge.AsNoTracking().SingleAsync(row => row.Id == entry.Id);
+        Assert.Equal(question, stored.Question);
+        Assert.Equal(answer, stored.Answer);
+    }
+
+    [Theory]
+    [InlineData(true, "a", "es")]
+    [InlineData(true, "a", "en")]
+    [InlineData(false, "a", "es")]
+    [InlineData(false, "a", "en")]
+    [InlineData(true, "\U0001F600", "es")]
+    [InlineData(true, "\U0001F600", "en")]
+    [InlineData(false, "\U0001F600", "es")]
+    [InlineData(false, "\U0001F600", "en")]
+    public async Task ExcessTextReturnsLocalizedValidationProblemWithoutPersistence(bool questionIsTooLong, string scalar, string language)
+    {
+        RequireIsolation();
+        using var client = await CreateAuthenticatedClientAsync("ai-writer@example.test", "Creator_dev_only_123!");
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AiAgentDbContext>();
+        var before = await db.Knowledge.CountAsync();
+        var text = string.Concat(Enumerable.Repeat(scalar, (questionIsTooLong ? KnowledgeEntry.QuestionMaxLength : KnowledgeEntry.AnswerMaxLength) + 1));
+        var response = await client.PostAsJsonAsync("/api/ai/knowledge", new
+        {
+            question = questionIsTooLong ? text : "Question",
+            answer = questionIsTooLong ? "Answer" : text
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(400, problem.GetProperty("status").GetInt32());
+        Assert.Equal("validation_error", problem.GetProperty("code").GetString());
+        Assert.Equal("https://alxarafe.dev/problems/validation_error", problem.GetProperty("type").GetString());
+        Assert.Equal(language == "es" ? "La solicitud contiene datos no válidos." : "The request contains invalid data.", problem.GetProperty("title").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+        Assert.Equal(before, await db.Knowledge.CountAsync());
     }
 
     private async Task<HttpClient> CreateAuthenticatedClientAsync(string email, string password)

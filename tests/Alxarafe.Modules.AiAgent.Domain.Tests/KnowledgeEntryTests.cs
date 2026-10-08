@@ -44,4 +44,72 @@ public sealed class KnowledgeEntryTests
     {
         Assert.Throws<ArgumentException>(() => KnowledgeEntry.Rehydrate(Guid.Empty, "Question", "Answer"));
     }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("\U0001F600")]
+    public void CreateAcceptsExactScalarLimitsAfterTrimming(string scalar)
+    {
+        var question = string.Concat(Enumerable.Repeat(scalar, 1000));
+        var answer = string.Concat(Enumerable.Repeat(scalar, 20000));
+        var entry = KnowledgeEntry.Create($"  {question}  ", $"\t{answer}\n");
+        Assert.Equal(question, entry.Question);
+        Assert.Equal(answer, entry.Answer);
+    }
+
+    [Theory]
+    [InlineData(true, "a")]
+    [InlineData(false, "a")]
+    [InlineData(true, "\U0001F600")]
+    [InlineData(false, "\U0001F600")]
+    public void CreateRejectsOneScalarBeyondEachLimit(bool questionIsTooLong, string scalar)
+    {
+        var text = string.Concat(Enumerable.Repeat(scalar, questionIsTooLong ? 1001 : 20001));
+        var exception = Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(
+            questionIsTooLong ? text : "Question", questionIsTooLong ? "Answer" : text));
+        Assert.Equal(questionIsTooLong ? "question" : "answer", exception.ParamName);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RehydrateEnforcesTheSameLengthInvariants(bool questionIsTooLong)
+    {
+        var text = new string('a', questionIsTooLong ? 1001 : 20001);
+        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Rehydrate(Guid.NewGuid(),
+            questionIsTooLong ? text : "Question", questionIsTooLong ? "Answer" : text));
+    }
+
+    [Fact]
+    public void CreatePreservesInteriorWhitespaceAndCase()
+    {
+        var entry = KnowledgeEntry.Create("  A  Question\tHere  ", "\nAn  Answer\nHere\n");
+        Assert.Equal("A  Question\tHere", entry.Question);
+        Assert.Equal("An  Answer\nHere", entry.Answer);
+    }
+
+    [Fact]
+    public void CreateTrimsUnicodeWhitespaceBeforeValidation()
+    {
+        var entry = KnowledgeEntry.Create("\u2003Question\u2003", "\u2003Answer\u2003");
+        Assert.Equal("Question", entry.Question);
+        Assert.Equal("Answer", entry.Answer);
+        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create("\u2003", "Answer"));
+    }
+
+    [Fact]
+    public void CombiningMarksCountSeparatelyWithoutUnicodeNormalization()
+    {
+        var question = string.Concat(Enumerable.Repeat("e\u0301", 500));
+        Assert.Equal(question, KnowledgeEntry.Create(question, "Answer").Question);
+        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(question + "e", "Answer"));
+    }
+
+    [Fact]
+    public void CreateRejectsUnpairedSurrogates()
+    {
+        var invalid = new string('\uD800', 1);
+        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(invalid, "Answer"));
+        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create("Question", invalid));
+    }
 }
