@@ -6,6 +6,7 @@ using Alxarafe.Modules.AiAgent.ModuleDefinition;
 using Alxarafe.Modules.Catalog.ModuleDefinition;
 using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
@@ -73,7 +74,12 @@ await SecuritySeed.InitializeAsync(app.Services, app.Environment);
 await app.Services.GetRequiredService<ModuleRuntime>().InitializeAsync(app.Services);
 app.MapOpenApi();
 AuthEndpoints.Map(app);
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    // Contractual HTTP liveness must not run database or module checks.
+    Predicate = _ => false,
+    ResponseWriter = (context, _) => context.Response.WriteAsJsonAsync(new { status = "ok" })
+}).AllowAnonymous();
 app.MapAlxarafeModuleEndpoints();
 app.Run();
 

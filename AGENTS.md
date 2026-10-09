@@ -43,3 +43,17 @@ Never commit credentials, tokens, connection strings, or machine-specific settin
 ## Abstraction Guidelines
 
 Before introducing a custom abstraction, check whether .NET or ASP.NET Core already provides a suitable native capability. Add a new layer only when it delivers concrete decoupling, modularity, or meaningful ergonomics; document that benefit briefly in the code or architectural notes. Prefer direct, idiomatic framework APIs over wrappers that merely rename existing types or operations.
+
+## Shared HTTP Contract
+
+OpenAPI and the sole shared conformance Bruno collection belong to erbas-contract.
+This backend cannot change their observable behavior unilaterally. The public
+`/health` endpoint is HTTP process liveness only: 200 application/json with exactly
+`{"status":"ok"}`, independent of database, module or external-service checks.
+
+`contract.revision` pins the explicit unreleased contract checkout. `./bin/check`
+requires `ERBAS_CONTRACT_DIR`, verifies its exact clean revision while preserving
+ignored files, and invokes its public `bin/test` on the existing validation Docker
+network. Never assume a sibling path, clone a contract from the runner, or copy
+its OpenAPI/Bruno into this backend. Local and CI validation must use the same
+pinned revision and fail if shared-contract conformance fails.

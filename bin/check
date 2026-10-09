@@ -4,6 +4,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+if [[ -z "${ERBAS_CONTRACT_DIR:-}" || ! -d "$ERBAS_CONTRACT_DIR" ]]; then
+    echo "ERROR: ERBAS_CONTRACT_DIR must explicitly name the pinned contract checkout" >&2
+    exit 2
+fi
+CONTRACT_DIR="$(cd "$ERBAS_CONTRACT_DIR" && pwd -P)"
+contract_revision=$(cat contract.revision)
+contract_root=$(git -C "$CONTRACT_DIR" rev-parse --show-toplevel)
+contract_head=$(git -C "$CONTRACT_DIR" rev-parse HEAD)
+contract_status=$(GIT_OPTIONAL_LOCKS=0 git -C "$CONTRACT_DIR" status --porcelain=v1 --untracked-files=all)
+if [[ ! "$contract_revision" =~ ^[0-9a-f]{40}$ ]] ||
+    [[ "$contract_root" != "$CONTRACT_DIR" ]] ||
+    [[ "$contract_head" != "$contract_revision" ]] ||
+    [[ -n "$contract_status" ]] ||
+    [[ ! -x "$CONTRACT_DIR/bin/test" ]]; then
+    echo "ERROR: contract checkout must be clean and match contract.revision" >&2
+    exit 2
+fi
+
 source ./bin/validation-db
 
 cleanup() {
@@ -38,7 +56,16 @@ echo "==> Running .NET restore, build, and tests"
 ./bin/test --prepared
 
 echo "==> Starting isolated validation Host"
-docker compose up -d --wait validation-app
+docker compose up -d --wait --wait-timeout 120 validation-app
+
+echo "==> Verifying the pinned shared HTTP contract"
+validation_container=$(docker compose ps --quiet validation-app)
+validation_network=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' "$validation_container")
+if [[ -z "$validation_network" || "$validation_network" == *$'\n'* ]]; then
+    echo "ERROR: validation Host must have exactly one isolated Docker network" >&2
+    exit 1
+fi
+"$CONTRACT_DIR/bin/test" --network "$validation_network" http://validation-app:8080
 
 echo "==> Checking health endpoint from the validation network"
 docker compose exec -T validation-app curl --fail --silent --show-error http://localhost:8080/health >/dev/null

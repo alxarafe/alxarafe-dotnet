@@ -9,7 +9,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
+      ERBAS_CONTRACT_DIR: ${{ github.workspace }}/erbas-contract
     steps:
       - uses: actions/checkout@v4
-      - name: Validate platform and module suites
+        with:
+          path: alxarafe-dotnet
+      - uses: actions/checkout@v4
+        with:
+          repository: alxarafe/erbas-contract
+          ref: 3ceade3a19a2545545cf58a2eb027d587554aac0
+          path: erbas-contract
+      - name: Validate native, module and shared-contract suites
+        working-directory: alxarafe-dotnet
         run: ./bin/check

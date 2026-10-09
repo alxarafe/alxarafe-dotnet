@@ -15,10 +15,12 @@ This experimental foundation uses .NET 10, ASP.NET Core Minimal APIs, EF Core, P
 The reproducible validation flow for the platform foundation uses one command:
 
 ```bash
-./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 ```
 
-The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all platform and module Bruno scenarios (33 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
+The host uses Git, Bash, Docker and Docker Compose, plus the Linux fixture utilities listed in [API tests](api-tests/README.md). It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, shared HTTP conformance, local OpenAPI, all platform and module Bruno scenarios (33 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
+
+`contract.revision` pins the unreleased [ERBAS shared contract](https://github.com/alxarafe/erbas-contract/tree/3ceade3a19a2545545cf58a2eb027d587554aac0). Supply its separate clean checkout explicitly through `ERBAS_CONTRACT_DIR`; ignored local files are preserved. Shared OpenAPI and Bruno belong to erbas-contract and cannot be changed unilaterally by .NET. `bin/check` invokes that checkout's public `bin/test` against `http://validation-app:8080` on the existing Docker network, with no additional published port. A conformance failure fails the full validation, locally and in CI.
 
 The helper scripts are:
 
@@ -43,13 +45,14 @@ URLs and does not require host port 48081. Dev Container forwarding of 8080 is
 disabled because Compose owns the publication. See the
 [shared port convention](https://github.com/alxarafe/erbas-contract/blob/main/docs/development-ports.md).
 
-The current `/health` response uses ASP.NET Core's health-check representation.
-Shared JSON conformance (`{"status":"ok"}`) is known debt for CONTRACT-001C;
-PLATFORM-001 preserves this behavior and checks HTTP 200 and existing validation.
+The public `/health` endpoint retains ASP.NET Core Health Checks and returns HTTP
+200 application/json with exactly `{"status":"ok"}`. It probes HTTP process
+liveness after startup, independently of PostgreSQL, modules or external services.
 
 - From the host: `http://127.0.0.1:48081`.
 - Inside the Docker network: `http://app:8080`.
 - The health endpoint from the host is `http://127.0.0.1:48081/health`.
+- Health inside Docker is `http://app:8080/health` (validation: `http://validation-app:8080/health`).
 - OpenAPI from the host is `http://127.0.0.1:48081/openapi/v1.json`.
 
 ## Linux development with Docker only
