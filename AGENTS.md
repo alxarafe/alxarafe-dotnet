@@ -2,7 +2,11 @@
 
 ## Project Structure & Module Organization
 
-This repository is currently an empty .NET workspace: no solution, project, source, test, or asset files are checked in yet. When adding implementation, place production code in `src/` (ideally one directory per project), automated tests in `tests/`, and shared documentation or static assets in `docs/` and `assets/`. Keep solution files and repository-wide build configuration at the root. Use clear project names such as `src/Alxarafe.Api/` and `tests/Alxarafe.Api.Tests/`.
+This repository implements a .NET 10/ASP.NET Core modular platform, including
+shared Health and AUTH-001 login, authorization, Catalog and AiAgent. Production
+code lives in `src/`, automated tests in `tests/`, and documentation in `docs/`.
+Keep solution files and repository-wide build configuration at the root and use
+clear project names consistent with the existing modules.
 
 ## Build, Test, and Development Commands
 
@@ -47,7 +51,11 @@ publication or deployment; each requires separate express authorization.
 
 ## Commit & Pull Request Guidelines
 
-No project Git history is available yet, so no existing commit convention can be inferred. Use short imperative commit subjects, preferably scoped when useful (for example, `api: add health endpoint`). Pull requests should explain the change and validation performed, link related issues, call out configuration or migration steps, and include screenshots or sample requests when user-facing behavior changes.
+Use short imperative commit subjects consistent with repository history,
+preferably scoped when useful (for example, `api: add health endpoint`). Pull
+requests should explain the change and validation performed, link related issues,
+call out configuration or migration steps, and include screenshots or sample
+requests when user-facing behavior changes.
 
 ## Security & Configuration Tips
 
@@ -77,3 +85,48 @@ ignored files, and invokes its public `bin/test` on the existing validation Dock
 network. Never assume a sibling path, clone a contract from the runner, or copy
 its OpenAPI/Bruno into this backend. Local and CI validation must use the same
 pinned revision and fail if shared-contract conformance fails.
+
+## Documentation impact review
+
+After implementation, validation and scope review, review whether the task
+changes public behavior, architecture, configuration, usage, development
+workflow, API capabilities, repository status, or documented limitations.
+If it affects any of these areas, update the relevant README and documentation
+as part of the same task before its final local commit. If it does not, do not
+modify documentation merely to record that the review occurred.
+
+Keep README a brief landing page covering current capabilities, how to try them,
+ecosystem relationships, verifiable badges and principal limitations. Keep
+detailed architecture, decisions, processes, configuration, operations and
+verification evidence in docs/; preserve historical reports as historical.
+
+When a task changes a capability or status shared across the ERBAS ecosystem,
+review status references and badges in related repository READMEs. Keep CI,
+local contract conformance and full-stack demo verification distinct. If other
+repositories need updates, handle them as an independent coordinated task
+immediately after the functional change is merged, preferably before the next
+major feature. Do not mix those updates into another repository's functional
+commit or leave them indefinitely pending; obtain the required task approval.
+
+The lifecycle is: approve task, implement, validate, review scope, review
+documentation impact, update relevant docs if needed, local atomic commit,
+then obtain approval for the next task. Existing separate authorization rules
+for push, PR, merge, release, publication and deployment remain unchanged.
+
+## Engineering simplicity
+
+Prefer simple, explicit and maintainable solutions.
+
+Apply these principles:
+
+- **KISS** — keep solutions as simple as the requirements allow.
+- **DRY** — avoid duplicated logic and duplicated sources of truth.
+- **YAGNI** — do not build abstractions, extension points or infrastructure without a concrete current need.
+- **Occam's razor** — when several solutions satisfy the requirements equally well, prefer the one with fewer concepts, dependencies and moving parts.
+- **Reuse before invention** — prefer existing mechanisms, conventions and components before introducing new ones.
+
+Do not introduce layers, helpers, factories, interfaces, services or abstractions merely for architectural symmetry or possible future use.
+
+Simplicity must not compromise correctness, security, performance, clarity, testability or contractual behavior.
+
+When duplication is small and removing it would create a more complex abstraction, prefer the clearer solution over mechanically applying DRY.
