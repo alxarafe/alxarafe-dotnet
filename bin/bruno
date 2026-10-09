@@ -41,6 +41,9 @@ else
 fi
 
 for directory in "${suites[@]}"; do
+    if [[ -f "$directory/test-prepare.sh" ]]; then
+        docker compose run --rm --no-deps app bash "$directory/test-prepare.sh"
+    fi
     if [[ -f "$directory/prepare.sh" ]]; then
         bash "$directory/prepare.sh"
     fi
