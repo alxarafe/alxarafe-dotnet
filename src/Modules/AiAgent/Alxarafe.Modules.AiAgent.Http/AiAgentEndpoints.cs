@@ -15,7 +15,12 @@ public static class AiAgentEndpoints
         {
             var entry = await handler.HandleAsync(new CreateKnowledgeEntryCommand(request.Question, request.Answer), ct);
             return Results.Created($"/api/ai/knowledge/{entry.Id}", entry);
-        }).RequireAuthorization(AiAgentPermissions.KnowledgeWrite);
+        }).RequireAuthorization(AiAgentPermissions.KnowledgeWrite)
+            .Produces<KnowledgeEntryDto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status415UnsupportedMediaType);
         group.MapGet("/{id:guid}", async (Guid id, GetKnowledgeEntryByIdHandler handler, IStringLocalizer<AiAgentMessages> localizer, CancellationToken ct) =>
         {
             var entry = await handler.HandleAsync(id, ct);
@@ -24,7 +29,11 @@ public static class AiAgentEndpoints
                 ? Results.Problem(statusCode: StatusCodes.Status404NotFound, title: localizer[code].Value,
                     type: $"https://alxarafe.dev/problems/{code}", extensions: new Dictionary<string, object?> { ["code"] = code })
                 : Results.Ok(entry);
-        }).RequireAuthorization(AiAgentPermissions.KnowledgeRead);
+        }).RequireAuthorization(AiAgentPermissions.KnowledgeRead)
+            .Produces<KnowledgeEntryDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }
 

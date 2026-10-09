@@ -55,7 +55,11 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.SupportedCultures = supportedCultures;
     options.SupportedUICultures = supportedCultures;
 });
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecurityTransformer>();
+    options.AddOperationTransformer<BearerSecurityTransformer>();
+});
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();

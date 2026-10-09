@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Alxarafe.Modules.AiAgent.IntegrationTests;
 
-public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class KnowledgeApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     private static void RequireIsolation()
     {
@@ -43,6 +43,7 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
             ? await client.GetAsync($"/api/ai/knowledge/{Guid.NewGuid()}")
             : await client.PostAsJsonAsync("/api/ai/knowledge", new { question = "Question", answer = "Answer" });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        await AssertStatusProblemAsync(response, 401);
     }
 
     [Fact]
@@ -65,6 +66,7 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
         Assert.Equal(entry, await read.Content.ReadFromJsonAsync<KnowledgeEntryDto>());
         var forbidden = await reader.PostAsJsonAsync("/api/ai/knowledge", new { question = "Denied", answer = "Denied" });
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        await AssertStatusProblemAsync(forbidden, 403);
 
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AiAgentDbContext>();
@@ -82,7 +84,9 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
         var registration = await client.PostAsJsonAsync("/api/auth/register", new { email, password = "Password123" });
         registration.EnsureSuccessStatusCode();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync(client, email, "Password123"));
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/ai/knowledge/{Guid.NewGuid()}" )).StatusCode);
+        var read = await client.GetAsync($"/api/ai/knowledge/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.Forbidden, read.StatusCode);
+        await AssertStatusProblemAsync(read, 403);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/ai/knowledge", new { question = "Denied", answer = "Denied" })).StatusCode);
     }
 
@@ -120,6 +124,7 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
         var before = await db.Knowledge.CountAsync();
         var response = await client.PostAsJsonAsync("/api/ai/knowledge", new { question, answer });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("validation_error", problem.GetProperty("code").GetString());
         Assert.Equal(before, await db.Knowledge.CountAsync());
@@ -270,6 +275,7 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
         Assert.Equal(HttpStatusCode.OK, (await reader.GetAsync(created.Headers.Location)).StatusCode);
         var denied = await writer.GetAsync(created.Headers.Location);
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        await AssertStatusProblemAsync(denied, 403);
         var body = await denied.Content.ReadAsStringAsync();
         Assert.DoesNotContain(entry.Question, body);
         Assert.DoesNotContain(entry.Answer, body);
@@ -307,4 +313,12 @@ public sealed class KnowledgeApiTests(WebApplicationFactory<Program> factory) : 
     }
 
     private sealed record TokenResponse(string AccessToken);
+
+    private static async Task AssertStatusProblemAsync(HttpResponseMessage response, int status)
+    {
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(status, problem.GetProperty("status").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+    }
 }
