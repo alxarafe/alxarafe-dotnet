@@ -59,7 +59,7 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     }
 
     [Fact]
-    public async Task SeededCreatorCanCreateAndReadItem()
+    public async Task LoginTokenWhenSeededCreatorAuthenticatesProtectedCreateAndRead()
     {
         RequireIsolation();
         using var client = factory.CreateClient();

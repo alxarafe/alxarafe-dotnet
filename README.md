@@ -40,9 +40,11 @@ Bruno-only result. The Java badge reports Java's own CI, which does not yet run
 shared Bruno.
 
 [contract.revision](contract.revision) pins an unpublished draft. Shared
-conformance covers `GET /health` returning exactly `{"status":"ok"}`; .NET's
-additional capabilities are outside that shared coverage. No contract release
-is published.
+conformance covers HTTP liveness and login defined by
+[AUTH-001](https://github.com/alxarafe/erbas-contract/blob/main/docs/auth-001.md).
+The sole shared Bruno collection lives in erbas-contract; registration and module
+behavior remain .NET-specific. Identity bearer tokens stay opaque and need not
+interoperate with Java. No contract release is published.
 
 Browse the [documentation index](docs/README.md) for architecture, decisions,
 API scenarios and the AiAgent roadmap.
