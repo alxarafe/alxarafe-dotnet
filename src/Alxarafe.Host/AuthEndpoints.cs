@@ -20,14 +20,8 @@ public static class AuthEndpoints
                     .ToDictionary(group => group.Key, group => group.Select(error => error.Description).ToArray()));
         }).WithTags("Authentication");
 
-        endpoints.MapPost("/api/auth/login", async (LoginRequest request, SignInManager<AlxarafeUser> signInManager) =>
-        {
-            signInManager.AuthenticationScheme = IdentityConstants.BearerScheme;
-            var result = await signInManager.PasswordSignInAsync(request.Email, request.Password, isPersistent: false, lockoutOnFailure: true);
-            return result.Succeeded ? Results.Empty : Results.Problem(statusCode: StatusCodes.Status401Unauthorized);
-        }).WithTags("Authentication");
+        LoginEndpoint.Map(endpoints);
     }
 }
 
 public sealed record RegisterRequest(string Email, string Password);
-public sealed record LoginRequest(string Email, string Password);

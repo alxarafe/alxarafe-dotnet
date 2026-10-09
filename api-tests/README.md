@@ -4,7 +4,7 @@ The independent collections complement .NET domain, architecture, and integratio
 
 ```text
 api-tests/
-    platform/                 # health, registration, login (3 requests)
+    platform/                 # health, registration (2 requests)
     modules/
         catalog/              # Catalog permissions and functionality (13 requests)
             assert-persistence.sh
@@ -16,9 +16,9 @@ api-tests/
 
 Each collection has its own `bruno.json`. The `environments` directories are relative symlinks to the shared environment, so the CLI and Bruno UI use the same base URL and test-only identity credentials without duplicated files. Shared infrastructure contains no module entity, error, or request state.
 
-Platform generates a unique registration email and verifies its own login. Catalog prepares reader and creator sessions explicitly in its collection, uses `readerToken` and `creatorToken`, and generates its own unique SKU. Create/read/duplicate scenarios use `itemId`/`sku` from Catalog's own create flow. No variable or token is inherited from another collection, so Catalog can run before or without Platform. Its local create/read ordering is intentional. The original 14 scenarios are preserved; two duplicate-item cases add localized 409 coverage. Missing-item cases also assert the Spanish/English titles.
+Platform generates a unique registration email. Shared login conformance belongs exclusively to the pinned erbas-contract AUTH-001 collection; the duplicated platform login request has been removed. Module login requests remain session setup for permission and functionality tests. Catalog prepares reader and creator sessions explicitly in its collection, uses `readerToken` and `creatorToken`, and generates its own unique SKU. Create/read/duplicate scenarios use `itemId`/`sku` from Catalog's own create flow. No variable or token is inherited from another collection, so Catalog can run before or without Platform. Its local create/read ordering is intentional. The original 14 scenarios are preserved; two duplicate-item cases add localized 409 coverage. Missing-item cases also assert the Spanish/English titles.
 
-Run all 33 requests without installing Bruno, Node.js, or the .NET SDK on the host:
+Run all 32 requests without installing Bruno, Node.js, or the .NET SDK on the host:
 
 ```bash
 ./bin/bruno
@@ -34,7 +34,7 @@ Run a single collection independently:
 
 `bin/bruno` provisions `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test`, starts the validation Host, runs the selected suites in separate CLI invocations, and removes the databases on exit. Development databases/volumes are preserved. The internal `--prepared` mode reuses the lifecycle managed by `bin/check`.
 
-`./bin/check` is the authoritative full validation entry point. It runs .NET tests, every module collection with a `bruno.json`, platform checks, and each module's `assert-persistence.sh`. Catalog owns its SQL and endpoint OpenAPI assertions; the global runner only orchestrates module scripts. Add new suites under `modules/<name>` with a `bruno.json` and a link to the shared environment. Keep any module-specific test setup and assertions inside that suite.
+`./bin/check` is the authoritative full validation entry point. It supplies AUTH-001 with the existing reader fixture email from the shared environment and password from the running Testing Host configuration (`SecuritySeed__ReaderPassword`). `SecuritySeed` provisions that identity through `DevelopmentUsersOptions` before readiness, only in Testing/Development. No production account is introduced. It runs .NET tests, every module collection with a `bruno.json`, platform checks, and each module's `assert-persistence.sh`. Catalog owns its SQL and endpoint OpenAPI assertions; the global runner only orchestrates module scripts. Add new suites under `modules/<name>` with a `bruno.json` and a link to the shared environment. Keep any module-specific test setup and assertions inside that suite.
 
 AiAgent prepares its own `ai-reader`/`ai-writer` sessions, `aiReaderToken`/`aiWriterToken`, and knowledge data. It reuses only shared test credentials and the base URL. Its assertions cover unauthenticated access, read/write permissions, installation-wide creation/readback, invalid input and oversized text, Spanish/English 404 responses, the exact three-column schema, migration history, and named length constraints. See [the module decisions](../docs/ai-agent.md) for the Unicode length semantics.
 

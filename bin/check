@@ -65,6 +65,11 @@ if [[ -z "$validation_network" || "$validation_network" == *$'\n'* ]]; then
     echo "ERROR: validation Host must have exactly one isolated Docker network" >&2
     exit 1
 fi
+# Reuse the existing reader fixture. SecuritySeed provisions it before Host readiness.
+# Read the password from the running Testing configuration, never repeat its literal.
+ERBAS_TEST_EMAIL=$(awk '$1 == "readerEmail:" { print $2 }' api-tests/shared/environments/docker.bru)
+ERBAS_TEST_PASSWORD=$(docker compose exec -T validation-app printenv SecuritySeed__ReaderPassword)
+export ERBAS_TEST_EMAIL ERBAS_TEST_PASSWORD
 "$CONTRACT_DIR/bin/test" --network "$validation_network" http://validation-app:8080
 
 echo "==> Checking health endpoint from the validation network"
@@ -90,7 +95,8 @@ done
 
 echo "==> Checking validation application logs for known sensitive values"
 app_logs="$(docker compose logs --no-color validation-app)"
-if grep -Fq 'Reader_dev_only_123!' <<<"$app_logs" || \
+if grep -Fq "$ERBAS_TEST_PASSWORD" <<<"$app_logs" || \
+   grep -Fq 'Reader_dev_only_123!' <<<"$app_logs" || \
    grep -Fq 'Creator_dev_only_123!' <<<"$app_logs" || \
    grep -Fq 'Password123' <<<"$app_logs" || \
    grep -Eiq 'accessToken|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' <<<"$app_logs"; then
