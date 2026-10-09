@@ -1,0 +1,25 @@
+meta {
+  name: Missing knowledge in English
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/ai/knowledge/00000000-0000-0000-0000-000000000001
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiReaderToken}}
+}
+
+headers {
+  Accept-Language: en
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq ai.knowledge_not_found
+  res.body.title: eq The requested knowledge entry was not found.
+}

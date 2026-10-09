@@ -25,4 +25,5 @@ docker compose run --rm --no-deps \
     -e ASPNETCORE_ENVIRONMENT=Testing \
     -e "ConnectionStrings__Catalog=Host=postgres;Port=5432;Database=$validation_catalog_db;Username=alxarafe;Password=alxarafe_dev_only" \
     -e "ConnectionStrings__Security=Host=postgres;Port=5432;Database=$validation_security_db;Username=alxarafe;Password=alxarafe_dev_only" \
+    -e "ConnectionStrings__AiAgent=Host=postgres;Port=5432;Database=$validation_ai_db;Username=alxarafe;Password=alxarafe_dev_only" \
     app sh -c 'dotnet restore Alxarafe.sln && dotnet build Alxarafe.sln --no-restore && dotnet test Alxarafe.sln --no-build -m:1'

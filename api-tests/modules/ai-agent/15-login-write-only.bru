@@ -1,0 +1,27 @@
+meta {
+  name: Prepare a distinct writer without read permission
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "ai-write-only@example.test",
+    "password": "{{creatorPassword}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("aiWriteOnlyToken", res.body.accessToken)
+}
+
+assert {
+  res.status: eq 200
+  res.body.accessToken: isString
+}

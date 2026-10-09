@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Alxarafe.Modules.AiAgent.Infrastructure</AssemblyName>
+        <RootNamespace>Alxarafe.Modules.AiAgent.Infrastructure</RootNamespace>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Alxarafe.Modules.AiAgent.Application/Alxarafe.Modules.AiAgent.Application.csproj" />
+        <ProjectReference Include="../../../Alxarafe.EntityFrameworkCore/Alxarafe.EntityFrameworkCore.csproj" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    </ItemGroup>
+</Project>

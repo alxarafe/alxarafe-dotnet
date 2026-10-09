@@ -1,0 +1,25 @@
+meta {
+  name: Missing knowledge in Spanish
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/ai/knowledge/00000000-0000-0000-0000-000000000001
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiReaderToken}}
+}
+
+headers {
+  Accept-Language: es
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq ai.knowledge_not_found
+  res.body.title: eq No se encontró la entrada de conocimiento solicitada.
+}

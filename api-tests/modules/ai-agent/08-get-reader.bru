@@ -1,0 +1,22 @@
+meta {
+  name: Reader reads knowledge shared across the installation
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/ai/knowledge/{{knowledgeId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiReaderToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{knowledgeId}}
+  res.body.question: eq {{knowledgeQuestion}}
+  res.body.answer: eq Bruno knowledge answer
+}

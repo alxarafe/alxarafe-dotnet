@@ -1,0 +1,37 @@
+meta {
+  name: Knowledge OpenAPI describes the running API
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/openapi/v1.json
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("AiAgent advertises its actual success responses and bearer protection", function () {
+    const document = res.getBody();
+    const bearer = document.components.securitySchemes.Bearer;
+    expect(bearer.type).to.equal("http");
+    expect(bearer.scheme).to.equal("bearer");
+    expect(bearer.bearerFormat).to.equal(undefined);
+    const post = document.paths["/api/ai/knowledge"].post;
+    const get = document.paths["/api/ai/knowledge/{id}"].get;
+    expect(post.responses).to.not.have.property("200");
+    for (const [operation, status] of [[post, "201"], [get, "200"]]) {
+      expect(operation.security).to.deep.equal([{ Bearer: [] }]);
+      expect(operation.responses[status].content["application/json"].schema.$ref)
+        .to.equal("#/components/schemas/KnowledgeEntryDto");
+    }
+    expect(document.security || []).to.deep.equal([]);
+    for (const path of ["/api/auth/register", "/api/auth/login"]) {
+      expect(document.paths[path].post.security || []).to.deep.equal([]);
+    }
+  });
+}

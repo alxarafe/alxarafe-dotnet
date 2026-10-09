@@ -1,0 +1,27 @@
+meta {
+  name: Empty knowledge question is invalid
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/ai/knowledge
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiWriterToken}}
+}
+
+body:json {
+  {
+    "question": "",
+    "answer": "Invalid answer"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.code: eq validation_error
+}

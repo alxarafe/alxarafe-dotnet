@@ -1,0 +1,26 @@
+meta {
+  name: Reader cannot write knowledge
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/ai/knowledge
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiReaderToken}}
+}
+
+body:json {
+  {
+    "question": "Denied question",
+    "answer": "Denied answer"
+  }
+}
+
+assert {
+  res.status: eq 403
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Prepare AiAgent reader session
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "ai-reader@example.test",
+    "password": "{{readerPassword}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("aiReaderToken", res.body.accessToken)
+}
+
+assert {
+  res.status: eq 200
+  res.body.accessToken: isString
+}

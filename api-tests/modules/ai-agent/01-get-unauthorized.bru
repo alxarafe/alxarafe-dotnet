@@ -1,0 +1,15 @@
+meta {
+  name: Knowledge GET without authentication
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/ai/knowledge/00000000-0000-0000-0000-000000000001
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}

@@ -14,7 +14,7 @@ Platform and Host define contracts and mechanisms; modules implement or extend t
 Catalog.Domain <- Catalog.Application <- Catalog.Infrastructure
                                       <- Catalog.Http
 Catalog.Module composes both adapters and registers them
-Host explicitly discovers Catalog.Module (temporary static composition)
+Host explicitly discovers Catalog.Module and AiAgent.Module (temporary static composition)
 Host composes Identity and localization through platform APIs
 ```
 
@@ -30,14 +30,15 @@ Modules currently come from explicitly known assemblies:
 
 ```csharp
 builder.Services.AddAlxarafeModules(
-    typeof(CatalogModule).Assembly);
+    typeof(CatalogModule).Assembly,
+    typeof(AiAgentModule).Assembly);
 ```
 
 `AddAlxarafeModules` delegates to `ModuleBuilder` and `ModuleGraph`. `ModuleGraph` discovers exported implementations of `IAlxarafeModule` through reflection in those assemblies, constructs them, validates missing dependencies, and sorts them topologically, rejecting cycles. It does not load external assemblies or scan every assembly already loaded in the process.
 
-The only permitted Host-to-Catalog dependency is the project reference to `Alxarafe.Modules.Catalog.Module` and the entry type `CatalogModule` in `Program.cs` to select its assembly. This is temporary static composition, not permission to use other types from that assembly or any Application, Domain, Http, or Infrastructure types. Architecture tests check both compiled assembly/type references and source directives/resources. Framework assemblies may not reference any `Alxarafe.Modules.*` assembly.
+The only permitted Host-to-module dependencies are the project references to `Alxarafe.Modules.Catalog.Module` / `Alxarafe.Modules.AiAgent.Module` and their entry types `CatalogModule` / `AiAgentModule` in `Program.cs` to select its assembly. This is temporary static composition, not permission to use other types from that assembly or any Application, Domain, Http, or Infrastructure types. Architecture tests check both compiled assembly/type references and source directives/resources. Framework assemblies may not reference any `Alxarafe.Modules.*` assembly.
 
-Compose, `bin/test`, and `bin/validation-db` still name the two database connections and the fixed isolated database names. These are explicit deployment/test composition, not domain behavior. Catalog validates its own Testing connection before EF can use it; Host validates only the platform Security connection. Making deployment configuration and test database provisioning extensible is a future installation concern.
+Compose, `bin/test`, and `bin/validation-db` still name the three database connections and the fixed isolated database names. These are explicit deployment/test composition, not domain behavior. Catalog and AiAgent each validate their own Testing connection before EF can use it; Host validates only the platform Security connection. Making deployment configuration and test database provisioning extensible is a future installation concern.
 
 ## Module HTTP errors and localization
 
@@ -53,7 +54,7 @@ The platform handler handles only the existing transversal `ArgumentException` v
 
 Catalog contributes its reader/creator fixtures and permissions through native `IOptions<DevelopmentUsersOptions>` configuration. The small options data contract belongs to Security and decouples module fixture definitions from Identity persistence. `SecuritySeed` only provisions the supplied users/claims, and runs exclusively in Development or Testing. Catalog does not reference the security EF adapter; no module permissions or credentials are hardcoded in Host. Existing test users, claims, password overrides, and routes are preserved.
 
-The Bruno suites live under `api-tests/platform` (health and authentication) and `api-tests/modules/catalog` (permissions and Catalog scenarios). Each is a separate collection/runner invocation. Shared environment infrastructure has no Catalog entities, errors, or state. Catalog explicitly logs in its reader and creator, creates its own unique SKU, and uses separate token variables. Its create/read sequence is local to that suite; it never consumes a platform suite's runtime state. Module SQL/OpenAPI assertions live with that module. `bin/check` runs .NET tests, all Bruno suites, and module assertions; it remains the authoritative entry point.
+The Bruno suites live under `api-tests/platform` (health and authentication) and `api-tests/modules/catalog` (permissions and Catalog scenarios). Each is a separate collection/runner invocation. Shared environment infrastructure has no Catalog entities, errors, or state. Each module suite explicitly prepares its own sessions and test data. Catalog explicitly logs in its reader and creator, creates its own unique SKU, and uses separate token variables. Its create/read sequence is local to that suite; it never consumes a platform suite's runtime state. Module SQL/OpenAPI assertions live with that module. `bin/check` runs .NET tests, all Bruno suites, and module assertions; it remains the authoritative entry point.
 
 Health/registration/login .NET integration tests belong to `Alxarafe.Host.IntegrationTests`; Catalog API tests belong to `Alxarafe.Modules.Catalog.IntegrationTests`. Both use the isolated Testing Host. `bin/test` uses native MSBuild `-m:1` for test execution because each project bootstraps its own Host against the same ephemeral databases; their schema/seed initialization must not race. Neither suite depends on data produced by the other. Duplicate errors have Spanish, English, and default-language regression coverage, plus two Bruno scenarios.
 
@@ -117,3 +118,9 @@ There are no `sku` occurrences outside Catalog, Catalog tests, architecture boun
 No dynamic plugin loader, hot reload/unload, MediatR, AutoMapper/Mapster, new modularity framework, or new NuGet package is added. ASP.NET Core native services provide Identity bearer authentication, authorization policies, localization, ProblemDetails, and OpenAPI. PostgreSQL remains an adapter.
 
 The existing create use case checks SKU uniqueness before inserting. Concurrent inserts can still race and reach the database's unique constraint; mapping that persistence race into the semantic application exception is separate work. Development/test seeds add claims idempotently but do not reconcile revoked permissions, reset existing passwords, or provide production identity administration. Fixed test database provisioning and static module assembly selection remain until installation/activation policies are designed.
+
+## AiAgent 0.1
+
+[AiAgent](ai-agent.md) is a second independent module with the same five layers. It persists a three-field knowledge entry and exposes creation/retrieval by identifier with module-owned permissions and localized errors. No AI model is connected. There are no implementation dependencies between Catalog and AiAgent; both declare an empty module dependency list and can compose independently. Host only adds AiAgent's static entry assembly. The module owns its separate database, migration, tests, and Bruno suite.
+
+The future agent will call controlled capabilities exposed by owner modules through public contracts, respecting permissions, validation, audit, and sensitive-operation approval. It will not access sibling tables/contexts/repositories or generate free SQL. Generic AI-related platform contracts remain undecided and will be introduced only for real consumers; AiAgent is intended to remain an optional module/plugin. See its document for the conceptual roadmap and future plugin packaging.

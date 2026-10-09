@@ -18,7 +18,7 @@ The reproducible validation flow for the platform foundation uses one command:
 ./bin/check
 ```
 
-The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all platform and module Bruno scenarios (16 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test` and `alxarafe_security_test` databases in the existing PostgreSQL service and preserves development volumes.
+The host only needs Docker and Docker Compose. It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, health, OpenAPI, all platform and module Bruno scenarios (33 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
 
 The helper scripts are:
 
@@ -30,7 +30,7 @@ The helper scripts are:
 ./bin/down -v  # stops services and removes development volumes
 ```
 
-`./bin/test` creates two temporary databases (`alxarafe_test` and `alxarafe_security_test`) inside the Compose PostgreSQL container, runs the .NET tests against them, and drops them on exit. `./bin/check` retains them for the validation Host, Bruno, and SQL checks, then drops them even after failure. Development databases `alxarafe` and `alxarafe_security` are outside this flow.
+`./bin/test` creates three temporary databases (`alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test`) inside the Compose PostgreSQL container, runs the .NET tests against them, and drops them on exit. `./bin/check` retains them for the validation Host, Bruno, and SQL checks, then drops them even after failure. Development databases `alxarafe`, `alxarafe_security`, and `alxarafe_ai` are outside this flow.
 
 All validation entry points wait for PostgreSQL to be healthy (up to 120 seconds) before running `psql`. Its healthcheck uses TCP so a fresh volume cannot report readiness from the temporary Unix-socket server used during initialization. CI runs the same flow against a fresh Compose environment.
 
@@ -67,7 +67,7 @@ docker compose exec app dotnet build
 curl http://127.0.0.1:48081/health
 ```
 
-The PostgreSQL init script creates a separate `alxarafe_security` database. On a fresh environment, the app creates the Identity schema and applies the Catalog EF Core migration during startup.
+The PostgreSQL init script creates separate `alxarafe_security` and `alxarafe_ai` databases. On a fresh environment, the app creates the Identity schema and applies the Catalog EF Core migration during startup.
 
 Development seed users exist only in Development or Testing:
 
@@ -99,7 +99,7 @@ OpenAPI is available at `http://127.0.0.1:48081/openapi/v1.json`. Run all platfo
 ./bin/bruno
 ```
 
-The Docker runner uses the `docker` environment and reaches `validation-app`, which connects only to the temporary databases. The independent platform and Catalog suites cover authentication, 401/403, permissions, CRUD access, ProblemDetails, localization, and health.
+The Docker runner uses the `docker` environment and reaches `validation-app`, which connects only to the temporary databases. The independent platform, Catalog, and AiAgent suites cover authentication, 401/403, permissions, CRUD access, ProblemDetails, localization, and health.
 
 View logs with `docker compose logs -f app`. Stop with `docker compose down`; remove the development databases too with `docker compose down -v`.
 
@@ -110,3 +110,9 @@ View logs with `docker compose logs -f app`. Stop with `docker compose down`; re
 ## Adding a module
 
 Create Domain, Application, Infrastructure, Http, and Module projects under `src/Modules/<Name>/`. Implement `IAlxarafeModule`, expose only public contracts, and add the module assembly explicitly in Host. A module must never reach into another module’s Infrastructure; use public contracts or future public events.
+
+## AiAgent 0.1
+
+AiAgent currently provides a preparatory knowledge base shared by the installation, with permission-protected creation/readback. No AI provider or search is connected. See [the module decisions, Unicode limits, migration requirements, and future roadmap](docs/ai-agent.md).
+
+Run its independent HTTP suite with `./bin/bruno modules/ai-agent`. `./bin/check` includes all three suites and all module tests.

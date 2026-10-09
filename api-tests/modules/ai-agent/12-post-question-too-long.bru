@@ -1,0 +1,37 @@
+meta {
+  name: Question beyond 1000 Unicode scalar values is rejected
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/ai/knowledge
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiWriterToken}}
+}
+
+headers {
+  Accept-Language: en
+}
+
+body:json {
+  {
+    "question": "{{oversizedQuestion}}",
+    "answer": "Answer"
+  }
+}
+
+script:pre-request {
+  bru.setVar("oversizedQuestion", "a".repeat(1001))
+}
+
+assert {
+  res.status: eq 400
+  res.body.status: eq 400
+  res.body.code: eq validation_error
+  res.body.title: eq The request contains invalid data.
+}

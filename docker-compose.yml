@@ -26,6 +26,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=alxarafe;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security;Username=alxarafe;Password=alxarafe_dev_only
+      ConnectionStrings__AiAgent: Host=postgres;Port=5432;Database=alxarafe_ai;Username=alxarafe;Password=alxarafe_dev_only
       SecuritySeed__ReaderPassword: Reader_dev_only_123!
       SecuritySeed__CreatorPassword: Creator_dev_only_123!
     ports:
@@ -51,6 +52,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Testing
       ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security_test;Username=alxarafe;Password=alxarafe_dev_only
+      ConnectionStrings__AiAgent: Host=postgres;Port=5432;Database=alxarafe_ai_test;Username=alxarafe;Password=alxarafe_dev_only
       SecuritySeed__ReaderPassword: Reader_dev_only_123!
       SecuritySeed__CreatorPassword: Creator_dev_only_123!
     command: ["dotnet", "run", "--no-launch-profile", "--no-build", "--project", "src/Alxarafe.Host/Alxarafe.Host.csproj", "--urls", "http://0.0.0.0:8080"]

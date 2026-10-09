@@ -1,0 +1,37 @@
+meta {
+  name: Answer beyond 20000 Unicode scalar values is rejected
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/ai/knowledge
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{aiWriterToken}}
+}
+
+headers {
+  Accept-Language: es
+}
+
+body:json {
+  {
+    "question": "Question",
+    "answer": "{{oversizedAnswer}}"
+  }
+}
+
+script:pre-request {
+  bru.setVar("oversizedAnswer", "\u{1F600}".repeat(20001))
+}
+
+assert {
+  res.status: eq 400
+  res.body.status: eq 400
+  res.body.code: eq validation_error
+  res.body.title: eq La solicitud contiene datos no válidos.
+}
