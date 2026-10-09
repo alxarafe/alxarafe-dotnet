@@ -25,6 +25,26 @@ Use four spaces for indentation and follow standard C# conventions: `PascalCase`
 
 Use the repository’s selected .NET test framework (typically xUnit or NUnit) and keep tests beside the behavior they verify under `tests/`. Name test classes after the system under test and test methods in a descriptive form such as `Method_WhenCondition_ExpectedResult`. Add regression coverage for bug fixes and run `dotnet test` locally before opening a pull request.
 
+## Task lifecycle
+
+Follow this order for each task: obtain explicit approval, implement only its
+scope, pass applicable validations, review the diff, close it with a local atomic
+commit, then request and obtain approval before starting the next task.
+
+Task approval also authorizes staging and the final local commit once the task
+is implemented, validated and its diff contains only that task's changes. No
+second authorization is required solely for that commit. Use one atomic commit,
+or the minimum number its structure requires, with clear messages following this
+repository's commit guidelines. Preserve all other repository-specific rules.
+
+Do not commit incomplete tasks or tasks with failed validations. Correct and
+revalidate defects found before closing a task. Do not start the next task with
+uncommitted changes from the previous one. If a task exceptionally starts with
+another task's pending changes, separate their commits correctly before continuing.
+
+Task approval does not authorize push, PR creation, merge, tag, release,
+publication or deployment; each requires separate express authorization.
+
 ## Commit & Pull Request Guidelines
 
 No project Git history is available yet, so no existing commit convention can be inferred. Use short imperative commit subjects, preferably scoped when useful (for example, `api: add health endpoint`). Pull requests should explain the change and validation performed, link related issues, call out configuration or migration steps, and include screenshots or sample requests when user-facing behavior changes.
