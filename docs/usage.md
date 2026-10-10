@@ -117,8 +117,11 @@ from the shared contract; EnsureCreated is not treated as an upgrade mechanism.
 
 Configure a dedicated development administrator explicitly with
 `ERBAS_CORE_ADMIN_PASSWORD` before `./bin/up`; no administrator password is supplied
-by default. The email defaults to `admin@example.test` (`SecuritySeed:AdminEmail`
-can override it through controlled host configuration). Provisioning runs only in
+by default. Set `ERBAS_CORE_ADMIN_EMAIL` to override the standalone development fallback
+`admin@example.test`. Compose maps these variables to `SecuritySeed__AdminEmail`
+and `SecuritySeed__AdminPassword`. The client-owned full-stack demo maps its
+effective shared administrator to them; .NET does not read the contract defaults
+file or depend on its filesystem location. Provisioning runs only in
 Development/Testing, is idempotent and never overwrites existing credentials/state.
 An existing disabled/non-admin account at that email causes a seed conflict rather
 than implicit escalation.

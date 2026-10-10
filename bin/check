@@ -26,7 +26,8 @@ source ./bin/validation-db
 
 # Always use a disposable CORE administrator, separate from module fixtures.
 export ERBAS_CORE_ADMIN_PASSWORD="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
-export ERBAS_TEST_EMAIL=admin@example.test
+export ERBAS_CORE_ADMIN_EMAIL=admin@example.test
+export ERBAS_TEST_EMAIL="$ERBAS_CORE_ADMIN_EMAIL"
 export ERBAS_TEST_PASSWORD="$ERBAS_CORE_ADMIN_PASSWORD"
 
 cleanup() {
