@@ -1,4 +1,4 @@
-name: CI
+name: .NET CI / shared conformance
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: alxarafe/erbas-contract
-          ref: 5f814dfb21732ba20c31c66bf62e66caadbdda58
+          ref: 42e0c5ad81902a355fe01d6635466717f46b9dfd
           path: erbas-contract
       - name: Validate native, module and shared-contract suites
         working-directory: alxarafe-dotnet

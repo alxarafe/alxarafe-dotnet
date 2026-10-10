@@ -10,7 +10,13 @@ ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 
 The host uses Git, Bash, Docker and Docker Compose, plus the Linux fixture utilities listed in [API tests](../api-tests/README.md). It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, shared HTTP conformance, local OpenAPI, all platform and module Bruno scenarios (33 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
 
-`contract.revision` pins the unreleased [ERBAS shared contract](https://github.com/alxarafe/erbas-contract/tree/3ceade3a19a2545545cf58a2eb027d587554aac0). Supply its separate clean checkout explicitly through `ERBAS_CONTRACT_DIR`; ignored local files are preserved. Shared OpenAPI and Bruno belong to erbas-contract and cannot be changed unilaterally by .NET. `bin/check` invokes that checkout's public `bin/test` against `http://validation-app:8080` on the existing Docker network, with no additional published port. A conformance failure fails the full validation, locally and in CI.
+`contract.revision` pins draft 0.4.0 at [42e0c5ad81902a355fe01d6635466717f46b9dfd](https://github.com/alxarafe/erbas-contract/tree/42e0c5ad81902a355fe01d6635466717f46b9dfd). Supply its separate clean checkout explicitly through `ERBAS_CONTRACT_DIR`; ignored local files are preserved. Shared OpenAPI and Bruno belong to erbas-contract and cannot be changed unilaterally by .NET. `bin/check` invokes that checkout's public `bin/test` against `http://validation-app:8080` on the existing Docker network, with no additional published port. Its 82 requests / 313 named checks cover Health, AUTH-001, USERS-001 and COLLECTIONS-001. A conformance failure fails the full validation, locally and in CI. A later README-only contract revision does not change this pin; use a separate clean detached checkout of the exact executable revision.
+
+Validation creates a dedicated `admin@example.test` with a per-run random password
+(host `od` and `tr`), supplied through `ERBAS_CORE_ADMIN_PASSWORD`. It has no module
+permissions. Module reader/creator fixtures remain non-admin. Post-conformance
+SQL verifies the administrator, disposable user state and credential hashes;
+cleanup verifies removal of the validation Host and all three temporary databases.
 
 The helper scripts are:
 
@@ -69,6 +75,12 @@ Development seed users exist only in Development or Testing:
 
 Register and log in through the native API endpoints:
 
+Registration is an implementation-specific Identity extension, outside the ERBAS
+shared contract and shared Bruno coverage. Portable/common clients must not depend
+on it; it may change or disappear in a future .NET revision. It retains Identity's
+password policy and creates enabled non-admin users. The contractual administrative
+creation route is `POST /api/users`.
+
 ```bash
 curl -X POST http://127.0.0.1:48081/api/auth/register -H 'Content-Type: application/json' -d '{"email":"new@example.test","password":"Password123"}'
 curl -X POST http://127.0.0.1:48081/api/auth/login -H 'Content-Type: application/json' -d '{"email":"creator@example.test","password":"Creator_dev_only_123!"}'
@@ -95,6 +107,52 @@ OpenAPI is available at `http://127.0.0.1:48081/openapi/v1.json`. Run all platfo
 The Docker runner uses the `docker` environment and reaches `validation-app`, which connects only to the temporary databases. The independent platform, Catalog, and AiAgent suites cover authentication, 401/403, permissions, CRUD access, ProblemDetails, localization, and health.
 
 View logs with `docker compose logs -f app`. Stop with `docker compose down`; remove the development databases too with `docker compose down -v`.
+
+## Shared CORE user administration
+
+Fresh Identity schemas use text for Email/NormalizedEmail. Startup applies a small
+idempotent type upgrade to previously provisioned varchar(256) columns, preserving
+existing users and credentials. This avoids imposing an email maximum absent
+from the shared contract; EnsureCreated is not treated as an upgrade mechanism.
+
+Configure a dedicated development administrator explicitly with
+`ERBAS_CORE_ADMIN_PASSWORD` before `./bin/up`; no administrator password is supplied
+by default. The email defaults to `admin@example.test` (`SecuritySeed:AdminEmail`
+can override it through controlled host configuration). Provisioning runs only in
+Development/Testing, is idempotent and never overwrites existing credentials/state.
+An existing disabled/non-admin account at that email causes a seed conflict rather
+than implicit escalation.
+
+`GET /api/auth/me` returns exactly opaque string `id`, `email`, `enabled`, `admin`.
+`GET /api/users`, `GET /api/users/{id}`, `POST /api/users` and
+`PATCH /api/users/{id}` require current CORE admin; module permissions do not imply
+admin and admin does not grant module permissions. Every protected request reads
+current persisted CORE state before authorization, so old tokens stop working when
+disabled and reflect promotion/demotion without a new login. Login while disabled
+returns neutral `401 invalid_credentials`.
+
+Creation accepts exactly nonempty `email`, `password` and Boolean `admin`; new
+users are enabled. Passwords contain 12–256 Unicode code points without trimming
+or composition rules and use the existing Identity hasher. Email is stored as
+received, with exact-duplicate conflict. Exact email login takes precedence;
+Identity's normalized fallback remains available when unambiguous.
+PATCH accepts only non-null Boolean `enabled` and/or `admin`, at least one.
+Concurrent state changes cannot disable/demote the last enabled admin. Self-changes
+are allowed if another enabled admin remains.
+
+The list uses optional integer `offset` (default 0, minimum 0) and `limit`
+(default 50, range 1–100). It returns exactly `items`, `offset`, `limit`, `total`,
+`order`, with fixed `[{"field":"id","direction":"asc"}]`. Ordering precedes the
+window; total counts all users before pagination. At/beyond-total offsets return
+200 with empty items and preserved metadata. Invalid values are rejected without
+clamping. No filters, search, selectable ordering or cursor pagination exist.
+
+All shared user responses are JSON/no-store. Closed errors contain only `code`:
+400 `invalid_request`, protected 401 `unauthorized` (Bearer challenge), 403
+`forbidden` (no challenge), 404 `user_not_found`, 409 `email_conflict` or
+`last_admin`. Authentication/authorization precedes lookup and body/query parsing.
+There is no DELETE, email update, password management or new RBAC.
+See [verification](verification/users-001-collections-001.md).
 
 ## Architecture
 

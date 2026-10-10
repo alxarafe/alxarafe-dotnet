@@ -24,21 +24,34 @@ fi
 
 source ./bin/validation-db
 
+# Always use a disposable CORE administrator, separate from module fixtures.
+export ERBAS_CORE_ADMIN_PASSWORD="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+export ERBAS_TEST_EMAIL=admin@example.test
+export ERBAS_TEST_PASSWORD="$ERBAS_CORE_ADMIN_PASSWORD"
+
 cleanup() {
-    local result=$?
+    local result=$? remaining
     trap - EXIT
     validation_host_stop
+    if ! remaining="$(docker compose ps --all --quiet validation-app)"; then
+        echo 'ERROR: unable to verify validation Host cleanup' >&2
+        result=1
+    elif [[ -n "$remaining" ]]; then
+        echo 'ERROR: validation Host cleanup failed' >&2
+        result=1
+    fi
     if ! validation_db_drop || ! validation_db_removed; then
         echo "ERROR: ephemeral databases could not be removed" >&2
         result=1
     fi
+    if [[ "$result" == 0 ]]; then echo 'VALIDATION_DATABASE_CLEANUP=passed'; fi
     exit "$result"
 }
 
 diagnostics() {
     echo "==> Docker diagnostics"
     docker compose ps || true
-    docker compose logs --no-color validation-app postgres || true
+    echo 'Application logs withheld to preserve credential secrecy.'
 }
 
 trap diagnostics ERR
@@ -65,11 +78,6 @@ if [[ -z "$validation_network" || "$validation_network" == *$'\n'* ]]; then
     echo "ERROR: validation Host must have exactly one isolated Docker network" >&2
     exit 1
 fi
-# Reuse the existing reader fixture. SecuritySeed provisions it before Host readiness.
-# Read the password from the running Testing configuration, never repeat its literal.
-ERBAS_TEST_EMAIL=$(awk '$1 == "readerEmail:" { print $2 }' api-tests/shared/environments/docker.bru)
-ERBAS_TEST_PASSWORD=$(docker compose exec -T validation-app printenv SecuritySeed__ReaderPassword)
-export ERBAS_TEST_EMAIL ERBAS_TEST_PASSWORD
 "$CONTRACT_DIR/bin/test" --network "$validation_network" http://validation-app:8080
 
 echo "==> Checking health endpoint from the validation network"
@@ -79,6 +87,9 @@ echo "==> Checking OpenAPI from the validation network"
 openapi="$(docker compose exec -T validation-app curl --fail --silent --show-error http://localhost:8080/openapi/v1.json)"
 grep -Fq '"/api/auth/register"' <<<"$openapi"
 grep -Fq '"/api/auth/login"' <<<"$openapi"
+grep -Fq '"/api/auth/me"' <<<"$openapi"
+grep -Fq '"/api/users"' <<<"$openapi"
+grep -Fq '"/api/users/{id}"' <<<"$openapi"
 
 echo "==> Running platform and module Bruno suites"
 ./bin/bruno --prepared
@@ -88,6 +99,28 @@ docker compose exec -T postgres psql -U alxarafe -d "$validation_security_db" -t
     "SELECT 1 FROM information_schema.tables WHERE table_name = 'AspNetUsers'" | grep -Fxq '1'
 docker compose exec -T postgres psql -U alxarafe -d "$validation_security_db" -tAc \
     "SELECT COUNT(*) FROM \"AspNetUsers\"" | awk '{ if ($1 < 1) exit 1 }'
+
+docker compose exec -T -e ERBAS_TEST_PASSWORD postgres psql -U alxarafe -d "$validation_security_db" -v ON_ERROR_STOP=1 <<'SQL'
+\getenv validation_password ERBAS_TEST_PASSWORD
+SELECT set_config('erbas.validation_password', :'validation_password', false) \g /dev/null
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM "AspNetUsers" u WHERE u."Email" = 'admin@example.test'
+        AND EXISTS (SELECT 1 FROM "AspNetUserClaims" c WHERE c."UserId" = u."Id" AND c."ClaimType" = 'erbas.core.admin' AND c."ClaimValue" = 'true')
+        AND NOT EXISTS (SELECT 1 FROM "AspNetUserClaims" c WHERE c."UserId" = u."Id" AND c."ClaimType" = 'erbas.core.enabled' AND c."ClaimValue" = 'false'))
+       OR EXISTS (SELECT 1 FROM "AspNetUsers" WHERE "PasswordHash" IS NULL OR "PasswordHash" = ''
+           OR "PasswordHash" = current_setting('erbas.validation_password'))
+       OR NOT EXISTS (SELECT 1 FROM "AspNetUsers" WHERE "Email" LIKE 'users-%@example.test')
+       OR EXISTS (SELECT 1 FROM "AspNetUsers" u JOIN "AspNetUserClaims" c ON c."UserId" = u."Id"
+           WHERE u."Email" = 'admin@example.test' AND c."ClaimType" = 'permission')
+       OR EXISTS (SELECT 1 FROM "AspNetUsers" u JOIN "AspNetUserClaims" c ON c."UserId" = u."Id"
+           WHERE u."Email" LIKE 'users-%@example.test' AND
+               ((c."ClaimType" = 'erbas.core.admin' AND c."ClaimValue" = 'true') OR
+                (c."ClaimType" = 'erbas.core.enabled' AND c."ClaimValue" = 'false'))) THEN
+        RAISE EXCEPTION 'Post-conformance CORE administrator, credential or disposable-user state invariant failed';
+    END IF;
+END $$;
+SQL
+echo 'POST_CONFORMANCE_DATABASE=passed CORE_ADMIN=separate-from-module-permissions'
 
 for assertions in api-tests/modules/*/assert-persistence.sh; do
     [[ ! -f "$assertions" ]] || bash "$assertions"
@@ -99,10 +132,11 @@ if grep -Fq "$ERBAS_TEST_PASSWORD" <<<"$app_logs" || \
    grep -Fq 'Reader_dev_only_123!' <<<"$app_logs" || \
    grep -Fq 'Creator_dev_only_123!' <<<"$app_logs" || \
    grep -Fq 'Password123' <<<"$app_logs" || \
-   grep -Eiq 'accessToken|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' <<<"$app_logs"; then
+   grep -Eiq 'accessToken|AQAAAA[A-Za-z0-9+/=]{50,}|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' <<<"$app_logs"; then
     echo "ERROR: a password or bearer token marker was written to application logs" >&2
     exit 1
 fi
+echo 'LOG_SECRECY=passed'
 
 echo
 echo "VALIDATION PASS: Compose, .NET, API, Bruno, PostgreSQL, and architecture checks completed"

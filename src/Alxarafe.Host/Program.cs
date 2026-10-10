@@ -49,6 +49,8 @@ builder.Services.AddAlxarafeModules(typeof(CatalogModule).Assembly, typeof(AiAge
 // Module handlers run first; this handler only handles transversal validation.
 builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddAlxarafePermissionAuthorization();
+builder.Services.AddScoped<UserAdministration>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, SharedUserAuthorizationResultHandler>();
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[] { new CultureInfo("es"), new CultureInfo("en") };
@@ -60,6 +62,24 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecurityTransformer>();
     options.AddOperationTransformer<BearerSecurityTransformer>();
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        if (context.JsonTypeInfo.Type == typeof(System.Numerics.BigInteger))
+        {
+            schema.Type = Microsoft.OpenApi.JsonSchemaType.Integer;
+            schema.Minimum = "0";
+            schema.Properties = null;
+            schema.Format = null;
+        }
+        if (context.JsonTypeInfo.Type == typeof(UpdateUserRequest))
+        {
+            schema.MinProperties = 1;
+            schema.Required = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in schema.Properties!.Values.OfType<Microsoft.OpenApi.OpenApiSchema>())
+                property.Type = Microsoft.OpenApi.JsonSchemaType.Boolean;
+        }
+        return Task.CompletedTask;
+    });
 });
 builder.Services.AddHealthChecks();
 
@@ -69,11 +89,16 @@ app.UseRequestLocalization();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
+app.UseMiddleware<CurrentUserMiddleware>();
 app.UseAuthorization();
 await SecuritySeed.InitializeAsync(app.Services, app.Environment);
+// Existing installations also need the small storage upgrade outside seed environments.
+await using (var scope = app.Services.CreateAsyncScope())
+    await SecuritySchema.UpgradeEmailStorageAsync(scope.ServiceProvider.GetRequiredService<SecurityDbContext>());
 await app.Services.GetRequiredService<ModuleRuntime>().InitializeAsync(app.Services);
 app.MapOpenApi();
 AuthEndpoints.Map(app);
+UserEndpoints.Map(app);
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     // Contractual HTTP liveness must not run database or module checks.

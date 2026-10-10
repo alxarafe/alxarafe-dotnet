@@ -29,6 +29,7 @@ services:
       ConnectionStrings__AiAgent: Host=postgres;Port=5432;Database=alxarafe_ai;Username=alxarafe;Password=alxarafe_dev_only
       SecuritySeed__ReaderPassword: Reader_dev_only_123!
       SecuritySeed__CreatorPassword: Creator_dev_only_123!
+      SecuritySeed__AdminPassword: ${ERBAS_CORE_ADMIN_PASSWORD:-}
     ports:
       - "127.0.0.1:${ERBAS_DOTNET_PORT:-48081}:8080"
     healthcheck:
@@ -55,6 +56,7 @@ services:
       ConnectionStrings__AiAgent: Host=postgres;Port=5432;Database=alxarafe_ai_test;Username=alxarafe;Password=alxarafe_dev_only
       SecuritySeed__ReaderPassword: Reader_dev_only_123!
       SecuritySeed__CreatorPassword: Creator_dev_only_123!
+      SecuritySeed__AdminPassword: ${ERBAS_CORE_ADMIN_PASSWORD:-}
     command: ["dotnet", "run", "--no-launch-profile", "--no-build", "--project", "src/Alxarafe.Host/Alxarafe.Host.csproj", "--urls", "http://0.0.0.0:8080"]
     working_dir: /workspace
     volumes:
