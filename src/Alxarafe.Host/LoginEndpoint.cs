@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Alxarafe.Security;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -29,7 +30,8 @@ internal static class LoginEndpoint
             .Produces<LoginError>(StatusCodes.Status401Unauthorized);
 
     private static async Task<IResult> LoginAsync(HttpContext context,
-        SignInManager<AlxarafeUser> signInManager, IOptionsMonitor<BearerTokenOptions> bearerOptions)
+        SignInManager<AlxarafeUser> signInManager, IOptionsMonitor<BearerTokenOptions> bearerOptions,
+        UserAdministration users)
     {
         LoginRequest? request;
         try
@@ -49,8 +51,9 @@ internal static class LoginEndpoint
             return InvalidRequest();
 
         signInManager.AuthenticationScheme = IdentityConstants.BearerScheme;
-        var user = await signInManager.UserManager.FindByEmailAsync(request.Email);
+        var user = await users.FindLoginUserAsync(request.Email);
         if (user is null ||
+            (await users.FindAsync(user.Id))?.Enabled != true ||
             !(await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true)).Succeeded ||
             await signInManager.IsTwoFactorEnabledAsync(user))
         {

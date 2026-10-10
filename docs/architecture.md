@@ -58,6 +58,60 @@ Credential checks use `SignInManager.CheckPasswordSignInAsync` (including Identi
 
 This separates credential validation and token protection from HTTP serialization because .NET 10's automatic sign-in handler writes expiry and refresh fields alongside the access token. Only `accessToken` is returned with `Cache-Control: no-store`; failures use the generic contractual JSON and Bearer challenge. No refresh token is issued. The internal token remains opaque and has no cross-backend interoperability requirement. See the [public protector API](https://learn.microsoft.com/dotnet/api/microsoft.aspnetcore.authentication.bearertoken.bearertokenoptions.bearertokenprotector?view=aspnetcore-10.0).
 
+## CORE users and current Identity state
+
+USERS-001 and COLLECTIONS-001 use the existing Identity user/claim tables.
+`erbas.core.enabled` and `erbas.core.admin` are implementation-specific persisted
+state, distinct from `permission` claims. Absence means enabled=true/admin=false,
+so existing Identity databases/users require no new state columns. New contractual
+users receive explicit admin state; updates persist both flags. No additional
+user table, new columns or migration framework is introduced. EnsureCreated
+still initializes fresh Development/Testing databases; it is not used as an
+upgrade mechanism. A small idempotent PostgreSQL startup upgrade changes only
+the existing Email/NormalizedEmail types from varchar(256) to text, because the
+shared email string has no maximum length. Fresh EF schemas use text directly;
+native tests reproduce the previous schema and prove upgrade preserves accounts,
+hashes and existing default state. Production startup also applies this type-only
+upgrade to an already provisioned Identity database; it never seeds an admin.
+
+The small `UserAdministration` EF adapter projects current state and handles
+creation/updates. Shared creation uses UserManager's configured password hasher
+and normalizer without running registration's stricter user/password validators.
+The HTTP adapter validates the exact body and 12–256 Unicode code points first;
+emails/passwords remain unchanged. Login resolves an exact email first and retains
+Identity's normalized fallback when unambiguous. Registration preserves its own
+validation policy and rejects normalized duplicates.
+
+`CurrentUserMiddleware`, between authentication and authorization, resolves state
+once for protected endpoints, removes stale CORE claims and supplies the current
+principal/admin flag. Disabled/deleted users lose their authenticated principal,
+including on module resources; re-enable/promotion/demotion affect the same token
+on its next request. Public liveness and other anonymous endpoints do not query
+user state. The shared authorization result handler emits closed 401/403 JSON
+only on user endpoints and delegates unrelated errors to existing middleware.
+
+Administrative endpoints use one native AuthorizationPolicy requiring current
+CORE admin. Existing module policy providers and permission handlers remain
+unchanged. Request bodies/queries are read inside authorized endpoint delegates
+to preserve authorization precedence. Generated .NET OpenAPI documents these
+endpoints and the .NET-only registration extension; shared OpenAPI remains the
+sole common authority.
+
+CORE creation, state updates and registration acquire `SHARE ROW EXCLUSIVE`
+locks on AspNetUsers/AspNetUserClaims inside READ COMMITTED transactions before
+reading/writing. Concurrent state updates therefore observe prior committed
+changes before checking the last enabled admin. Normal identity reads stay
+unblocked. Self-disable/demotion has no special exception. Pagination uses an
+independent count and a parameterized id-ascending LIMIT/OFFSET query; public IDs
+remain opaque. No cached totals, dynamic query infrastructure or generic locking
+framework is introduced.
+
+`POST /api/auth/register` is not part of ERBAS shared conformance. Portable clients
+must not depend on it; it can change/disappear in a later .NET revision. It remains
+in local OpenAPI/tests and defaults to enabled non-admin. Contractual creation
+uses administrator-only `POST /api/users`. A dedicated configured seed admin has
+no module permissions and never silently escalates an existing account.
+
 ## Development/test identities and test ownership
 
 Catalog contributes its reader/creator fixtures and permissions through native `IOptions<DevelopmentUsersOptions>` configuration. The small options data contract belongs to Security and decouples module fixture definitions from Identity persistence. `SecuritySeed` only provisions the supplied users/claims, and runs exclusively in Development or Testing. Catalog does not reference the security EF adapter; no module permissions or credentials are hardcoded in Host. Existing test users, claims, password overrides, and routes are preserved.

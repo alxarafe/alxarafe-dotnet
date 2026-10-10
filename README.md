@@ -18,7 +18,7 @@ localization, a Catalog module and a preparatory AiAgent knowledge base.
 | --- | --- |
 | [erbas-contract](https://github.com/alxarafe/erbas-contract) | Shared OpenAPI and the sole shared Bruno collection |
 | [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend implementing Health and AUTH-001 |
-| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health and AUTH-001 plus platform modules |
+| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001 plus platform modules |
 | [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health and AUTH-001 from either backend; WEB-002 completed |
 
 ## Get started
@@ -46,12 +46,18 @@ tests, build, runtime and isolated Health/login proxies; its
 records WEB-002 integration separately.
 
 [contract.revision](contract.revision) pins an unpublished draft. Shared
-conformance covers HTTP liveness and login defined by
+conformance covers HTTP liveness, login, basic CORE user administration and paged
+user collections against draft 0.4.0. See [verification](docs/verification/users-001-collections-001.md) and
 [AUTH-001](https://github.com/alxarafe/erbas-contract/blob/main/docs/auth-001.md).
-AUTH-002 is completed: this backend implements shared Health and AUTH-001 login.
+AUTH-002, USERS-001 and COLLECTIONS-001 are implemented.
 The sole shared Bruno collection lives in erbas-contract; registration and module
 behavior remain .NET-specific. Identity bearer tokens stay opaque and need not
 interoperate with Java. No contract release is published.
+
+`POST /api/auth/register` remains a .NET-specific Identity extension outside the
+shared contract and Bruno conformance. Portable clients must not depend on it;
+it may change or disappear. Contractual account creation uses administrator-only
+`POST /api/users`. CORE admin is separate from module permissions.
 
 Browse the [documentation index](docs/README.md) for architecture, decisions,
 API scenarios and the AiAgent roadmap.

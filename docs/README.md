@@ -4,6 +4,7 @@
 | --- | --- |
 | [Usage](usage.md) | Docker development, full validation, networking, isolation and cleanup |
 | [Architecture](architecture.md) | Module boundaries and composition |
+| [USERS-001 / COLLECTIONS-001 verification](verification/users-001-collections-001.md) | CORE users, current Identity state, concurrent last-admin protection and draft 0.4.0 conformance |
 | [Foundation decision](decisions/0001-modular-hexagonal-foundation.md) | Modular and hexagonal foundation |
 | [Platform decision](decisions/0002-platform-security-localization.md) | Security and localization |
 | [AiAgent](ai-agent.md) | Knowledge base, limits, migrations and roadmap |
