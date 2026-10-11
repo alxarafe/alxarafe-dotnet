@@ -11,14 +11,33 @@ fi
 CONTRACT_DIR="$(cd "$ERBAS_CONTRACT_DIR" && pwd -P)"
 contract_revision=$(cat contract.revision)
 contract_root=$(git -C "$CONTRACT_DIR" rev-parse --show-toplevel)
+if [[ "$contract_root" != "$CONTRACT_DIR" ]]; then
+    echo 'ERROR: use the contract repository root' >&2
+    exit 2
+fi
+contract_origin=$(git -C "$CONTRACT_DIR" remote get-url origin)
+case "$contract_origin" in
+    git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
+    *) echo 'ERROR: unexpected contract origin' >&2; exit 2 ;;
+esac
+if [[ "$contract_revision" != v0.4.0 ]]; then
+    echo 'ERROR: unsupported release in contract.revision' >&2
+    exit 2
+fi
+contract_commit=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract_revision^{commit}") || {
+    echo 'ERROR: contract checkout is missing the configured release tag' >&2
+    exit 2
+}
+if [[ "$contract_commit" != 839255ea54610ccf711b29bd096ea294a1ebc3fc ]]; then
+    echo 'ERROR: contract release tag does not resolve to its immutable commit' >&2
+    exit 2
+fi
 contract_head=$(git -C "$CONTRACT_DIR" rev-parse HEAD)
 contract_status=$(GIT_OPTIONAL_LOCKS=0 git -C "$CONTRACT_DIR" status --porcelain=v1 --untracked-files=all)
-if [[ ! "$contract_revision" =~ ^[0-9a-f]{40}$ ]] ||
-    [[ "$contract_root" != "$CONTRACT_DIR" ]] ||
-    [[ "$contract_head" != "$contract_revision" ]] ||
+if [[ "$contract_head" != "$contract_commit" ]] ||
     [[ -n "$contract_status" ]] ||
     [[ ! -x "$CONTRACT_DIR/bin/test" ]]; then
-    echo "ERROR: contract checkout must be clean and match contract.revision" >&2
+    echo "ERROR: contract checkout must be clean and HEAD must match the configured release tag" >&2
     exit 2
 fi
 

@@ -8,9 +8,28 @@ The reproducible validation flow for the platform foundation uses one command:
 ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 ```
 
-The host uses Git, Bash, Docker and Docker Compose, plus the Linux fixture utilities listed in [API tests](../api-tests/README.md). It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, shared HTTP conformance, local OpenAPI, all platform and module Bruno scenarios (33 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
+The host uses Git, Bash, Docker and Docker Compose, plus the Linux fixture utilities listed in [API tests](../api-tests/README.md). It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, shared HTTP conformance, local OpenAPI, all platform and module Bruno scenarios (32 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
 
-`contract.revision` pins draft 0.4.0 at [42e0c5ad81902a355fe01d6635466717f46b9dfd](https://github.com/alxarafe/erbas-contract/tree/42e0c5ad81902a355fe01d6635466717f46b9dfd). Supply its separate clean checkout explicitly through `ERBAS_CONTRACT_DIR`; ignored local files are preserved. Shared OpenAPI and Bruno belong to erbas-contract and cannot be changed unilaterally by .NET. `bin/check` invokes that checkout's public `bin/test` against `http://validation-app:8080` on the existing Docker network, with no additional published port. Its 82 requests / 313 named checks cover Health, AUTH-001, USERS-001 and COLLECTIONS-001. A conformance failure fails the full validation, locally and in CI. A later README-only contract revision does not change this pin; use a separate clean detached checkout of the exact executable revision.
+`contract.revision` declares the published release [v0.4.0](https://github.com/alxarafe/erbas-contract/tree/v0.4.0).
+Supply its separate clean checkout explicitly through `ERBAS_CONTRACT_DIR`.
+Before application validation proceeds, `bin/check` verifies the Git repository
+root, the expected `alxarafe/erbas-contract` GitHub origin, tracked/nonignored
+cleanliness, and `refs/tags/v0.4.0^{commit}` resolving to the immutable published
+commit `839255ea54610ccf711b29bd096ea294a1ebc3fc`. HEAD must equal that commit.
+Missing or unexpected tag targets, wrong HEAD/origin, and tracked/nonignored
+changes are rejected. Ignored local files are preserved. The caller prepares the
+checkout; `bin/check` never fetches, pulls, checks out or modifies it.
+
+GitHub Actions keeps sibling `alxarafe-dotnet/` and `erbas-contract/` checkouts,
+selects contract `ref: v0.4.0`, sets `ERBAS_CONTRACT_DIR` to that separate directory,
+and runs the same authoritative `./bin/check` from `alxarafe-dotnet/`.
+
+Shared OpenAPI and Bruno belong to erbas-contract and cannot be changed
+unilaterally by .NET. `bin/check` invokes the verified checkout's public `bin/test`
+against `http://validation-app:8080` on the existing Docker network, with no
+additional published port. Its 82 requests / 313 named checks cover Health,
+AUTH-001, USERS-001 and COLLECTIONS-001. A conformance failure fails the full
+validation, locally and in CI.
 
 Validation creates a dedicated `admin@example.test` with a per-run random password
 (host `od` and `tr`), supplied through `ERBAS_CORE_ADMIN_PASSWORD`. It has no module
