@@ -132,3 +132,69 @@ Do not introduce layers, helpers, factories, interfaces, services or abstraction
 Simplicity must not compromise correctness, security, performance, clarity, testability or contractual behavior.
 
 When duplication is small and removing it would create a more complex abstraction, prefer the clearer solution over mechanically applying DRY.
+
+### No magic literals
+
+Do not use magic literals.
+
+Any literal with contractual, domain, protocol, configuration or behavioral
+meaning must have one explicit and descriptive source of truth instead of being
+scattered through implementation code, tests, templates, scripts or configuration.
+This includes, where applicable:
+
+- numeric and string values;
+- endpoint paths, URLs and path fragments;
+- HTTP header names, media types, HTTP/status/error codes and protocol tokens;
+- state names, configuration keys and environment-variable names;
+- contract field names and regular expressions with semantic meaning;
+- timeouts, limits, sizes and thresholds;
+- database/schema identifiers when they carry semantic meaning.
+
+Prefer, in this order:
+
+1. Existing framework/platform constants or enums.
+2. Existing project/domain constants or types.
+3. Existing configuration.
+4. A narrowly scoped named constant or enum introduced for the concrete need.
+
+Do not introduce local constants that merely duplicate an available and clearer
+framework facility, such as HTTP status, header or media-type abstractions.
+Examples of meaningful values that should not be scattered:
+
+```text
+USERS_PAGE_SIZE = 50
+USERS_ENDPOINT = "/api/users"
+JSON_MEDIA_TYPE = "application/json"
+```
+
+Do not mechanically replace every literal with a constant. A literal may remain
+inline when it has no independent semantic meaning, its value is obvious from
+the immediate local structure, naming it would reduce clarity, or it is incidental
+fixture data whose exact value is irrelevant. Examples include simple array
+indexes, trivial loop counters, structural zero/one values without domain meaning,
+and arbitrary test values used only as distinct fixtures. Do not introduce
+pointless constants such as `ZERO`, `ONE` or `TRUE` without a named domain or
+protocol concept.
+
+The objective is to eliminate hidden meaning and duplicated sources of truth,
+prevent accidental inconsistencies, and improve readability and maintainability.
+It is not a global constants catalog, needless abstraction, or replacement of
+every string or number. Apply KISS, DRY, YAGNI, Occam's razor and reuse before
+invention; this rule must reinforce simplicity.
+
+Tests are subject to the same rule for production, contractual, protocol or
+domain behavior. Do not duplicate production-significant literals unnecessarily:
+prefer an exported `USERS_PAGE_SIZE` when asserting the production page size.
+A deliberate contractual boundary such as 100 may use a named test/contract
+constant when that improves semantic clarity. Arbitrary fixture values may
+remain local. Do not couple tests unnecessarily to implementation internals;
+correctness and test independence remain important.
+
+The shared contract standardizes observable behavior, not implementation
+internals. Each stack may represent contractual values idiomatically in its own
+constants, enums or types. This rule does not make erbas-contract a general
+constants package or require shared cross-language source-code constants or
+generated constants infrastructure.
+
+During scope review, explicitly inspect newly introduced meaningful literals and
+confirm that no magic literals were added.

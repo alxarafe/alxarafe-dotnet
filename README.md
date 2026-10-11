@@ -17,9 +17,14 @@ localization, a Catalog module and a preparatory AiAgent knowledge base.
 | Repository | Responsibility |
 | --- | --- |
 | [erbas-contract](https://github.com/alxarafe/erbas-contract) | Shared OpenAPI and the sole shared Bruno collection |
-| [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend implementing Health and AUTH-001 |
+| [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001; CI requires shared Bruno against v0.4.0 |
 | [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001 plus platform modules |
-| [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health and AUTH-001 from either backend; WEB-002 completed |
+| [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health, AUTH-001 and the administrator-only USERS-001 collection with COLLECTIONS-001 pagination from either backend; WEB-003A completed |
+
+The client implements the collection/list slice; user creation, editing and
+detail views remain unimplemented. See its
+[WEB-003A guide](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#authenticated-user-list-web-003a)
+for session, pagination and error behavior.
 
 ## Get started
 
@@ -41,9 +46,10 @@ platform/module suites and shared Bruno. The combined badge is not a separate
 Bruno-only result. The Java badge reports Java's own CI, including mandatory
 shared conformance against published `v0.4.0`.
 It does not demonstrate .NET conformance. Angular client CI verifies client
-tests, build, runtime and isolated Health/login proxies; its
+tests, build, runtime and isolated Health/login/users proxies; its
 [real dual-backend demo evidence](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#web-002-integration-verification-2026-10-09)
-records WEB-002 integration separately.
+records WEB-002 integration separately. Client CI does not perform backend
+shared-conformance validation.
 
 [contract.revision](contract.revision) declares published `v0.4.0`. Local and CI
 `./bin/check` verify the supplied checkout's origin, cleanliness, release-tag
