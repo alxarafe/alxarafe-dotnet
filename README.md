@@ -19,14 +19,16 @@ localization, a Catalog module and a preparatory AiAgent knowledge base.
 | [erbas-contract](https://github.com/alxarafe/erbas-contract) | Shared OpenAPI and the sole shared Bruno collection |
 | [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001; CI requires shared Bruno against v0.4.0 |
 | [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001 plus platform modules |
-| [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health, AUTH-001 and the read-only USERS-001 profile/list/detail slice with COLLECTIONS-001 pagination from either backend; WEB-003B completed |
+| [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health, AUTH-001 and the USERS-001 profile/list/detail/create slice with COLLECTIONS-001 pagination from either backend; WEB-003C completed and merged |
 
-The client implements the read-only USERS-001 slice: `GET /api/auth/me`, paged
-administrator `GET /api/users` and `GET /api/users/{id}` detail. Login loads the
-current profile; `User.admin` controls administrator UI visibility. The bearer
-remains backend-bound and memory-only. User creation/update UI remains pending.
-See its [WEB-003B guide](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#current-profile-and-user-detail-web-003b)
-for profile, detail, session, pagination and error behavior.
+The client consumes `GET /api/auth/me`, paged administrator `GET /api/users`,
+`GET /api/users/{id}` detail and administrator `POST /api/users` creation. Login
+loads the current profile; a loaded `admin=true` profile offers administrator
+controls, while backend authorization remains authoritative. The bearer remains
+backend-bound and memory-only. `PATCH /api/users/{id}` and update UI remain pending;
+this is not full USERS-001 frontend support. See its
+[WEB-003C guide](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#administrator-user-creation-web-003c)
+for creation, password handling, errors and verification scope.
 
 ## Get started
 
@@ -48,7 +50,7 @@ platform/module suites and shared Bruno. The combined badge is not a separate
 Bruno-only result. The Java badge reports Java's own CI, including mandatory
 shared conformance against published `v0.4.0`.
 It does not demonstrate .NET conformance. Angular client CI verifies client
-tests, build, runtime and isolated Health/login/profile/list/detail proxies; its
+tests, build, runtime and isolated Health/login/profile/list/detail/create proxies; its
 [real dual-backend demo evidence](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#web-002-integration-verification-2026-10-09)
 records WEB-002 integration separately. Client CI does not perform backend
 shared-conformance validation.
