@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: alxarafe/erbas-contract
-          ref: 42e0c5ad81902a355fe01d6635466717f46b9dfd
+          ref: v0.4.0
           path: erbas-contract
       - name: Validate native, module and shared-contract suites
         working-directory: alxarafe-dotnet

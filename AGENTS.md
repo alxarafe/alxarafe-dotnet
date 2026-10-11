@@ -79,12 +79,14 @@ This backend cannot change their observable behavior unilaterally. The public
 `/health` endpoint is HTTP process liveness only: 200 application/json with exactly
 `{"status":"ok"}`, independent of database, module or external-service checks.
 
-`contract.revision` pins the explicit unreleased contract checkout. `./bin/check`
-requires `ERBAS_CONTRACT_DIR`, verifies its exact clean revision while preserving
-ignored files, and invokes its public `bin/test` on the existing validation Docker
-network. Never assume a sibling path, clone a contract from the runner, or copy
-its OpenAPI/Bruno into this backend. Local and CI validation must use the same
-pinned revision and fail if shared-contract conformance fails.
+`contract.revision` declares the implemented published release, currently
+`v0.4.0`. `./bin/check` requires `ERBAS_CONTRACT_DIR` and verifies repository root,
+the expected GitHub origin, tracked/nonignored cleanliness, release-tag resolution
+to `839255ea54610ccf711b29bd096ea294a1ebc3fc` and matching HEAD. Ignored files are
+preserved. It invokes the public `bin/test` on the existing validation Docker
+network. Never assume a sibling path, fetch, pull, checkout or modify the supplied
+contract, or copy its OpenAPI/Bruno into this backend. Local and CI validation
+must use the same published release and fail if shared conformance fails.
 
 ## Documentation impact review
 

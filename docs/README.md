@@ -9,11 +9,12 @@
 | [Platform decision](decisions/0002-platform-security-localization.md) | Security and localization |
 | [AiAgent](ai-agent.md) | Knowledge base, limits, migrations and roadmap |
 | [API tests](../api-tests/README.md) | Local platform and module Bruno suites |
-| [Contract revision](../contract.revision) | Exact unpublished shared-contract commit |
+| [Contract revision](../contract.revision) | Implemented published shared-contract release v0.4.0 |
 | [Working agreement](../AGENTS.md) | Repository rules |
 
 The backend owns its test infrastructure. Shared OpenAPI and shared Bruno belong
 to [ERBAS Contract](https://github.com/alxarafe/erbas-contract).
 The [CI workflow](https://github.com/alxarafe/alxarafe-dotnet/actions/workflows/ci.yml)
 runs `bin/check`, including shared conformance. Its result is distinct from the
-implemented draft revision and from a published contract release.
+declared published release `v0.4.0`. Local and CI validation both verify and test
+that same release; historical reports retain their original revisions and results.

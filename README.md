@@ -38,21 +38,23 @@ networking, test isolation and cleanup.
 
 The .NET workflow runs the same `bin/check`, including native tests, local
 platform/module suites and shared Bruno. The combined badge is not a separate
-Bruno-only result. The Java badge reports Java's own CI, which does not yet run
-shared Bruno.
+Bruno-only result. The Java badge reports Java's own CI, including mandatory
+shared conformance against published `v0.4.0`.
 It does not demonstrate .NET conformance. Angular client CI verifies client
 tests, build, runtime and isolated Health/login proxies; its
 [real dual-backend demo evidence](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#web-002-integration-verification-2026-10-09)
 records WEB-002 integration separately.
 
-[contract.revision](contract.revision) pins an unpublished draft. Shared
-conformance covers HTTP liveness, login, basic CORE user administration and paged
-user collections against draft 0.4.0. See [verification](docs/verification/users-001-collections-001.md) and
+[contract.revision](contract.revision) declares published `v0.4.0`. Local and CI
+`./bin/check` verify the supplied checkout's origin, cleanliness, release-tag
+target and matching HEAD, then require shared conformance. Coverage includes HTTP
+liveness, login, basic CORE user administration and paged user collections.
+See [historical verification](docs/verification/users-001-collections-001.md) and
 [AUTH-001](https://github.com/alxarafe/erbas-contract/blob/main/docs/auth-001.md).
 AUTH-002, USERS-001 and COLLECTIONS-001 are implemented.
 The sole shared Bruno collection lives in erbas-contract; registration and module
 behavior remain .NET-specific. Identity bearer tokens stay opaque and need not
-interoperate with Java. No contract release is published.
+interoperate with Java. Release checkout requirements are in [usage](docs/usage.md#full-validation).
 
 `POST /api/auth/register` remains a .NET-specific Identity extension outside the
 shared contract and Bruno conformance. Portable clients must not depend on it;
