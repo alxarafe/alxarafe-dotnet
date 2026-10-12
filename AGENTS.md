@@ -90,30 +90,44 @@ must use the same published release and fail if shared conformance fails.
 
 ## Documentation impact review
 
-After implementation, validation and scope review, review whether the task
-changes public behavior, architecture, configuration, usage, development
-workflow, API capabilities, repository status, or documented limitations.
-If it affects any of these areas, update the relevant README and documentation
-as part of the same task before its final local commit. If it does not, do not
-modify documentation merely to record that the review occurred.
+Every task must review its documentation impact after implementation, validation
+and scope review, before the final local commit. If it changes public behavior,
+architecture, configuration, usage, development workflow, API capabilities,
+repository status or documented limitations, update the relevant documentation
+within the same task and the same future pull request. Otherwise, do not modify
+documentation merely to record that the review occurred.
 
-Keep README a brief landing page covering current capabilities, how to try them,
-ecosystem relationships, verifiable badges and principal limitations. Keep
-detailed architecture, decisions, processes, configuration, operations and
-verification evidence in docs/; preserve historical reports as historical.
+README.md is a stable, brief public landing page for project purpose, high-level
+capabilities, architecture and ecosystem relationships, essential quick start,
+onboarding and configuration, principal limitations, verifiable badges and links
+to detailed documentation. It is not a changelog, task history, endpoint catalog,
+record of individual WEB-003 slices or exhaustive inventory of internal checks.
+Do not change it merely because an endpoint, field, validation or test is added
+or changed, or an internal task is completed. Change README only when its
+high-level description, onboarding, architecture, essential configuration,
+principal capabilities or limitations become materially false or incomplete.
 
-When a task changes a capability or status shared across the ERBAS ecosystem,
-review status references and badges in related repository READMEs. Keep CI,
-local contract conformance and full-stack demo verification distinct. If other
-repositories need updates, handle them as an independent coordinated task
-immediately after the functional change is merged, preferably before the next
-major feature. Do not mix those updates into another repository's functional
-commit or leave them indefinitely pending; obtain the required task approval.
+Functional and technical detail belongs preferably in `docs/`. Feature code and
+documentation normally belong in the same task and pull request; use separate
+functional and documentation commits when that improves review, for example
+`feat(...): ...` and `docs: ...`. Do not automatically create a follow-up DOCS task
+or coordinated documentation synchronization after each feature.
 
-The lifecycle is: approve task, implement, validate, review scope, review
-documentation impact, update relevant docs if needed, local atomic commit,
-then obtain approval for the next task. Existing separate authorization rules
-for push, PR, merge, release, publication and deployment remain unchanged.
+Cross-repository documentation synchronization is necessary only for a shared
+policy change, a contractual or published version change, an architecture or
+ecosystem change, materially false information in another repository, or a
+significant milestone that actually affects several repositories. Review related
+status references when one of these conditions applies; obtain task approval
+for necessary changes in other repositories and keep each repository's commits
+separate. Preserve historical references and reports as historical; never rewrite
+them to appear current. Change badges only when the verifiable fact they represent
+changes. Keep CI, local contract conformance and real full-stack demo verification
+distinct.
+
+Write public documentation in English. Complete necessary documentation updates
+before the final local commit, then obtain approval before starting the next task.
+Independent authorization for push, PR creation, merge, tag, release, publication
+and deployment remains required.
 
 ## Engineering simplicity
 
