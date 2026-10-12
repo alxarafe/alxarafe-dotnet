@@ -14,8 +14,7 @@ namespace Alxarafe.Modules.Catalog.ModuleDefinition;
 
 public sealed class CatalogModule : IAlxarafeModule, IHttpModule
 {
-    public string Id => "Catalog";
-    public IReadOnlyCollection<string> Dependencies => [];
+    public ModuleDescriptor Descriptor { get; } = new("Catalog", ModuleApi.CurrentVersion, []);
 
     public void ConfigureServices(IServiceCollection services)
     {

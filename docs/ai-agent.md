@@ -116,7 +116,7 @@ plugins/
         ...
 ```
 
-That is a future packaging illustration, not the current assembly layout or installer. Compatibility, dependency resolution/isolation, configuration, migration ownership, and activation still require decisions. The current static module will integrate via the same public platform contracts. No dynamic loading, installation, activation/deactivation, hot reload/unload, `AssemblyLoadContext`, or `AssemblyDependencyResolver` is implemented. An in-process plugin would not be a security sandbox.
+That is a future packaging illustration, not the current assembly layout or installer. Module API version checks and identifier dependency validation are now provided by the shared modular infrastructure. The approved future activation and install/uninstall semantics are documented in [modularity](modularity.md); physical loading, dependency isolation, package configuration and migration provisioning remain future work. The current static module will integrate via the same public platform contracts. No dynamic loading, installation, activation/deactivation, hot reload/unload, `AssemblyLoadContext`, or `AssemblyDependencyResolver` is implemented. An in-process plugin would not be a security sandbox.
 
 ## Conceptual roadmap
 

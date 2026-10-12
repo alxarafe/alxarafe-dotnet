@@ -296,7 +296,7 @@ public sealed partial class KnowledgeApiTests(WebApplicationFactory<Program> fac
         builder.Services.AddAlxarafeModules(typeof(AiAgentModule).Assembly);
         using var host = builder.Build();
         var runtime = host.Services.GetRequiredService<ModuleRuntime>();
-        Assert.Equal("AiAgent", Assert.Single(runtime.Modules).Id);
+        Assert.Equal("AiAgent", Assert.Single(runtime.Modules).Descriptor.Id);
         await runtime.InitializeAsync(host.Services);
         await using var scope = host.Services.CreateAsyncScope();
         var handler = scope.ServiceProvider.GetRequiredService<CreateKnowledgeEntryHandler>();
