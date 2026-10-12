@@ -128,8 +128,8 @@ modules. Physical loading is not implemented. Current entry assembly selection
 remains confined to the composition root and built-in source.
 
 The [module extension model](modularity.md) records the approved semantics:
-installation/uninstallation may initially require restart, while persistent
-functional enabled/disabled will be dynamic without restart. Disable, uninstall
+installation/uninstallation may initially require restart. Persistent
+enabled/disabled state and HTTP functional gating now operate dynamically without restart. Disable, uninstall
 and any future explicit purge remain separate operations. Loader, package and
 migration provisioning details require later work.
 
