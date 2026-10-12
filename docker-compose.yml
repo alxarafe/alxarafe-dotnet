@@ -24,6 +24,7 @@ services:
       target: development
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Platform: Host=postgres;Port=5432;Database=alxarafe;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=alxarafe;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__AiAgent: Host=postgres;Port=5432;Database=alxarafe_ai;Username=alxarafe;Password=alxarafe_dev_only
@@ -52,6 +53,7 @@ services:
     profiles: [validation]
     environment:
       ASPNETCORE_ENVIRONMENT: Testing
+      ConnectionStrings__Platform: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security_test;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__AiAgent: Host=postgres;Port=5432;Database=alxarafe_ai_test;Username=alxarafe;Password=alxarafe_dev_only

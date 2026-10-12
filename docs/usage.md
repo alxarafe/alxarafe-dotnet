@@ -85,7 +85,7 @@ docker compose exec app dotnet build
 curl http://127.0.0.1:48081/health
 ```
 
-The PostgreSQL init script creates separate `alxarafe_security` and `alxarafe_ai` databases. On a fresh environment, the app creates the Identity schema and applies the Catalog EF Core migration during startup.
+The PostgreSQL init script creates separate `alxarafe_security` and `alxarafe_ai` databases. On a fresh environment, the app creates the Identity schema and applies platform and module EF Core migrations during startup. The explicit `ConnectionStrings__Platform` connection in Compose shares the physical `alxarafe` database with Catalog; validation uses `alxarafe_test`. Platform owns `module_states` and a separate migration history. Existing deployments must supply this connection before updating; see [modularity](modularity.md) for synchronization and dynamic state.
 
 Development seed users exist only in Development or Testing:
 
