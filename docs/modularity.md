@@ -103,11 +103,47 @@ instances. Ordinary checks continue to read committed database state.
 
 Disabling never deletes module data, tables or configuration, reverts migrations,
 unloads code, or changes technical initialization. All available modules still
-initialize, including disabled ones. `requireEnabled` provides an internal guard
-with a clear exception; no HTTP status mapping, middleware or management API is
-introduced. Existing endpoints remain unchanged. Future HTTP, jobs, event consumers
-and inter-module capabilities must consult this same authority instead of treating
-INITIALIZED as permission to execute functional work.
+initialize, including disabled ones. `requireEnabled` provides the shared internal
+guard now used by the platform HTTP gate. Module administration HTTP remains out of
+scope; INITIALIZED never substitutes for permission to execute functional work.
+
+## Functional HTTP gating
+
+DISABLED means available and technically initialized, but functional entry is
+blocked. Endpoints, routes, services and code remain registered; disabling does
+not delete data or revert migrations. A request checks `ModuleStateService` once
+at its module boundary, using the stable descriptor ID. It never reads the store
+directly or captures an enabled flag during startup. Disable/re-enable takes effect
+on the next request without restart, route rebuilding or reinitialization.
+PostgreSQL remains the authority; no enabled-state cache is introduced.
+
+The observable order is authentication, authorization, module gate, endpoint.
+Existing protected endpoints return their normal 401 for invalid/missing credentials
+and 403 for insufficient permissions before reaching the gate. An authorized caller
+to a disabled module receives HTTP 503 with JSON exactly:
+
+```json
+{"code":"module_disabled"}
+```
+
+The response sets `Cache-Control: no-store`, with no `WWW-Authenticate`,
+`Retry-After`, module ID, internal message or stack trace. A public module endpoint
+also passes through the gate, without an authentication requirement of its own.
+
+`ModuleDisabledException` belongs to Modularity and retains the module ID only
+internally. `requireEnabled`/`RequireEnabledAsync` throws it only for an available
+module with a persisted false flag. Unavailable IDs, missing state and unexpected
+system failures retain their distinct internal errors; the HTTP gate does not
+misrepresent them as administrative deactivation. The gate never changes state
+or bypasses dependency validation.
+
+CORE remains outside this gate: Health, authentication/login, user administration,
+the runtime and future recovery/administration infrastructure are not functional
+modules. All available modules still initialize technically even when disabled.
+Future scheduled jobs, event consumers, AI capabilities and other externally
+triggered internal actions must use the same `ModuleStateService.requireEnabled`
+authority at their entry boundary; no such execution mechanisms are implemented.
+Future external modules receive the same HTTP semantics through the public adapters.
 
 ## Future lifecycle, not implemented
 
@@ -166,6 +202,24 @@ module endpoints/running the application. The runtime owns a defensive read-only
 copy of the ordered modules. `IHttpModule` remains a separate ASP.NET Core adapter;
 Java need not reproduce this endpoint abstraction or service-collection API.
 
+### .NET HTTP adapter and OpenAPI
+
+`MapAlxarafeModuleEndpoints` wraps each `IHttpModule` in a transparent empty
+`RouteGroupBuilder`. Its `ModuleStateEndpointFilter` receives the real descriptor
+ID; the module maps all routes against that protected builder. Nested groups inherit
+the filter, including public endpoints. No path list, concrete module type or
+manual per-handler check is needed. ASP.NET Core authentication/authorization
+middleware runs before endpoint filters. The filter performs one enabled check
+per request and converts only `ModuleDisabledException`; Catalog and AiAgent
+need no functional changes or manual checks.
+
+The group also receives native `ProducesResponseTypeMetadata` for the JSON
+`ModuleDisabledResponse` and HTTP 503. It is inherited by module endpoints and
+appears in generated OpenAPI without per-endpoint duplication. Disabled endpoints
+remain published; their route/operation metadata does not change with state.
+CORE endpoints do not inherit this module response metadata. The shared ERBAS
+contract and Module API version remain unchanged.
+
 ## Verification
 
 Focused modularity tests in the existing architecture test project cover
@@ -177,7 +231,13 @@ remain in place. PostgreSQL-backed `ModuleStateTests` cover defaults, retained
 and reinstalled state, immediate checks, idempotent transitions, dependency chains,
 technical initialization of disabled modules, rollback, case-sensitive IDs, clean
 and existing-schema migrations, snapshot consistency and competing transitions
-waiting on real database locks. Run complete Docker-only validation with the published contract:
+waiting on real database locks. `ModuleGatingTests` uses the actual Catalog and
+AiAgent routes and PostgreSQL state to verify the authorized disable/re-enable
+cycle, unchanged data/routes/migrations, CORE recovery access, 401/403 precedence,
+exact 503 response, and persistent OpenAPI publication. A small TestServer context
+also proves automatic gating of a test module's public nested groups, one state
+read per entry, no gate writes, and propagation of missing/unavailable state.
+Run complete Docker-only validation with the published contract:
 
 ```bash
 ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check

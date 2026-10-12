@@ -116,7 +116,7 @@ plugins/
         ...
 ```
 
-That is a future packaging illustration, not the current assembly layout or installer. Module API version checks and identifier dependency validation are now provided by the shared modular infrastructure. Persistent dynamic enabled/disabled state and future install/uninstall semantics are documented in [modularity](modularity.md); physical loading, dependency isolation, package configuration and migration provisioning remain future work. The current static module will integrate via the same public platform contracts. Administrative state does not gate the current HTTP routes yet. No dynamic loading, installation, functional activation hooks, hot reload/unload, `AssemblyLoadContext`, or `AssemblyDependencyResolver` is implemented. An in-process plugin would not be a security sandbox.
+That is a future packaging illustration, not the current assembly layout or installer. Module API version checks and identifier dependency validation are now provided by the shared modular infrastructure. Persistent dynamic enabled/disabled state and future install/uninstall semantics are documented in [modularity](modularity.md); physical loading, dependency isolation, package configuration and migration provisioning remain future work. The current static module will integrate via the same public platform contracts. The platform now gates its HTTP routes dynamically after authentication and authorization; disabled modules return `503 module_disabled`. No dynamic loading, installation, functional activation hooks, hot reload/unload, `AssemblyLoadContext`, or `AssemblyDependencyResolver` is implemented. An in-process plugin would not be a security sandbox.
 
 ## Conceptual roadmap
 

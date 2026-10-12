@@ -38,7 +38,7 @@ public sealed class ModuleStateService
     public async Task RequireEnabledAsync(string moduleId, CancellationToken cancellationToken = default)
     {
         if (!await IsEnabledAsync(moduleId, cancellationToken))
-            throw new InvalidOperationException($"Module '{moduleId}' is disabled.");
+            throw new ModuleDisabledException(moduleId);
     }
 
     public Task EnableAsync(string moduleId, CancellationToken cancellationToken = default) => ChangeAsync(moduleId, true, cancellationToken);

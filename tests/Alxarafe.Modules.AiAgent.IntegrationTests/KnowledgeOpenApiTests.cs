@@ -15,8 +15,8 @@ namespace Alxarafe.Modules.AiAgent.IntegrationTests;
 public sealed partial class KnowledgeApiTests
 {
     private static readonly string[] _undocumentedPublicPaths = ["/health", "/openapi/v1.json"];
-    private static readonly string[] _postStatuses = ["201", "400", "401", "403", "415"];
-    private static readonly string[] _getStatuses = ["200", "401", "403", "404"];
+    private static readonly string[] _postStatuses = ["201", "400", "401", "403", "415", "503"];
+    private static readonly string[] _getStatuses = ["200", "401", "403", "404", "503"];
     private static readonly string[] _requestRequired = ["question", "answer"];
     private static readonly string[] _responseRequired = ["id", "question", "answer"];
     [Fact]

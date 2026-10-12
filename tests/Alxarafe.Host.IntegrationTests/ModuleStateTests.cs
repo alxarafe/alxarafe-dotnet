@@ -57,7 +57,8 @@ public sealed class ModuleStateTests
         await states.DisableAsync(fixture.B);
         await states.DisableAsync(fixture.A);
         await states.DisableAsync(fixture.A);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => states.RequireEnabledAsync(fixture.A));
+        var disabled = await Assert.ThrowsAsync<ModuleDisabledException>(() => states.RequireEnabledAsync(fixture.A));
+        Assert.Equal(fixture.A, disabled.ModuleId);
         error = await Assert.ThrowsAsync<InvalidOperationException>(() => states.EnableAsync(fixture.B));
         Assert.Contains(fixture.B, error.Message);
         Assert.Contains(fixture.A, error.Message);
