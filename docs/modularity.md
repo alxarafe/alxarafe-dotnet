@@ -48,7 +48,7 @@ cross source boundaries. Zero sources or modules are valid.
 All AVAILABLE modules initialize sequentially in resolved dependency order.
 Failures propagate and stop subsequent initialization. There is no rollback,
 retry or parallel initialization. **INITIALIZED does not mean ENABLED**:
-initialization remains technical, and functional activation is a future layer.
+initialization remains technical even when the persistent enabled flag is false.
 
 The CORE is not a disableable functional module. Basic Health, essential
 authentication, the modular runtime and essential system administration remain
@@ -59,13 +59,57 @@ Future integration must use public contracts/capabilities of the owning module,
 including future Inventory and AI integrations. No bus or capability registry is
 introduced without a real consumer.
 
-## Approved future lifecycle, not implemented
+## Persistent dynamic state
 
-Enabled/disabled will be persistent and dynamic, without restart. Disabling must
-never delete data. Routes and services may remain registered while runtime checks
-block functionality. Jobs and event consumers must respect the same state;
-dependencies must prevent invalid activation combinations. No activation state,
-storage, HTTP administration or activation hooks exist yet.
+**ENABLED** is administrative state stored in PostgreSQL, independently of
+AVAILABLE and INITIALIZED. **OPERATIONAL** is not modeled. State belongs to the
+platform/CORE, never to Catalog, Security or another business module.
+
+The platform table `module_states` has exactly two columns: `module_id TEXT
+COLLATE "C" PRIMARY KEY` and `enabled BOOLEAN NOT NULL`. IDs retain the descriptor's
+case-sensitive semantics and are not constrained by class or package names.
+There are no module foreign keys, timestamps or configuration fields.
+
+After registry/graph validation, startup synchronizes state before technical
+initialization. Missing rows are inserted with the centralized initial policy
+`enabled = true` to preserve existing behavior. Existing flags are never rewritten.
+Rows for unavailable modules remain untouched: removing a package and restarting
+removes availability, but reinstalling the same ID recovers its previous state.
+An enabled module whose dependency is disabled makes startup fail; synchronization
+rolls back rather than repairing persisted choices or leaving partial inserts.
+Zero available modules are valid and do not remove retained state.
+
+`ModuleStateService` reads the database for every enabled check; it keeps no
+persistent enabled-state cache. A committed change is immediately visible to a
+new check, including from another service instance sharing this database.
+Availability is still checked against the current registry, never inferred from
+a retained database row. Unknown/unavailable IDs cannot be queried, enabled,
+disabled or passed to `requireEnabled` (named `RequireEnabledAsync` in .NET).
+
+Enable requires all declared dependencies to be enabled. Disable fails while an
+enabled module depends on the target. There are no automatic cascades: disable
+consumers before dependencies; enable dependencies before consumers. Validating
+every enabled module's direct edges also preserves the invariant through indirect
+dependency chains. Repeating an already satisfied transition succeeds without
+rewriting unchanged rows. Failures identify the module and offending dependency.
+
+Synchronization and transitions use a READ COMMITTED transaction and acquire
+`LOCK TABLE module_states IN SHARE ROW EXCLUSIVE MODE` before reading the snapshot.
+One lock serializes modifications, including initial insertions into an empty
+table, without a multi-row lock order or permanent memory authority. Validation
+precedes writes; exceptions roll back the whole operation. This deliberately
+simple policy fits a small module set and coordinates separate application
+instances. Ordinary checks continue to read committed database state.
+
+Disabling never deletes module data, tables or configuration, reverts migrations,
+unloads code, or changes technical initialization. All available modules still
+initialize, including disabled ones. `requireEnabled` provides an internal guard
+with a clear exception; no HTTP status mapping, middleware or management API is
+introduced. Existing endpoints remain unchanged. Future HTTP, jobs, event consumers
+and inter-module capabilities must consult this same authority instead of treating
+INITIALIZED as permission to execute functional work.
+
+## Future lifecycle, not implemented
 
 Installation will mean physical incorporation of a module package; uninstallation
 will mean its physical removal. Both may initially require restart. DISABLE is
@@ -73,9 +117,10 @@ not UNINSTALL, and UNINSTALL does not imply deleting data. PURGE, if ever provid
 will be explicit and independent. None of these operations is implemented.
 
 External directory discovery, JAR/DLL loading, hot loading/unloading, installers,
-state persistence, module management endpoints and frontend are out of scope.
+module management endpoints and frontend remain out of scope. No start/stop,
+activation hooks, event bus or cache invalidation infrastructure is introduced.
 The future package source will enter the existing registry/graph/runtime pipeline;
-its loader and package distribution details require later implementation.
+state remains keyed by descriptor ID independently of its source.
 
 ## .NET integration and current composition limit
 
@@ -101,7 +146,22 @@ All sources must participate before this build and before the Host's
 `builder.Build()`. A future external assembly source can enter at that point;
 no `AssemblyLoadContext` or external loader is implemented.
 
-The Host performs one normal sequential `InitializeAsync` call before mapping
+The platform EF adapter owns `PlatformDbContext`, `ModuleStateRow` and
+`EfModuleStateStore`; the service and `IModuleStateStore` remain in framework-free
+Modularity. Each check/transaction uses a fresh context from `IDbContextFactory`,
+so tracked entities cannot become a permanent enabled-state cache.
+
+Configure the explicit `ConnectionStrings__Platform` connection. Compose points it
+at the existing physical `alxarafe` database (validation: `alxarafe_test`), alongside
+Catalog, without transferring table ownership to Catalog. Platform uses its own
+`__PlatformMigrationsHistory`; migration `202610120001_ModuleStates` creates only
+platform state and can coexist with existing module migration histories. Security
+continues owning its separate context and tables. Testing rejects a Platform
+connection outside the isolated validation database.
+
+Before module initialization, the Host applies platform migrations and calls
+`ModuleStateService.SynchronizeAsync`. The Host then performs one normal sequential
+`InitializeAsync` call before mapping
 module endpoints/running the application. The runtime owns a defensive read-only
 copy of the ordered modules. `IHttpModule` remains a separate ASP.NET Core adapter;
 Java need not reproduce this endpoint abstraction or service-collection API.
@@ -113,7 +173,11 @@ descriptor immutability, versions, sources, duplicate IDs, cross-source
 dependencies, missing dependencies, direct/indirect cycles, deterministic order,
 read-only collections, service configuration, sequential initialization and
 failure propagation. Existing Catalog/AiAgent composition and functional suites
-remain in place. Run complete Docker-only validation with the published contract:
+remain in place. PostgreSQL-backed `ModuleStateTests` cover defaults, retained
+and reinstalled state, immediate checks, idempotent transitions, dependency chains,
+technical initialization of disabled modules, rollback, case-sensitive IDs, clean
+and existing-schema migrations, snapshot consistency and competing transitions
+waiting on real database locks. Run complete Docker-only validation with the published contract:
 
 ```bash
 ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
