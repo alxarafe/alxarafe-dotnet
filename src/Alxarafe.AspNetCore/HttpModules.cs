@@ -1,5 +1,7 @@
+using System.Net.Mime;
 using Alxarafe.Modularity;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,7 +17,15 @@ public static class ModuleEndpointExtensions
     public static IEndpointRouteBuilder MapAlxarafeModuleEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var runtime = endpoints.ServiceProvider.GetRequiredService<ModuleRuntime>();
-        foreach (var module in runtime.Modules.OfType<IHttpModule>()) module.MapEndpoints(endpoints);
+        foreach (var module in runtime.Modules)
+        {
+            if (module is not IHttpModule httpModule) continue;
+            var group = endpoints.MapGroup(string.Empty);
+            group.AddEndpointFilter(new ModuleStateEndpointFilter(module.Descriptor.Id));
+            group.WithMetadata(new ProducesResponseTypeMetadata(StatusCodes.Status503ServiceUnavailable,
+                typeof(ModuleDisabledResponse), [MediaTypeNames.Application.Json]));
+            httpModule.MapEndpoints(group);
+        }
         return endpoints;
     }
 }
