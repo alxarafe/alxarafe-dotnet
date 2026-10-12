@@ -1,5 +1,6 @@
 using System.Globalization;
 using Alxarafe.AspNetCore;
+using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.AiAgent.ModuleDefinition;
@@ -17,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsEnvironment("Testing"))
 {
     RequireValidationDatabase("Security", "alxarafe_security_test");
+    RequireValidationDatabase(PlatformStorage.ConnectionName, PlatformStorage.ValidationDatabase);
 }
 
 void RequireValidationDatabase(string connectionName, string expectedDatabase)
@@ -26,6 +28,12 @@ void RequireValidationDatabase(string connectionName, string expectedDatabase)
         !string.Equals(new NpgsqlConnectionStringBuilder(connectionString).Database, expectedDatabase, StringComparison.Ordinal))
         throw new InvalidOperationException($"Testing requires the {connectionName} connection to use {expectedDatabase}.");
 }
+
+builder.Services.AddDbContextFactory<PlatformDbContext>(options =>
+    PlatformStorage.Configure(options, builder.Configuration.GetConnectionString(PlatformStorage.ConnectionName)
+        ?? throw new InvalidOperationException("The Platform connection string must be configured.")));
+builder.Services.AddSingleton<IModuleStateStore, EfModuleStateStore>();
+builder.Services.AddSingleton<ModuleStateService>();
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
@@ -95,6 +103,9 @@ await SecuritySeed.InitializeAsync(app.Services, app.Environment);
 // Existing installations also need the small storage upgrade outside seed environments.
 await using (var scope = app.Services.CreateAsyncScope())
     await SecuritySchema.UpgradeEmailStorageAsync(scope.ServiceProvider.GetRequiredService<SecurityDbContext>());
+await using (var context = await app.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync())
+    await context.Database.MigrateAsync();
+await app.Services.GetRequiredService<ModuleStateService>().SynchronizeAsync();
 await app.Services.GetRequiredService<ModuleRuntime>().InitializeAsync(app.Services);
 app.MapOpenApi();
 AuthEndpoints.Map(app);
