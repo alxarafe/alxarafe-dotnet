@@ -14,8 +14,7 @@ namespace Alxarafe.Modules.AiAgent.ModuleDefinition;
 
 public sealed class AiAgentModule : IAlxarafeModule, IHttpModule
 {
-    public string Id => "AiAgent";
-    public IReadOnlyCollection<string> Dependencies => [];
+    public ModuleDescriptor Descriptor { get; } = new("AiAgent", ModuleApi.CurrentVersion, []);
 
     public void ConfigureServices(IServiceCollection services)
     {

@@ -5,15 +5,14 @@ namespace Alxarafe.Modularity;
 
 public interface IAlxarafeModule
 {
-    string Id { get; }
-    IReadOnlyCollection<string> Dependencies { get; }
+    ModuleDescriptor Descriptor { get; }
     void ConfigureServices(IServiceCollection services);
     Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default);
 }
 
 public sealed class ModuleRuntime(IReadOnlyList<IAlxarafeModule> modules)
 {
-    public IReadOnlyList<IAlxarafeModule> Modules { get; } = modules;
+    public IReadOnlyList<IAlxarafeModule> Modules { get; } = Array.AsReadOnly(modules.ToArray());
 
     public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
     {
@@ -25,22 +24,27 @@ public sealed class ModuleRuntime(IReadOnlyList<IAlxarafeModule> modules)
 public sealed class ModuleBuilder(IServiceCollection services)
 {
     private readonly IServiceCollection _services = services;
-    private readonly List<Assembly> _assemblies = [];
+    private readonly List<IModuleSource> _sources = [];
 
-    public ModuleBuilder AddModulesFromAssemblies(params Assembly[] assemblies)
+    public ModuleBuilder AddSource(IModuleSource source)
     {
-        _assemblies.AddRange(assemblies);
+        _sources.Add(source);
         return this;
     }
 
+    public ModuleBuilder AddModulesFromAssemblies(params Assembly[] assemblies) =>
+        AddSource(new BuiltInAssemblyModuleSource(assemblies));
+
     public void Build()
     {
-        var modules = ModuleGraph.Discover(_assemblies);
+        var registry = new ModuleRegistry(_sources);
+        var modules = ModuleGraph.Order(registry.Modules);
         foreach (var module in modules)
         {
             module.ConfigureServices(_services);
             _services.AddSingleton(module.GetType(), module);
         }
+        _services.AddSingleton(registry);
         _services.AddSingleton(new ModuleRuntime(modules));
     }
 }
@@ -57,17 +61,16 @@ public static class ModuleServiceCollectionExtensions
 
 public static class ModuleGraph
 {
-    public static IReadOnlyList<IAlxarafeModule> Discover(IEnumerable<Assembly> assemblies)
+    public static IReadOnlyList<IAlxarafeModule> Order(IEnumerable<IAlxarafeModule> availableModules)
     {
-        var types = assemblies.SelectMany(a => a.GetExportedTypes())
-            .Where(t => typeof(IAlxarafeModule).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false })
-            .Distinct()
-            .ToArray();
-        var modules = types.Select(t => (IAlxarafeModule)Activator.CreateInstance(t)!).ToDictionary(m => m.Id, StringComparer.Ordinal);
+        var modules = new SortedDictionary<string, IAlxarafeModule>(StringComparer.Ordinal);
+        foreach (var module in availableModules)
+            if (!modules.TryAdd(module.Descriptor.Id, module))
+                throw new InvalidOperationException($"Duplicate module id '{module.Descriptor.Id}'.");
         foreach (var module in modules.Values)
-            foreach (var dependency in module.Dependencies)
+            foreach (var dependency in module.Descriptor.Dependencies)
                 if (!modules.ContainsKey(dependency))
-                    throw new InvalidOperationException($"Module '{module.Id}' depends on missing module '{dependency}'.");
+                    throw new InvalidOperationException($"Module '{module.Descriptor.Id}' depends on missing module '{dependency}'.");
 
         var ordered = new List<IAlxarafeModule>();
         var visiting = new HashSet<string>(StringComparer.Ordinal);
@@ -76,12 +79,12 @@ public static class ModuleGraph
         {
             if (visited.Contains(id)) return;
             if (!visiting.Add(id)) throw new InvalidOperationException($"Module dependency cycle detected at '{id}'.");
-            foreach (var dependency in modules[id].Dependencies) Visit(dependency);
+            foreach (var dependency in modules[id].Descriptor.Dependencies.Order(StringComparer.Ordinal)) Visit(dependency);
             visiting.Remove(id);
             visited.Add(id);
             ordered.Add(modules[id]);
         }
-        foreach (var id in modules.Keys.Order(StringComparer.Ordinal)) Visit(id);
-        return ordered;
+        foreach (var id in modules.Keys) Visit(id);
+        return ordered.AsReadOnly();
     }
 }

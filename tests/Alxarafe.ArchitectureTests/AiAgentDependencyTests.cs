@@ -57,8 +57,8 @@ public sealed class AiAgentDependencyTests
         services.AddAlxarafeModules(assembly);
         using var provider = services.BuildServiceProvider();
         var runtime = provider.GetRequiredService<ModuleRuntime>();
-        Assert.Equal(id, Assert.Single(runtime.Modules).Id);
-        Assert.Empty(runtime.Modules[0].Dependencies);
+        Assert.Equal(id, Assert.Single(runtime.Modules).Descriptor.Id);
+        Assert.Empty(runtime.Modules[0].Descriptor.Dependencies);
         var permissions = provider.GetServices<IPermissionDefinitionProvider>().SelectMany(definition => definition.GetPermissions());
         var prefix = id == "AiAgent" ? "ai." : "catalog.";
         Assert.All(permissions, permission => Assert.StartsWith(prefix, permission.Name, StringComparison.Ordinal));
