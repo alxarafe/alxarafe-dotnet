@@ -24,7 +24,7 @@ Each module owns its domain, application, adapters, endpoints, permissions, sema
 
 ## Current module discovery and controlled Host dependency
 
-`IAlxarafeModule` exposes an identifier, declared dependencies, service registration, and ordered initialization. `IHttpModule` is an ASP.NET Core adapter contract, so Modularity itself does not depend on endpoint routing.
+`IAlxarafeModule` exposes an immutable `ModuleDescriptor`, service registration, and ordered initialization. `IHttpModule` is an ASP.NET Core adapter contract, so Modularity itself does not depend on endpoint routing.
 
 Modules currently come from explicitly known assemblies:
 
@@ -34,7 +34,7 @@ builder.Services.AddAlxarafeModules(
     typeof(AiAgentModule).Assembly);
 ```
 
-`AddAlxarafeModules` delegates to `ModuleBuilder` and `ModuleGraph`. `ModuleGraph` discovers exported implementations of `IAlxarafeModule` through reflection in those assemblies, constructs them, validates missing dependencies, and sorts them topologically, rejecting cycles. It does not load external assemblies or scan every assembly already loaded in the process.
+`AddAlxarafeModules` wraps those assemblies in `BuiltInAssemblyModuleSource`. Only that source reflects over exported module implementations and constructs them. `ModuleRegistry` gathers sources, checks Module API versions and duplicate IDs, then `ModuleGraph` validates dependencies and cycles and produces deterministic topological order for `ModuleRuntime`. Neither registry nor graph performs discovery. See [the module extension model](modularity.md) for the public contracts and availability semantics.
 
 The only permitted Host-to-module dependencies are the project references to `Alxarafe.Modules.Catalog.Module` / `Alxarafe.Modules.AiAgent.Module` and their entry types `CatalogModule` / `AiAgentModule` in `Program.cs` to select its assembly. This is temporary static composition, not permission to use other types from that assembly or any Application, Domain, Http, or Infrastructure types. Architecture tests check both compiled assembly/type references and source directives/resources. Framework assemblies may not reference any `Alxarafe.Modules.*` assembly.
 
@@ -122,39 +122,19 @@ Shared login HTTP conformance belongs to the pinned erbas-contract AUTH-001 Brun
 
 ## Future external plugins (design only)
 
-The goal is to allow third parties to build external modules which the Host did not know when it was compiled, for example:
+Third-party .NET assemblies must eventually extend the CORE without modifying or
+recompiling it, using the same source/registry/graph/runtime pipeline as built-in
+modules. Physical loading is not implemented. Current entry assembly selection
+remains confined to the composition root and built-in source.
 
-```text
-plugins/
-    SomePlugin/
-        SomePlugin.dll
-        ...
-```
+The [module extension model](modularity.md) records the approved semantics:
+installation/uninstallation may initially require restart, while persistent
+functional enabled/disabled will be dynamic without restart. Disable, uninstall
+and any future explicit purge remain separate operations. Loader, package and
+migration provisioning details require later work.
 
-A future bootstrap flow would be:
-
-```text
-discover assembly
-→ load assembly
-→ locate IAlxarafeModule
-→ check compatibility
-→ check dependencies
-→ check activation
-→ register services
-→ initialize module
-```
-
-`AssemblyLoadContext` and `AssemblyDependencyResolver` are possible native .NET tools for loading and resolving plugin dependencies. They are not implemented now. The platform contracts must retain a shared type identity with the Host; duplicating their assemblies in separate load contexts can make identical-looking interfaces incompatible. Plugin dependency isolation and version conflicts need an explicit policy, including native library resolution. See [.NET plugin loading](https://learn.microsoft.com/dotnet/core/tutorials/creating-app-with-plugin-support).
-
-Activation/deactivation will probably require restarting the process, so service registration, policies, endpoints, and initialization are rebuilt consistently. Hot reload and hot unload are outside the current scope. Disabling a module will also need to validate dependent active modules and must not silently delete its data.
-
-Future compatibility rules must define platform contract/API versions, supported framework/runtime versions, plugin metadata, module versions, and supported dependency ranges. The current graph resolves identifier dependencies and order only; it does not implement version compatibility or activation rules. Dependency resolution should report missing/incompatible dependencies and cycles before registration and initialization.
-
-Installation still needs decisions on package layout, discovery paths, integrity/provenance, configuration and secrets, database provisioning, migration ownership and ordering, upgrade/rollback, and uninstall/data retention. Those decisions should precede implementation of an installer or loader.
-
-An in-process plugin is not a security sandbox. It executes with the Host's privileges and can access process memory, configuration, files, and networks. `AssemblyLoadContext` isolates assembly loading, not untrusted code. If untrusted plugins are required, process/container isolation and a separate communication contract must be designed.
-
-The eventual Host must be able to execute a module that did not exist when the Host was compiled, using public platform contracts rather than module domain knowledge. Static entry assembly references are the current, controlled intermediate state.
+An in-process plugin is not a security sandbox. It executes with the Host's
+privileges. Loading isolation does not make untrusted code safe.
 
 ## Catalog leakage audit
 
@@ -179,7 +159,7 @@ There are no `sku` occurrences outside Catalog, Catalog tests, architecture boun
 
 No dynamic plugin loader, hot reload/unload, MediatR, AutoMapper/Mapster, new modularity framework, or new NuGet package is added. ASP.NET Core native services provide Identity bearer authentication, authorization policies, localization, ProblemDetails, and OpenAPI. PostgreSQL remains an adapter.
 
-The existing create use case checks SKU uniqueness before inserting. Concurrent inserts can still race and reach the database's unique constraint; mapping that persistence race into the semantic application exception is separate work. Development/test seeds add claims idempotently but do not reconcile revoked permissions, reset existing passwords, or provide production identity administration. Fixed test database provisioning and static module assembly selection remain until installation/activation policies are designed.
+The existing create use case checks SKU uniqueness before inserting. Concurrent inserts can still race and reach the database's unique constraint; mapping that persistence race into the semantic application exception is separate work. Development/test seeds add claims idempotently but do not reconcile revoked permissions, reset existing passwords, or provide production identity administration. Fixed test database provisioning and static module assembly selection remain; the approved future lifecycle semantics are documented in [modularity](modularity.md), while physical loading and provisioning are not implemented.
 
 ## AiAgent 0.1
 

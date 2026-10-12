@@ -182,7 +182,7 @@ See [verification](verification/users-001-collections-001.md).
 
 ## Adding a module
 
-Create Domain, Application, Infrastructure, Http, and Module projects under `src/Modules/<Name>/`. Implement `IAlxarafeModule`, expose only public contracts, and add the module assembly explicitly in Host. A module must never reach into another module’s Infrastructure; use public contracts or future public events.
+Create Domain, Application, Infrastructure, Http, and Module projects under `src/Modules/<Name>/`. Implement `IAlxarafeModule` with an immutable descriptor declaring `ModuleApi.CurrentVersion`, expose only public contracts, and add the built-in module assembly explicitly in Host. See [modularity](modularity.md) for source/registry composition and the future external bootstrap boundary. A module must never reach into another module’s Infrastructure; use public contracts or future public events.
 
 ## AiAgent 0.1
 
