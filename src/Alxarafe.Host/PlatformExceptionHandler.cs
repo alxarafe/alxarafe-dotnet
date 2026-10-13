@@ -1,3 +1,4 @@
+using Alxarafe.AspNetCore;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,14 +9,14 @@ namespace Alxarafe.Host;
 
 public sealed partial class PlatformExceptionHandler(
     IProblemDetailsService problemDetails,
-    IStringLocalizer<PlatformMessages> localizer,
+    IStringLocalizer<CoreMessages> localizer,
     ILogger<PlatformExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var (status, code) = exception switch
         {
-            ArgumentException => (StatusCodes.Status400BadRequest, "validation_error"),
+            ArgumentException => (StatusCodes.Status400BadRequest, CoreMessages.ValidationCode),
             _ => (0, string.Empty)
         };
 
@@ -29,10 +30,10 @@ public sealed partial class PlatformExceptionHandler(
         var problem = new ProblemDetails
         {
             Status = status,
-            Title = localizer[code].Value,
-            Type = $"https://alxarafe.dev/problems/{code}"
+            Title = localizer[CoreMessages.ValidationTitle].Value,
+            Type = CoreMessages.ProblemTypePrefix + code
         };
-        problem.Extensions["code"] = code;
+        problem.Extensions[CoreMessages.CodeProperty] = code;
         await problemDetails.WriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,

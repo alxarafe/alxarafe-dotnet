@@ -33,5 +33,5 @@ assert {
   res.status: eq 400
   res.body.status: eq 400
   res.body.code: eq validation_error
-  res.body.title: eq La solicitud contiene datos no válidos.
+  res.body.title: eq El campo answer no debe superar 20000 valores escalares Unicode.
 }

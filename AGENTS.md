@@ -129,6 +129,34 @@ before the final local commit, then obtain approval before starting the next tas
 Independent authorization for push, PR creation, merge, tag, release, publication
 and deployment remains required.
 
+## API Internationalization
+
+All user-facing runtime literals must use native i18n. Initial languages are
+`en` and `es`, with English as base and deterministic fallback. Use only standard
+`Accept-Language` request negotiation, including parent-culture fallback for
+regional variants. Do not add language query parameters, custom headers, mutable
+global cultures or persistent preferences.
+
+Use `AddLocalization`, `RequestLocalization`, `IStringLocalizer<T>` and assembly-
+owned `.resx` resources. Keep the existing validation infrastructure and native
+`ProblemDetails`; localize human text at the HTTP boundary without changing
+technical codes, status or JSON shape. Domain/Application express structured
+failures and must not depend on localization, HTTP or request cultures. Use the
+native Identity error describer extension for Identity descriptions.
+
+Resources belong to the module/feature owning the text: Security owns Identity,
+Catalog and AiAgent own their functional/validation messages, and Core owns only
+transversal HTTP text. Never place module translations in Host or a global
+catalog. The neutral `.resx` is English; `.es.resx` supplies Spanish. Use complete
+parameterized phrases rather than concatenated translated fragments. Do not
+introduce translator interfaces, wrappers or a custom translation framework.
+
+Never translate routes, JSON properties, canonical field names/paths, codes, IDs,
+permissions/policies, claims, events, module names, configuration/technical keys,
+database identifiers or internal operational/development logs. Preserve closed
+shared-contract errors. Prove locale selection, fallback, parameter interpolation,
+request isolation and stable technical response fields through HTTP tests.
+
 ## Engineering simplicity
 
 Prefer simple, explicit and maintainable solutions.

@@ -1,3 +1,4 @@
+using Alxarafe.AspNetCore;
 using Alxarafe.Modules.AiAgent.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -24,10 +25,10 @@ public static class AiAgentEndpoints
         group.MapGet("/{id:guid}", async (Guid id, GetKnowledgeEntryByIdHandler handler, IStringLocalizer<AiAgentMessages> localizer, CancellationToken ct) =>
         {
             var entry = await handler.HandleAsync(id, ct);
-            const string code = "ai.knowledge_not_found";
+            const string code = AiAgentMessages.NotFoundCode;
             return entry is null
                 ? Results.Problem(statusCode: StatusCodes.Status404NotFound, title: localizer[code].Value,
-                    type: $"https://alxarafe.dev/problems/{code}", extensions: new Dictionary<string, object?> { ["code"] = code })
+                    type: CoreMessages.ProblemTypePrefix + code, extensions: new Dictionary<string, object?> { [CoreMessages.CodeProperty] = code })
                 : Results.Ok(entry);
         }).RequireAuthorization(AiAgentPermissions.KnowledgeRead)
             .Produces<KnowledgeEntryDto>(StatusCodes.Status200OK)
@@ -43,5 +44,12 @@ public static class AiAgentPermissions
     public const string KnowledgeWrite = "ai.knowledge.write";
 }
 
-public sealed class AiAgentMessages { }
+public sealed class AiAgentMessages
+{
+    public const string NotFoundCode = "ai.knowledge_not_found";
+    public const string Required = "ai.validation.required";
+    public const string InvalidUnicode = "ai.validation.invalid_unicode";
+    public const string NullScalar = "ai.validation.null_scalar";
+    public const string TooLong = "ai.validation.too_long";
+}
 public sealed record CreateKnowledgeEntryRequest(string Question, string Answer);

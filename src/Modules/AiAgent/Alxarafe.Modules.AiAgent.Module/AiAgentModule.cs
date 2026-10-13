@@ -18,6 +18,7 @@ public sealed class AiAgentModule : IAlxarafeModule, IHttpModule
 
     public void ConfigureServices(IServiceCollection services)
     {
+        services.AddExceptionHandler<KnowledgeExceptionHandler>();
         services.AddDbContext<AiAgentDbContext>((provider, options) =>
         {
             var connectionString = provider.GetRequiredService<IConfiguration>().GetConnectionString("AiAgent");

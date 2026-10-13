@@ -4,6 +4,8 @@
 | --- | --- |
 | [Usage](usage.md) | Docker development, full validation, networking, isolation and cleanup |
 | [Architecture](architecture.md) | Module boundaries and composition |
+| [API internationalization](i18n.md) | English fallback, native request negotiation and module-owned validation resources |
+| [I18N-001 verification](verification/i18n-001.md) | Native/HTTP test totals, unchanged shared conformance and cleanup evidence |
 | [Modularity](modularity.md) | Descriptors, API version, sources, availability, registry and future external extension boundaries |
 | [MODULES-001E-DOTNET verification](verification/modules-001e-dotnet.md) | Published v0.5.0 adoption, CORE module administration, explicit conformance composition and validation evidence |
 | [USERS-001 / COLLECTIONS-001 verification](verification/users-001-collections-001.md) | CORE users, current Identity state, concurrent last-admin protection and draft 0.4.0 conformance |

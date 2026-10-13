@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <data name="core.validation.invalid_request" xml:space="preserve"><value>La solicitud contiene datos no válidos.</value></data>
+  <data name="core.http.400" xml:space="preserve"><value>Solicitud no válida</value></data>
+  <data name="core.http.401" xml:space="preserve"><value>No autorizado</value></data>
+  <data name="core.http.403" xml:space="preserve"><value>Acceso prohibido</value></data>
+  <data name="core.http.404" xml:space="preserve"><value>No encontrado</value></data>
+  <data name="core.http.405" xml:space="preserve"><value>Método no permitido</value></data>
+  <data name="core.http.406" xml:space="preserve"><value>No aceptable</value></data>
+  <data name="core.http.409" xml:space="preserve"><value>Conflicto</value></data>
+  <data name="core.http.415" xml:space="preserve"><value>Tipo de contenido no admitido</value></data>
+  <data name="core.http.422" xml:space="preserve"><value>Contenido no procesable</value></data>
+  <data name="core.http.500" xml:space="preserve"><value>Error interno del servidor</value></data>
+  <data name="core.http.503" xml:space="preserve"><value>Servicio no disponible</value></data>
+  <data name="core.error.request" xml:space="preserve"><value>No se pudo completar la solicitud.</value></data>
+</root>

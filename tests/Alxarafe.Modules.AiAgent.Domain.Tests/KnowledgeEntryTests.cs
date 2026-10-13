@@ -25,7 +25,7 @@ public sealed class KnowledgeEntryTests
     [InlineData("Question", "   ", "answer")]
     public void CreateRejectsMissingText(string? question, string? answer, string parameter)
     {
-        var exception = Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(question!, answer!));
+        var exception = Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create(question!, answer!));
         Assert.Equal(parameter, exception.ParamName);
     }
 
@@ -65,7 +65,7 @@ public sealed class KnowledgeEntryTests
     public void CreateRejectsOneScalarBeyondEachLimit(bool questionIsTooLong, string scalar)
     {
         var text = string.Concat(Enumerable.Repeat(scalar, questionIsTooLong ? 1001 : 20001));
-        var exception = Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(
+        var exception = Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create(
             questionIsTooLong ? text : "Question", questionIsTooLong ? "Answer" : text));
         Assert.Equal(questionIsTooLong ? "question" : "answer", exception.ParamName);
     }
@@ -76,7 +76,7 @@ public sealed class KnowledgeEntryTests
     public void RehydrateEnforcesTheSameLengthInvariants(bool questionIsTooLong)
     {
         var text = new string('a', questionIsTooLong ? 1001 : 20001);
-        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Rehydrate(Guid.NewGuid(),
+        Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Rehydrate(Guid.NewGuid(),
             questionIsTooLong ? text : "Question", questionIsTooLong ? "Answer" : text));
     }
 
@@ -94,7 +94,7 @@ public sealed class KnowledgeEntryTests
         var entry = KnowledgeEntry.Create("\u2003Question\u2003", "\u2003Answer\u2003");
         Assert.Equal("Question", entry.Question);
         Assert.Equal("Answer", entry.Answer);
-        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create("\u2003", "Answer"));
+        Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create("\u2003", "Answer"));
     }
 
     [Fact]
@@ -102,15 +102,15 @@ public sealed class KnowledgeEntryTests
     {
         var question = string.Concat(Enumerable.Repeat("e\u0301", 500));
         Assert.Equal(question, KnowledgeEntry.Create(question, "Answer").Question);
-        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(question + "e", "Answer"));
+        Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create(question + "e", "Answer"));
     }
 
     [Fact]
     public void CreateRejectsUnpairedSurrogates()
     {
         var invalid = new string('\uD800', 1);
-        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(invalid, "Answer"));
-        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create("Question", invalid));
+        Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create(invalid, "Answer"));
+        Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create("Question", invalid));
     }
 
     [Theory]
@@ -120,12 +120,12 @@ public sealed class KnowledgeEntryTests
     [InlineData("Question", "before\u0000after", "answer")]
     public void NullScalarIsRejectedRatherThanSilentlyRemoved(string question, string answer, string parameter)
     {
-        var exception = Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(question, answer));
+        var exception = Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create(question, answer));
         Assert.Equal(parameter, exception.ParamName);
         Assert.Contains("U+0000", exception.Message);
         Assert.DoesNotContain("before", exception.Message);
         Assert.DoesNotContain("after", exception.Message);
-        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Rehydrate(Guid.NewGuid(), question, answer));
+        Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Rehydrate(Guid.NewGuid(), question, answer));
     }
 
     [Fact]

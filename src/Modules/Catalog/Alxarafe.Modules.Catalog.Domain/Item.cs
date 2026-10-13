@@ -8,22 +8,26 @@ public readonly record struct ItemId(Guid Value)
 
 public sealed record Sku
 {
+    public const int MaximumLength = 50;
+    public const string Field = "sku";
     public string Value { get; }
     private Sku(string value) => Value = value;
     public static Sku Create(string value)
     {
-        if (string.IsNullOrWhiteSpace(value) || value.Length > 50) throw new ArgumentException("SKU must contain 1 to 50 characters.", nameof(value));
+        if (string.IsNullOrWhiteSpace(value) || value.Length > MaximumLength) throw new ItemValidationException(Field, MaximumLength);
         return new Sku(value.Trim().ToUpperInvariant());
     }
 }
 
 public sealed record ItemName
 {
+    public const int MaximumLength = 200;
+    public const string Field = "name";
     public string Value { get; }
     private ItemName(string value) => Value = value;
     public static ItemName Create(string value)
     {
-        if (string.IsNullOrWhiteSpace(value) || value.Trim().Length > 200) throw new ArgumentException("Name must contain 1 to 200 characters.", nameof(value));
+        if (string.IsNullOrWhiteSpace(value) || value.Trim().Length > MaximumLength) throw new ItemValidationException(Field, MaximumLength);
         return new ItemName(value.Trim());
     }
 }
