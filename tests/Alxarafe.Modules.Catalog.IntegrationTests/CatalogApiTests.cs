@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Alxarafe.Modules.Catalog.IntegrationTests;
 
-public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class CatalogApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     private static readonly bool IsIsolated =
         Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing" &&
@@ -101,7 +101,10 @@ public sealed class CatalogApiTests(WebApplicationFactory<Program> factory) : IC
     [Theory]
     [InlineData("es", "Ya existe un artículo con este SKU.")]
     [InlineData("en", "An item with this SKU already exists.")]
-    [InlineData(null, "Ya existe un artículo con este SKU.")]
+    [InlineData(null, "An item with this SKU already exists.")]
+    [InlineData("fr", "An item with this SKU already exists.")]
+    [InlineData("es-ES", "Ya existe un artículo con este SKU.")]
+    [InlineData("en-US", "An item with this SKU already exists.")]
     public async Task CreateItemWhenDuplicatedReturnsLocalizedConflict(string? language, string expectedTitle)
     {
         RequireIsolation();

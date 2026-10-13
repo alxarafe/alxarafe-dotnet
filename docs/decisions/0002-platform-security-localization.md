@@ -12,7 +12,7 @@ ASP.NET Core owns authorization. Alxarafe adds only a small shared `IPermissionD
 
 ## Localization and errors
 
-Domain and Application never depend on localized text. HTTP resources live with the relevant adapter/module, and `Accept-Language` selects Spanish or English with Spanish as the default. Responses use native RFC-compatible ProblemDetails with a stable semantic `code` extension.
+Domain and Application never depend on localized text. HTTP resources live with the relevant adapter/module. I18N-001 supersedes the original Spanish default: `Accept-Language` now selects English or Spanish with English as the base/fallback, using only the native header provider. Responses retain native RFC-compatible ProblemDetails and their stable technical extensions. See [runtime internationalization](../i18n.md).
 
 ## Testing and operations
 

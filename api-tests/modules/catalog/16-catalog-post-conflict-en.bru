@@ -1,5 +1,5 @@
 meta {
-  name: Catalog duplicate item in English
+  name: Catalog duplicate item with default English
   type: http
   seq: 16
 }
@@ -12,10 +12,6 @@ post {
 
 auth:bearer {
   token: {{creatorToken}}
-}
-
-headers {
-  Accept-Language: en
 }
 
 body:json {

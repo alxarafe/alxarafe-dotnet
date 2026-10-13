@@ -24,7 +24,7 @@ public sealed class KnowledgeEntry
     {
         var normalized = value?.Trim();
         if (string.IsNullOrEmpty(normalized))
-            throw new ArgumentException("Knowledge text must not be empty after trimming.", parameter);
+            throw new KnowledgeValidationException(parameter, KnowledgeValidationRule.Required, maximumLength);
 
         // Count Unicode scalar values, not UTF-16 code units or grapheme clusters.
         var remaining = normalized.AsSpan();
@@ -32,11 +32,11 @@ public sealed class KnowledgeEntry
         while (!remaining.IsEmpty)
         {
             if (Rune.DecodeFromUtf16(remaining, out var rune, out var consumed) != OperationStatus.Done)
-                throw new ArgumentException("Knowledge text must contain valid Unicode scalar values.", parameter);
+                throw new KnowledgeValidationException(parameter, KnowledgeValidationRule.InvalidUnicode, maximumLength);
             if (rune.Value == 0)
-                throw new ArgumentException("Knowledge text must not contain U+0000.", parameter);
+                throw new KnowledgeValidationException(parameter, KnowledgeValidationRule.NullScalar, maximumLength);
             if (++length > maximumLength)
-                throw new ArgumentException($"Knowledge text must not exceed {maximumLength} Unicode scalar values.", parameter);
+                throw new KnowledgeValidationException(parameter, KnowledgeValidationRule.TooLong, maximumLength);
             remaining = remaining[consumed..];
         }
 

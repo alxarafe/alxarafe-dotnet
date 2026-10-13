@@ -8,7 +8,7 @@ The reproducible validation flow for the platform foundation uses one command:
 ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 ```
 
-The host uses Git, Bash, Docker and Docker Compose, plus the Linux fixture utilities listed in [API tests](../api-tests/README.md). It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, shared HTTP conformance, local OpenAPI, all platform and module Bruno scenarios (32 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
+The host uses Git, Bash, Docker and Docker Compose, plus the Linux fixture utilities listed in [API tests](../api-tests/README.md). It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, shared HTTP conformance, local OpenAPI, all platform and module Bruno scenarios (34 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
 
 `contract.revision` declares the published release [v0.5.0](https://github.com/alxarafe/erbas-contract/tree/v0.5.0).
 Supply its separate clean checkout explicitly through `ERBAS_CONTRACT_DIR`.
@@ -196,6 +196,13 @@ canonical development descriptors have no functional endpoints.
 See [modularity](modularity.md#core-module-administration) for representation,
 security, composition and state rules, and
 [verification](verification/modules-001e-dotnet.md) for measured results.
+
+## Runtime language selection
+
+Human API messages use `Accept-Language: en` or `es`, with English as default and
+fallback. Regional variants use native parent-culture resolution. Cookies/query
+parameters do not select language. Technical codes and shared v0.5.0 closed errors
+remain unchanged. See [internationalization](i18n.md) for ownership and validation.
 
 ## Architecture
 

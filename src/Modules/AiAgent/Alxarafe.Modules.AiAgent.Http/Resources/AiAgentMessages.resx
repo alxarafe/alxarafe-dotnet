@@ -5,4 +5,8 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0</value></resheader>
   <data name="ai.knowledge_not_found" xml:space="preserve"><value>The requested knowledge entry was not found.</value></data>
+  <data name="ai.validation.required" xml:space="preserve"><value>The field {0} is required.</value></data>
+  <data name="ai.validation.invalid_unicode" xml:space="preserve"><value>The field {0} must contain valid Unicode scalar values.</value></data>
+  <data name="ai.validation.null_scalar" xml:space="preserve"><value>The field {0} must not contain U+0000.</value></data>
+  <data name="ai.validation.too_long" xml:space="preserve"><value>The field {0} must not exceed {1} Unicode scalar values.</value></data>
 </root>

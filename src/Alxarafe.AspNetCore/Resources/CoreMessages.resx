@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <data name="core.validation.invalid_request" xml:space="preserve"><value>The request contains invalid data.</value></data>
+  <data name="core.http.400" xml:space="preserve"><value>Bad request</value></data>
+  <data name="core.http.401" xml:space="preserve"><value>Unauthorized</value></data>
+  <data name="core.http.403" xml:space="preserve"><value>Forbidden</value></data>
+  <data name="core.http.404" xml:space="preserve"><value>Not found</value></data>
+  <data name="core.http.405" xml:space="preserve"><value>Method not allowed</value></data>
+  <data name="core.http.406" xml:space="preserve"><value>Not acceptable</value></data>
+  <data name="core.http.409" xml:space="preserve"><value>Conflict</value></data>
+  <data name="core.http.415" xml:space="preserve"><value>Unsupported media type</value></data>
+  <data name="core.http.422" xml:space="preserve"><value>Unprocessable content</value></data>
+  <data name="core.http.500" xml:space="preserve"><value>Internal server error</value></data>
+  <data name="core.http.503" xml:space="preserve"><value>Service unavailable</value></data>
+  <data name="core.error.request" xml:space="preserve"><value>The request could not be completed.</value></data>
+</root>

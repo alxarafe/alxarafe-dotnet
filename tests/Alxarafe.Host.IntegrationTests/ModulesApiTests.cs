@@ -239,23 +239,29 @@ public sealed class ModulesApiTests(WebApplicationFactory<Program> factory) : IC
         AssertModule(Assert.Single(page.GetProperty("items").EnumerateArray()), lower, true, [a, z]);
     }
 
-    [Fact]
-    public async Task MissingStateAndUnexpectedStorageFailuresAreNotFalse404Or409()
+    [Theory]
+    [InlineData("en", "Internal server error")]
+    [InlineData("es", "Error interno del servidor")]
+    public async Task MissingStateAndUnexpectedStorageFailuresAreNotFalse404Or409(string language, string title)
     {
         await using var context = await application.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
         await context.ModuleStates.Where(row => row.ModuleId == ConformanceModuleSource.StatisticsId).ExecuteDeleteAsync();
         using var request = new HttpRequestMessage(HttpMethod.Patch, ModuleEndpoints.Path + "/" + ConformanceModuleSource.MathId);
         request.Headers.Authorization = new AuthenticationHeaderValue(BearerScheme, adminToken);
+        request.Headers.AcceptLanguage.ParseAdd(language);
         request.Content = JsonContent.Create(new { enabled = false });
         var missing = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.InternalServerError, missing.StatusCode);
+        Assert.Equal(title, (await Body(missing)).GetProperty("title").GetString());
         Assert.True(await states.IsEnabledAsync(ConformanceModuleSource.MathId));
         using var broken = application.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
             services.AddSingleton<IModuleStateStore>(new UnavailableStore())));
         using var brokenClient = broken.CreateClient();
         brokenClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(BearerScheme, adminToken);
+        brokenClient.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
         var failure = await brokenClient.PatchAsJsonAsync(ModuleEndpoints.Path + "/" + ConformanceModuleSource.MathId, new { enabled = false });
         Assert.Equal(HttpStatusCode.InternalServerError, failure.StatusCode);
+        Assert.Equal(title, (await Body(failure)).GetProperty("title").GetString());
     }
 
     private WebApplicationFactory<Program> WithModules(IAlxarafeModule[] modules) =>

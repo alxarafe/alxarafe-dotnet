@@ -127,7 +127,7 @@ public sealed class KnowledgePersistenceTests
         // Boundary behavior proves that domain length counts both scalars.
         var boundary = string.Concat(Enumerable.Repeat(decomposed, 500));
         Assert.Equal(boundary, KnowledgeEntry.Create(boundary, "Answer").Question);
-        Assert.Throws<ArgumentException>(() => KnowledgeEntry.Create(boundary + "e", "Answer"));
+        Assert.Throws<KnowledgeValidationException>(() => KnowledgeEntry.Create(boundary + "e", "Answer"));
         await using var database = await TemporaryKnowledgeDatabase.CreateAsync();
         await using var db = database.CreateContext();
         await db.Database.MigrateAsync();

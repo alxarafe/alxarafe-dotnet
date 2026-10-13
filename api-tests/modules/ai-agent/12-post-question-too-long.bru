@@ -33,5 +33,5 @@ assert {
   res.status: eq 400
   res.body.status: eq 400
   res.body.code: eq validation_error
-  res.body.title: eq The request contains invalid data.
+  res.body.title: eq The field question must not exceed 1000 Unicode scalar values.
 }

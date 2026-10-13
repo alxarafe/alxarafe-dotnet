@@ -1,4 +1,6 @@
+using Alxarafe.AspNetCore;
 using Alxarafe.Modules.Catalog.Application;
+using Alxarafe.Modules.Catalog.Domain;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,20 +16,25 @@ public sealed partial class CatalogExceptionHandler(
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        if (exception is not ItemAlreadyExistsException) return false;
-
-        const string code = "catalog.sku_already_exists";
-        const int status = StatusCodes.Status409Conflict;
+        var (status, code, title) = exception switch
+        {
+            ItemAlreadyExistsException => (StatusCodes.Status409Conflict, CatalogMessages.DuplicateCode,
+                localizer[CatalogMessages.DuplicateCode].Value),
+            ItemValidationException invalid => (StatusCodes.Status400BadRequest, CoreMessages.ValidationCode,
+                localizer[CatalogMessages.InvalidField, invalid.Field, invalid.MaximumLength].Value),
+            _ => (0, string.Empty, string.Empty)
+        };
+        if (status == 0) return false;
         // Do not log the exception message: it contains user-supplied domain data.
         RejectedRequest(logger, status, code);
         httpContext.Response.StatusCode = status;
         var problem = new ProblemDetails
         {
             Status = status,
-            Title = localizer[code].Value,
-            Type = $"https://alxarafe.dev/problems/{code}"
+            Title = title,
+            Type = CoreMessages.ProblemTypePrefix + code
         };
-        problem.Extensions["code"] = code;
+        problem.Extensions[CoreMessages.CodeProperty] = code;
         await problemDetails.WriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,

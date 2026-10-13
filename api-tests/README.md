@@ -4,11 +4,11 @@ The independent collections complement .NET domain, architecture, and integratio
 
 ```text
 api-tests/
-    platform/                 # health, registration (2 requests)
+    platform/                 # health, registration and localized validation (3 requests)
     modules/
-        catalog/              # Catalog permissions and functionality (13 requests)
+        catalog/              # Catalog permissions, functionality and locale fallback (17 requests)
             assert-persistence.sh
-        ai-agent/             # independent knowledge API (17 requests)
+        ai-agent/             # independent knowledge API (14 requests)
             assert-persistence.sh
     shared/
         environments/docker.bru
@@ -18,7 +18,13 @@ Each collection has its own `bruno.json`. The `environments` directories are rel
 
 Platform generates a unique registration email. Shared login conformance belongs exclusively to the pinned erbas-contract AUTH-001 collection; the duplicated platform login request has been removed. Module login requests remain session setup for permission and functionality tests. Catalog prepares reader and creator sessions explicitly in its collection, uses `readerToken` and `creatorToken`, and generates its own unique SKU. Create/read/duplicate scenarios use `itemId`/`sku` from Catalog's own create flow. No variable or token is inherited from another collection, so Catalog can run before or without Platform. Its local create/read ordering is intentional. The original 14 scenarios are preserved; two duplicate-item cases add localized 409 coverage. Missing-item cases also assert the Spanish/English titles.
 
-Run all 32 requests without installing Bruno, Node.js, or the .NET SDK on the host:
+Run all 34 requests without installing Bruno, Node.js, or the .NET SDK on the host:
+
+The i18n sample reuses the duplicate-item cases for regional Spanish/default
+English, adds an unsupported-language Catalog read and a Spanish Identity
+validation request, and retains explicit English/Spanish module checks. Technical
+status, code/error keys and JSON property sets are asserted independently of human
+text. See [runtime internationalization](../docs/i18n.md).
 
 ```bash
 ./bin/bruno

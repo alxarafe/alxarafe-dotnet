@@ -93,7 +93,10 @@ public sealed partial class KnowledgeApiTests(WebApplicationFactory<Program> fac
     [Theory]
     [InlineData("es", "No se encontró la entrada de conocimiento solicitada.")]
     [InlineData("en", "The requested knowledge entry was not found.")]
-    [InlineData(null, "No se encontró la entrada de conocimiento solicitada.")]
+    [InlineData(null, "The requested knowledge entry was not found.")]
+    [InlineData("fr", "The requested knowledge entry was not found.")]
+    [InlineData("es-ES", "No se encontró la entrada de conocimiento solicitada.")]
+    [InlineData("en-US", "The requested knowledge entry was not found.")]
     public async Task MissingKnowledgeReturnsLocalizedProblem(string? language, string title)
     {
         RequireIsolation();
@@ -199,7 +202,9 @@ public sealed partial class KnowledgeApiTests(WebApplicationFactory<Program> fac
         Assert.Equal(400, problem.GetProperty("status").GetInt32());
         Assert.Equal("validation_error", problem.GetProperty("code").GetString());
         Assert.Equal("https://alxarafe.dev/problems/validation_error", problem.GetProperty("type").GetString());
-        Assert.Equal(language == "es" ? "La solicitud contiene datos no válidos." : "The request contains invalid data.", problem.GetProperty("title").GetString());
+        var field = questionIsTooLong ? "question" : "answer";
+        var maximum = questionIsTooLong ? KnowledgeEntry.QuestionMaxLength : KnowledgeEntry.AnswerMaxLength;
+        Assert.Equal(language == "es" ? $"El campo {field} no debe superar {maximum} valores escalares Unicode." : $"The field {field} must not exceed {maximum} Unicode scalar values.", problem.GetProperty("title").GetString());
         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
         Assert.Equal(before, await db.Knowledge.CountAsync());
     }
@@ -233,7 +238,8 @@ public sealed partial class KnowledgeApiTests(WebApplicationFactory<Program> fac
         Assert.Equal(400, problem.GetProperty("status").GetInt32());
         Assert.Equal("validation_error", problem.GetProperty("code").GetString());
         Assert.Equal("https://alxarafe.dev/problems/validation_error", problem.GetProperty("type").GetString());
-        Assert.Equal(language == "es" ? "La solicitud contiene datos no válidos." : "The request contains invalid data.", problem.GetProperty("title").GetString());
+        var field = inQuestion ? "question" : "answer";
+        Assert.Equal(language == "es" ? $"El campo {field} no debe contener U+0000." : $"The field {field} must not contain U+0000.", problem.GetProperty("title").GetString());
         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
         Assert.DoesNotContain("nul-before", body);
         Assert.DoesNotContain("nul-after", body);

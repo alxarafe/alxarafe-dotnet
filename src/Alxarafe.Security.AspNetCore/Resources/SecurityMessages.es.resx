@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <data name="security.validation.title" xml:space="preserve"><value>Se produjeron uno o más errores de validación.</value></data>
+  <data name="security.identity.DefaultError" xml:space="preserve"><value>Se produjo un error inesperado.</value></data>
+  <data name="security.identity.ConcurrencyFailure" xml:space="preserve"><value>El registro cambió. Inténtelo de nuevo.</value></data>
+  <data name="security.identity.PasswordMismatch" xml:space="preserve"><value>La contraseña no es correcta.</value></data>
+  <data name="security.identity.InvalidToken" xml:space="preserve"><value>El token no es válido.</value></data>
+  <data name="security.identity.RecoveryCodeRedemptionFailed" xml:space="preserve"><value>El código de recuperación no es válido.</value></data>
+  <data name="security.identity.LoginAlreadyAssociated" xml:space="preserve"><value>Este inicio de sesión ya está asociado a otra cuenta.</value></data>
+  <data name="security.identity.InvalidUserName" xml:space="preserve"><value>El nombre de usuario {0} no es válido.</value></data>
+  <data name="security.identity.InvalidEmail" xml:space="preserve"><value>La dirección de correo {0} no es válida.</value></data>
+  <data name="security.identity.DuplicateUserName" xml:space="preserve"><value>El nombre de usuario {0} ya está en uso.</value></data>
+  <data name="security.identity.DuplicateEmail" xml:space="preserve"><value>La dirección de correo {0} ya está en uso.</value></data>
+  <data name="security.identity.InvalidRoleName" xml:space="preserve"><value>El nombre del rol {0} no es válido.</value></data>
+  <data name="security.identity.DuplicateRoleName" xml:space="preserve"><value>El nombre del rol {0} ya está en uso.</value></data>
+  <data name="security.identity.UserAlreadyHasPassword" xml:space="preserve"><value>Este usuario ya tiene una contraseña.</value></data>
+  <data name="security.identity.UserLockoutNotEnabled" xml:space="preserve"><value>El bloqueo no está habilitado para este usuario.</value></data>
+  <data name="security.identity.UserAlreadyInRole" xml:space="preserve"><value>Este usuario ya pertenece al rol {0}.</value></data>
+  <data name="security.identity.UserNotInRole" xml:space="preserve"><value>Este usuario no pertenece al rol {0}.</value></data>
+  <data name="security.identity.PasswordTooShort" xml:space="preserve"><value>Las contraseñas deben tener al menos {0} caracteres.</value></data>
+  <data name="security.identity.PasswordRequiresUniqueChars" xml:space="preserve"><value>Las contraseñas deben contener al menos {0} caracteres distintos.</value></data>
+  <data name="security.identity.PasswordRequiresNonAlphanumeric" xml:space="preserve"><value>Las contraseñas deben contener un carácter no alfanumérico.</value></data>
+  <data name="security.identity.PasswordRequiresDigit" xml:space="preserve"><value>Las contraseñas deben contener un dígito.</value></data>
+  <data name="security.identity.PasswordRequiresLower" xml:space="preserve"><value>Las contraseñas deben contener una letra minúscula.</value></data>
+  <data name="security.identity.PasswordRequiresUpper" xml:space="preserve"><value>Las contraseñas deben contener una letra mayúscula.</value></data>
+</root>

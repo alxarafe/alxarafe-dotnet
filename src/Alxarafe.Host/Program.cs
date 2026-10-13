@@ -37,7 +37,19 @@ builder.Services.AddSingleton<ModuleStateService>();
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
-    context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier);
+{
+    context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+    var status = context.ProblemDetails.Status ?? context.HttpContext.Response.StatusCode;
+    // Module codes and native validation responses already carry owner-localized titles.
+    if (!context.ProblemDetails.Extensions.ContainsKey(CoreMessages.CodeProperty)
+        && context.ProblemDetails is not HttpValidationProblemDetails)
+    {
+        var localizer = context.HttpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<CoreMessages>>();
+        var title = localizer[$"core.http.{status}"];
+        context.ProblemDetails.Title = title.ResourceNotFound ? localizer[CoreMessages.RequestTitle].Value : title.Value;
+    }
+});
 builder.Services.AddDbContext<SecurityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Security")));
 builder.Services.AddIdentityCore<AlxarafeUser>(options =>
@@ -46,7 +58,8 @@ builder.Services.AddIdentityCore<AlxarafeUser>(options =>
     options.Password.RequiredLength = 8;
     options.Password.RequireDigit = true;
     options.Password.RequireNonAlphanumeric = false;
-}).AddEntityFrameworkStores<SecurityDbContext>().AddSignInManager().AddApiEndpoints();
+}).AddEntityFrameworkStores<SecurityDbContext>().AddSignInManager().AddApiEndpoints()
+    .AddErrorDescriber<LocalizedIdentityErrorDescriber>();
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
@@ -65,10 +78,12 @@ builder.Services.AddScoped<UserAdministration>();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, SharedUserAuthorizationResultHandler>();
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
-    var supportedCultures = new[] { new CultureInfo("es"), new CultureInfo("en") };
-    options.DefaultRequestCulture = new RequestCulture("es");
+    var baseCulture = CultureInfo.GetCultureInfo("en");
+    var supportedCultures = new[] { baseCulture, CultureInfo.GetCultureInfo("es") };
+    options.DefaultRequestCulture = new RequestCulture(baseCulture);
     options.SupportedCultures = supportedCultures;
     options.SupportedUICultures = supportedCultures;
+    options.RequestCultureProviders = [new AcceptLanguageHeaderRequestCultureProvider()];
 });
 builder.Services.AddOpenApi(options =>
 {

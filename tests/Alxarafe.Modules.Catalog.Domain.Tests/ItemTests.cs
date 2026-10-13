@@ -16,6 +16,8 @@ public sealed class ItemTests
     [Fact]
     public void CreateRejectsEmptySku()
     {
-        Assert.Throws<ArgumentException>(() => Sku.Create(" "));
+        var failure = Assert.Throws<ItemValidationException>(() => Sku.Create(" "));
+        Assert.Equal(Sku.Field, failure.Field);
+        Assert.Equal(Sku.MaximumLength, failure.MaximumLength);
     }
 }
