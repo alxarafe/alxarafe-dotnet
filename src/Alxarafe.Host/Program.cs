@@ -53,7 +53,11 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
 }).AddBearerToken(IdentityConstants.BearerScheme);
 // Temporary static composition: only the module entry assemblies are known here.
-builder.Services.AddAlxarafeModules(typeof(CatalogModule).Assembly, typeof(AiAgentModule).Assembly);
+var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(CatalogModule).Assembly, typeof(AiAgentModule).Assembly);
+if (builder.Environment.IsEnvironment(ConformanceModuleSource.EnvironmentName)
+    && builder.Configuration.GetValue<bool>(ConformanceModuleSource.EnabledConfiguration))
+    modules.AddSource(new ConformanceModuleSource());
+modules.Build();
 // Module handlers run first; this handler only handles transversal validation.
 builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddAlxarafePermissionAuthorization();
@@ -110,6 +114,7 @@ await app.Services.GetRequiredService<ModuleRuntime>().InitializeAsync(app.Servi
 app.MapOpenApi();
 AuthEndpoints.Map(app);
 UserEndpoints.Map(app);
+ModuleEndpoints.Map(app);
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     // Contractual HTTP liveness must not run database or module checks.

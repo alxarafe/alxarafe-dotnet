@@ -34,10 +34,10 @@ public sealed class ModuleStateTests
         Assert.False(await reconstructed.IsEnabledAsync(fixture.B));
         Assert.False(await reconstructed.IsEnabledAsync(fixture.C));
         Assert.False(await fixture.Store.FindAsync(fixture.Retired));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => reconstructed.EnableAsync(fixture.Retired));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => reconstructed.DisableAsync(fixture.Retired));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => reconstructed.IsEnabledAsync(fixture.Retired));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => reconstructed.RequireEnabledAsync(fixture.Retired));
+        await Assert.ThrowsAsync<ModuleUnavailableException>(() => reconstructed.EnableAsync(fixture.Retired));
+        await Assert.ThrowsAsync<ModuleUnavailableException>(() => reconstructed.DisableAsync(fixture.Retired));
+        await Assert.ThrowsAsync<ModuleUnavailableException>(() => reconstructed.IsEnabledAsync(fixture.Retired));
+        await Assert.ThrowsAsync<ModuleUnavailableException>(() => reconstructed.RequireEnabledAsync(fixture.Retired));
         var reinstalled = fixture.Service([Fixture.Module(fixture.Retired)]);
         await reinstalled.SynchronizeAsync();
         Assert.False(await reinstalled.IsEnabledAsync(fixture.Retired));
@@ -49,20 +49,20 @@ public sealed class ModuleStateTests
         await using var fixture = await Fixture.CreateAsync();
         var states = fixture.Service(fixture.Chain());
         await states.SynchronizeAsync();
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => states.DisableAsync(fixture.A));
+        var error = await Assert.ThrowsAsync<ModuleDependencyConflictException>(() => states.DisableAsync(fixture.A));
         Assert.Contains(fixture.A, error.Message);
         Assert.Contains(fixture.B, error.Message);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => states.DisableAsync(fixture.B));
+        await Assert.ThrowsAsync<ModuleDependencyConflictException>(() => states.DisableAsync(fixture.B));
         await states.DisableAsync(fixture.C);
         await states.DisableAsync(fixture.B);
         await states.DisableAsync(fixture.A);
         await states.DisableAsync(fixture.A);
         var disabled = await Assert.ThrowsAsync<ModuleDisabledException>(() => states.RequireEnabledAsync(fixture.A));
         Assert.Equal(fixture.A, disabled.ModuleId);
-        error = await Assert.ThrowsAsync<InvalidOperationException>(() => states.EnableAsync(fixture.B));
+        error = await Assert.ThrowsAsync<ModuleDependencyConflictException>(() => states.EnableAsync(fixture.B));
         Assert.Contains(fixture.B, error.Message);
         Assert.Contains(fixture.A, error.Message);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => states.EnableAsync(fixture.C));
+        await Assert.ThrowsAsync<ModuleDependencyConflictException>(() => states.EnableAsync(fixture.C));
         Assert.False(await states.IsEnabledAsync(fixture.B));
         await states.EnableAsync(fixture.A);
         await states.EnableAsync(fixture.A);
@@ -81,12 +81,26 @@ public sealed class ModuleStateTests
             states.Add(fixture.A, false);
             states.Add(fixture.B, true);
         });
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service(fixture.Chain()).SynchronizeAsync());
+        var error = await Assert.ThrowsAsync<ModuleDependencyConflictException>(() => fixture.Service(fixture.Chain()).SynchronizeAsync());
         Assert.Contains(fixture.A, error.Message);
         Assert.Contains(fixture.B, error.Message);
         Assert.False(await fixture.Store.FindAsync(fixture.A));
         Assert.True(await fixture.Store.FindAsync(fixture.B));
         Assert.Null(await fixture.Store.FindAsync(fixture.C));
+    }
+
+    [Fact]
+    public async Task MissingDependencyStateRemainsAnInternalFailureWithoutPartialPersistence()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var states = fixture.Service([Fixture.Module(fixture.A, fixture.B), Fixture.Module(fixture.B)]);
+        await states.SynchronizeAsync();
+        await using var context = fixture.CreateDbContext();
+        await context.ModuleStates.Where(row => row.ModuleId == fixture.B).ExecuteDeleteAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => states.EnableAsync(fixture.A));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => states.DisableAsync(fixture.A));
+        Assert.True(await fixture.Store.FindAsync(fixture.A));
+        Assert.Null(await fixture.Store.FindAsync(fixture.B));
     }
 
     [Fact]

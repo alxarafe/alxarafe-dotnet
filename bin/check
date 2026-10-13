@@ -20,7 +20,7 @@ case "$contract_origin" in
     git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
     *) echo 'ERROR: unexpected contract origin' >&2; exit 2 ;;
 esac
-if [[ "$contract_revision" != v0.4.0 ]]; then
+if [[ "$contract_revision" != v0.5.0 ]]; then
     echo 'ERROR: unsupported release in contract.revision' >&2
     exit 2
 fi
@@ -28,7 +28,7 @@ contract_commit=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract
     echo 'ERROR: contract checkout is missing the configured release tag' >&2
     exit 2
 }
-if [[ "$contract_commit" != 839255ea54610ccf711b29bd096ea294a1ebc3fc ]]; then
+if [[ "$contract_commit" != 35be07fe002c364f758ae50419d0ecb86d1f0c43 ]]; then
     echo 'ERROR: contract release tag does not resolve to its immutable commit' >&2
     exit 2
 fi
@@ -110,6 +110,8 @@ grep -Fq '"/api/auth/login"' <<<"$openapi"
 grep -Fq '"/api/auth/me"' <<<"$openapi"
 grep -Fq '"/api/users"' <<<"$openapi"
 grep -Fq '"/api/users/{id}"' <<<"$openapi"
+grep -Fq '"/api/modules"' <<<"$openapi"
+grep -Fq '"/api/modules/{id}"' <<<"$openapi"
 
 echo "==> Running platform and module Bruno suites"
 ./bin/bruno --prepared
