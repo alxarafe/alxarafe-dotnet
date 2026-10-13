@@ -1,5 +1,9 @@
 # MODULES-001E-DOTNET: published contract v0.5.0 adoption
 
+> Historical verification. CLEANUP-001 later removed the experimental business
+> modules. Counts and composition below describe the original verified revision;
+> see [current cleanup evidence](cleanup-001.md).
+
 ## Result
 
 On 2026-10-13, the complete authoritative Docker flow passed with exit 0:

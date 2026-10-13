@@ -3,8 +3,6 @@ using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
-using Alxarafe.Modules.AiAgent.ModuleDefinition;
-using Alxarafe.Modules.Catalog.ModuleDefinition;
 using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -65,8 +63,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
     options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
 }).AddBearerToken(IdentityConstants.BearerScheme);
-// Temporary static composition: only the module entry assemblies are known here.
-var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(CatalogModule).Assembly, typeof(AiAgentModule).Assembly);
+// Normal composition has no business modules; conformance descriptors require explicit opt-in.
+var modules = new ModuleBuilder(builder.Services);
 if (builder.Environment.IsEnvironment(ConformanceModuleSource.EnvironmentName)
     && builder.Configuration.GetValue<bool>(ConformanceModuleSource.EnabledConfiguration))
     modules.AddSource(new ConformanceModuleSource());

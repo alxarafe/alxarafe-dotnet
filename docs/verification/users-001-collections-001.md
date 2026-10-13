@@ -1,5 +1,9 @@
 # USERS-001 and COLLECTIONS-001 — .NET verification
 
+> Historical verification. CLEANUP-001 later removed the experimental business
+> modules. Counts and composition below describe the original verified revision;
+> see [current cleanup evidence](cleanup-001.md).
+
 The .NET backend implements the shared draft **0.4.0** at immutable executable
 revision `42e0c5ad81902a355fe01d6635466717f46b9dfd`. The same SHA is pinned in
 `contract.revision` and CI checkout. The workflow display name is now

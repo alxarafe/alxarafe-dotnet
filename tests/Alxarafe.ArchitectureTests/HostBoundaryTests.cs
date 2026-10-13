@@ -8,12 +8,6 @@ namespace Alxarafe.ArchitectureTests;
 
 public sealed class HostBoundaryTests
 {
-    private static readonly string[] _allowedModuleDirectives =
-    [
-        "using Alxarafe.Modules.Catalog.ModuleDefinition;",
-        "using Alxarafe.Modules.AiAgent.ModuleDefinition;"
-    ];
-
     [Fact]
     public void FrameworkAssembliesHaveNoModuleReferences()
     {
@@ -33,27 +27,24 @@ public sealed class HostBoundaryTests
     }
 
     [Fact]
-    public void HostOnlyReferencesStaticModuleEntryAssembly()
+    public void HostHasNoBusinessModuleAssemblyOrProjectReferences()
     {
         var references = typeof(PlatformExceptionHandler).Assembly.GetReferencedAssemblies()
             .Select(reference => reference.Name)
             .Where(name => name?.StartsWith("Alxarafe.Modules.", StringComparison.Ordinal) == true)
             .Order(StringComparer.Ordinal);
-        Assert.Equal(["Alxarafe.Modules.AiAgent.Module", "Alxarafe.Modules.Catalog.Module"], references);
+        Assert.Empty(references);
 
         var project = XDocument.Load(Path.Combine(RepositoryRoot, "src/Alxarafe.Host/Alxarafe.Host.csproj"));
         var moduleProjects = project.Descendants("ProjectReference")
             .Select(reference => reference.Attribute("Include")!.Value)
             .Where(path => path.Contains("Modules/", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal);
-        Assert.Equal([
-            "../Modules/AiAgent/Alxarafe.Modules.AiAgent.Module/Alxarafe.Modules.AiAgent.Module.csproj",
-            "../Modules/Catalog/Alxarafe.Modules.Catalog.Module/Alxarafe.Modules.Catalog.Module.csproj"
-        ], moduleProjects);
+        Assert.Empty(moduleProjects);
     }
 
     [Fact]
-    public void HostOnlyUsesStaticModuleEntryType()
+    public void HostHasNoBusinessModuleTypeOrSourceDependencies()
     {
         using var stream = File.OpenRead(typeof(PlatformExceptionHandler).Assembly.Location);
         using var pe = new PEReader(stream);
@@ -62,18 +53,14 @@ public sealed class HostBoundaryTests
             .Select(type => $"{metadata.GetString(type.Namespace)}.{metadata.GetString(type.Name)}")
             .Where(name => name.StartsWith("Alxarafe.Modules.", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal);
-        Assert.Equal([
-            "Alxarafe.Modules.AiAgent.ModuleDefinition.AiAgentModule",
-            "Alxarafe.Modules.Catalog.ModuleDefinition.CatalogModule"
-        ], types);
+        Assert.Empty(types);
 
         // Compiled references do not detect unused using directives.
         foreach (var file in SourceFiles(Path.Combine(RepositoryRoot, "src/Alxarafe.Host")))
         {
             foreach (var line in File.ReadLines(file).Where(line => line.Contains("Alxarafe.Modules.", StringComparison.Ordinal)))
             {
-                Assert.Equal("Program.cs", Path.GetFileName(file));
-                Assert.Contains(line.Trim(), _allowedModuleDirectives);
+                Assert.Fail($"Host source references a business module: {file}");
             }
         }
     }
@@ -83,17 +70,10 @@ public sealed class HostBoundaryTests
     {
         var projects = Directory.GetDirectories(Path.Combine(RepositoryRoot, "src"))
             .Where(path => Path.GetFileName(path).StartsWith("Alxarafe.", StringComparison.Ordinal));
-        string[] forbidden = ["sku", "ItemAlreadyExistsException", "CatalogMessages", "CatalogPermissions", "catalog.",
-            "AiAgent", "KnowledgeEntry", "ai_knowledge", "ai.knowledge", "CatalogModule"];
+        string[] forbidden = ["Alxarafe.Modules."];
         foreach (var file in projects.SelectMany(SourceFiles))
         {
             var source = File.ReadAllText(file);
-            if (Path.GetFileName(file) == "Program.cs")
-            {
-                source = source.Replace("using Alxarafe.Modules.Catalog.ModuleDefinition;", string.Empty, StringComparison.Ordinal)
-                    .Replace("using Alxarafe.Modules.AiAgent.ModuleDefinition;", string.Empty, StringComparison.Ordinal)
-                    .Replace("var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(CatalogModule).Assembly, typeof(AiAgentModule).Assembly);", string.Empty, StringComparison.Ordinal);
-            }
             foreach (var concept in forbidden)
                 Assert.False(source.Contains(concept, StringComparison.OrdinalIgnoreCase), $"{file} contains module concept '{concept}'.");
         }

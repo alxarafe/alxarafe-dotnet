@@ -8,7 +8,7 @@ Only `/api/auth/register` and `/api/auth/login` are exposed in this iteration. T
 
 ## Permission modularity
 
-ASP.NET Core owns authorization. Alxarafe adds only a small shared `IPermissionDefinitionProvider` convention so a module can publish names such as `catalog.items.read`. A policy provider converts those declared names into native `IAuthorizationRequirement` policies, and a handler checks standard `permission` claims. This is modular integration rather than a parallel authorization engine.
+ASP.NET Core owns authorization. Alxarafe adds only a small shared `IPermissionDefinitionProvider` convention so a module can publish names such as `module.resource.read`. A policy provider converts those declared names into native `IAuthorizationRequirement` policies, and a handler checks standard `permission` claims. This is modular integration rather than a parallel authorization engine.
 
 ## Localization and errors
 

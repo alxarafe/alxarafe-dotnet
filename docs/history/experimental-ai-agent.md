@@ -1,3 +1,9 @@
+# Historical experimental module
+
+> Superseded by CLEANUP-001. The AiAgent experiment was removed completely from
+> active code, projects, migrations, endpoints, resources and tests. This record
+> preserves its original evidence/design; it does not define future ERP AI.
+
 # AiAgent
 
 ## Current state: 0.1 knowledge persistence
@@ -107,7 +113,7 @@ AiAgent (optional module/plugin)
 
 AiAgent must remain optional: neither Core, Security, Modularity, nor Catalog should acquire implementation references to it. Generic permissions, module contracts, and development fixture options already exist; no AI-specific platform contract is introduced in 0.1.
 
-The direction follows the [existing external plugin design](architecture.md#future-external-plugins-design-only), conceptually:
+The historical direction followed the [external plugin design](../modularity.md#future-lifecycle-not-implemented), conceptually:
 
 ```text
 plugins/
@@ -116,7 +122,7 @@ plugins/
         ...
 ```
 
-That is a future packaging illustration, not the current assembly layout or installer. Module API version checks and identifier dependency validation are now provided by the shared modular infrastructure. Persistent dynamic enabled/disabled state and future install/uninstall semantics are documented in [modularity](modularity.md); physical loading, dependency isolation, package configuration and migration provisioning remain future work. The current static module will integrate via the same public platform contracts. The platform now gates its HTTP routes dynamically after authentication and authorization; disabled modules return `503 module_disabled`. No dynamic loading, installation, functional activation hooks, hot reload/unload, `AssemblyLoadContext`, or `AssemblyDependencyResolver` is implemented. An in-process plugin would not be a security sandbox.
+That was a future packaging illustration, not an installer or the current assembly layout. Module API checks, dependency validation and persistent dynamic state remain in the shared runtime; see [modularity](../modularity.md). The experimental static module and its routes have since been removed. Physical loading, dependency isolation, package configuration and provisioning were never implemented. An in-process plugin would not be a security sandbox.
 
 ## Conceptual roadmap
 

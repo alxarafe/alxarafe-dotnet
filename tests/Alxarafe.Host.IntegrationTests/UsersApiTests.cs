@@ -24,6 +24,7 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
 {
+    private readonly WebApplicationFactory<Program> application = RuntimeProbe.Configure(factory);
     private readonly List<Guid> owned = [];
     private HttpClient client = null!;
     private string adminToken = "";
@@ -35,8 +36,8 @@ public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : ICla
 
     public async Task InitializeAsync()
     {
-        client = factory.CreateClient();
-        await using var scope = factory.Services.CreateAsyncScope();
+        client = application.CreateClient();
+        await using var scope = application.Services.CreateAsyncScope();
         var user = await scope.ServiceProvider.GetRequiredService<UserAdministration>().CreateAsync(Email(), Password, true);
         adminId = user!.Id;
         owned.Add(adminId);
@@ -45,10 +46,11 @@ public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : ICla
 
     public async Task DisposeAsync()
     {
-        await using var scope = factory.Services.CreateAsyncScope();
+        await using var scope = application.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
         await database.Users.Where(user => owned.Contains(user.Id)).ExecuteDeleteAsync();
         client.Dispose();
+        application.Dispose();
     }
 
     [Fact]
@@ -68,16 +70,14 @@ public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : ICla
         await Error(await Send(HttpMethod.Get, "/api/users/unparseable"), 404, "user_not_found");
         await Error(await Send(HttpMethod.Get, "/api/users/" + Guid.NewGuid()), 404, "user_not_found");
         await Error(await Send(HttpMethod.Post, "/api/users", JsonSerializer.Serialize(new { email, password = Password, admin = false })), 409, "email_conflict");
-        Assert.Equal(HttpStatusCode.Forbidden, (await Send(HttpMethod.Get, "/api/catalog/items/" + Guid.NewGuid())).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await Send(HttpMethod.Get, "/api/ai/knowledge/" + Guid.NewGuid())).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Send(HttpMethod.Get, RuntimeProbe.Path)).StatusCode);
 
         AssertUser(await Body(await Send(HttpMethod.Patch, "/api/users/" + id, "{\"admin\":true}")), id, true, true);
         Assert.Equal(HttpStatusCode.OK, (await Send(HttpMethod.Get, "/api/users", token: token)).StatusCode);
         AssertUser(await Body(await Send(HttpMethod.Get, "/api/auth/me", token: token)), id, true, true);
         await Send(HttpMethod.Patch, "/api/users/" + id, "{\"admin\":false,\"enabled\":false}");
         await Error(await Send(HttpMethod.Get, "/api/auth/me", token: token), 401, "unauthorized");
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(HttpMethod.Get, "/api/catalog/items/" + Guid.NewGuid(), token: token)).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(HttpMethod.Get, "/api/ai/knowledge/" + Guid.NewGuid(), token: token)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(HttpMethod.Get, RuntimeProbe.Path, token: token)).StatusCode);
         var disabledLogin = await client.PostAsJsonAsync("/api/auth/login", new { email, password = Password });
         Assert.Equal(HttpStatusCode.Unauthorized, disabledLogin.StatusCode);
         Assert.Equal("invalid_credentials", (await Body(disabledLogin)).GetProperty("code").GetString());
@@ -86,7 +86,7 @@ public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : ICla
         await Error(await Send(HttpMethod.Get, "/api/users", token: token), 403, "forbidden");
         Assert.False(string.IsNullOrEmpty(await Login(email, Password)));
 
-        await using var scope = factory.Services.CreateAsyncScope();
+        await using var scope = application.Services.CreateAsyncScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<AlxarafeUser>>();
         var stored = await users.FindByIdAsync(id);
         Assert.NotEqual(Password, stored!.PasswordHash);
@@ -223,7 +223,7 @@ public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : ICla
         Assert.Equal(50, defaults.GetProperty("limit").GetInt32());
         Assert.Equal("[{\"field\":\"id\",\"direction\":\"asc\"}]", defaults.GetProperty("order").GetRawText());
         var total = defaults.GetProperty("total").GetInt64();
-        await using var scope = factory.Services.CreateAsyncScope();
+        await using var scope = application.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
         var expected = await database.Users.OrderBy(user => user.Id).Take(50).Select(user => user.Id.ToString()).ToListAsync();
         Assert.Equal(expected, defaults.GetProperty("items").EnumerateArray().Select(user => user.GetProperty("id").GetString()));
@@ -273,7 +273,7 @@ public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : ICla
     [Fact]
     public async Task ExpiredIdentityTicketHasTheSameClosedUnauthorizedResponse()
     {
-        await using var scope = factory.Services.CreateAsyncScope();
+        await using var scope = application.Services.CreateAsyncScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<AlxarafeUser>>();
         var user = await users.FindByIdAsync(adminId.ToString());
         var principal = await scope.ServiceProvider.GetRequiredService<SignInManager<AlxarafeUser>>().CreateUserPrincipalAsync(user!);

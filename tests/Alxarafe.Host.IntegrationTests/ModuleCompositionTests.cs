@@ -1,8 +1,7 @@
+using System.Net.Http.Json;
 using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Modularity;
-using Alxarafe.Modules.AiAgent.ModuleDefinition;
-using Alxarafe.Modules.Catalog.ModuleDefinition;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -13,24 +12,39 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
+    [Fact]
+    public async Task FreshPlatformContainsOnlyCoreTablesAndCoreHttpOperations()
+    {
+        using var client = factory.CreateClient();
+        var document = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/openapi/v1.json");
+        string[] corePaths = ["/health", "/api/auth/login", "/api/auth/register", "/api/auth/me",
+            "/api/users", "/api/users/{id}", "/api/modules", "/api/modules/{id}"];
+        Assert.All(document.GetProperty("paths").EnumerateObject(), path => Assert.Contains(path.Name, corePaths));
+        await using var context = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
+        await context.Database.OpenConnectionAsync();
+        await using var command = context.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name COLLATE \"C\"";
+        await using var reader = await command.ExecuteReaderAsync();
+        var tables = new List<string>();
+        while (await reader.ReadAsync()) tables.Add(reader.GetString(0));
+        Assert.Equal([PlatformStorage.MigrationHistory, PlatformStorage.ModuleStatesTable], tables);
+    }
+
     [Theory]
     [InlineData("Development", true, false)]
     [InlineData("Production", true, false)]
     [InlineData(ConformanceModuleSource.EnvironmentName, false, false)]
     [InlineData(ConformanceModuleSource.EnvironmentName, true, true)]
-    public async Task CanonicalModulesRequireExplicitTestingCompositionAndPreserveBusinessModules(string environment, bool optIn, bool canonical)
+    public async Task CanonicalModulesRequireExplicitTestingCompositionWithEmptyNormalRegistry(string environment, bool optIn, bool canonical)
     {
         using var application = factory.WithWebHostBuilder(builder => builder.UseEnvironment(environment)
             .UseSetting(ConformanceModuleSource.EnabledConfiguration, optIn.ToString()));
         using var client = application.CreateClient();
         var registry = application.Services.GetRequiredService<ModuleRegistry>();
         var runtime = application.Services.GetRequiredService<ModuleRuntime>();
-        string[] business = [new AiAgentModule().Descriptor.Id, new CatalogModule().Descriptor.Id];
-        string[] expected = canonical ? [.. business, ConformanceModuleSource.MathId, ConformanceModuleSource.StatisticsId] : business;
+        string[] expected = canonical ? [ConformanceModuleSource.MathId, ConformanceModuleSource.StatisticsId] : [];
         Assert.Equal(expected, registry.Modules.Select(module => module.Descriptor.Id));
         Assert.Equal(ModuleGraph.Order(registry.Modules), runtime.Modules);
-        Assert.Single(registry.Modules.OfType<AiAgentModule>());
-        Assert.Single(registry.Modules.OfType<CatalogModule>());
         if (!canonical) return;
         try
         {
