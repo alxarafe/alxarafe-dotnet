@@ -10,26 +10,35 @@ ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 
 The host uses Git, Bash, Docker and Docker Compose, plus the Linux fixture utilities listed in [API tests](../api-tests/README.md). It does not require .NET, Node.js, Bruno, or PostgreSQL. The flow validates Compose, the build, .NET tests, shared HTTP conformance, local OpenAPI, all platform and module Bruno scenarios (32 requests), authentication and authorization, ProblemDetails, localization, PostgreSQL persistence, and architecture tests. CI runs the same command. Validation uses temporary `alxarafe_test`, `alxarafe_security_test`, and `alxarafe_ai_test` databases in the existing PostgreSQL service and preserves development volumes.
 
-`contract.revision` declares the published release [v0.4.0](https://github.com/alxarafe/erbas-contract/tree/v0.4.0).
+`contract.revision` declares the published release [v0.5.0](https://github.com/alxarafe/erbas-contract/tree/v0.5.0).
 Supply its separate clean checkout explicitly through `ERBAS_CONTRACT_DIR`.
 Before application validation proceeds, `bin/check` verifies the Git repository
 root, the expected `alxarafe/erbas-contract` GitHub origin, tracked/nonignored
-cleanliness, and `refs/tags/v0.4.0^{commit}` resolving to the immutable published
-commit `839255ea54610ccf711b29bd096ea294a1ebc3fc`. HEAD must equal that commit.
+cleanliness, and `refs/tags/v0.5.0^{commit}` resolving to the immutable published
+commit `35be07fe002c364f758ae50419d0ecb86d1f0c43`. HEAD must equal that commit.
 Missing or unexpected tag targets, wrong HEAD/origin, and tracked/nonignored
 changes are rejected. Ignored local files are preserved. The caller prepares the
 checkout; `bin/check` never fetches, pulls, checks out or modifies it.
 
 GitHub Actions keeps sibling `alxarafe-dotnet/` and `erbas-contract/` checkouts,
-selects contract `ref: v0.4.0`, sets `ERBAS_CONTRACT_DIR` to that separate directory,
+selects contract `ref: v0.5.0`, sets `ERBAS_CONTRACT_DIR` to that separate directory,
 and runs the same authoritative `./bin/check` from `alxarafe-dotnet/`.
 
 Shared OpenAPI and Bruno belong to erbas-contract and cannot be changed
 unilaterally by .NET. `bin/check` invokes the verified checkout's public `bin/test`
 against `http://validation-app:8080` on the existing Docker network, with no
-additional published port. Its 82 requests / 313 named checks cover Health,
-AUTH-001, USERS-001 and COLLECTIONS-001. A conformance failure fails the full
+additional published port. Its full 130 requests / 506 named checks cover Health,
+AUTH-001, USERS-001, COLLECTIONS-001 and CONTRACT-003/003A module administration.
+A conformance failure fails the full
 validation, locally and in CI.
+
+The validation Host explicitly sets `Modules__ConformanceEnabled=true` in
+`Testing`. This adds the two canonical development descriptors alongside the
+unchanged Catalog/AiAgent composition through the existing module pipeline.
+The shared suite permits additional AVAILABLE modules, discovers the canonical
+IDs through pagination and mutates their persistent flags, leaving both enabled
+on success. No isolated replacement composition is needed. Normal execution does
+not register these descriptors. See [modularity](modularity.md#core-module-administration).
 
 Validation creates a dedicated `admin@example.test` with a per-run random password
 (host `od` and `tr`), supplied through `ERBAS_CORE_ADMIN_PASSWORD`. It has no module
@@ -175,6 +184,18 @@ All shared user responses are JSON/no-store. Closed errors contain only `code`:
 `last_admin`. Authentication/authorization precedes lookup and body/query parsing.
 There is no DELETE, email update, password management or new RBAC.
 See [verification](verification/users-001-collections-001.md).
+
+## Shared CORE module administration
+
+Published v0.5.0 adds administrator-only `GET /api/modules` and
+`PATCH /api/modules/{id}`, independent of functional module gating.
+Listing applies the same COLLECTIONS-001 pagination policy as Users.
+Transitions are persistent, idempotent and atomic, with exact unavailable and
+dependency-conflict errors. Normal composition remains Catalog/AiAgent; the
+canonical development descriptors have no functional endpoints.
+See [modularity](modularity.md#core-module-administration) for representation,
+security, composition and state rules, and
+[verification](verification/modules-001e-dotnet.md) for measured results.
 
 ## Architecture
 

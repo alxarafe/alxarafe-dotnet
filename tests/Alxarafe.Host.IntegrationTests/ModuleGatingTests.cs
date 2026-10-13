@@ -87,6 +87,7 @@ public sealed class ModuleGatingTests(WebApplicationFactory<Program> factory) : 
             using var coreAdmin = await LoginAsync(admin.Email, AdminPassword);
             Assert.Equal(HttpStatusCode.OK, (await coreAdmin.GetAsync("/api/auth/me")).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await coreAdmin.GetAsync("/api/users")).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await coreAdmin.GetAsync(ModuleEndpoints.Path)).StatusCode);
             var disabledOpenApi = await ReadOpenApiAsync(anonymous);
             foreach (string path in new[] { AiPath, AiPath + "/{id}", CatalogPath, CatalogPath + "/{id}" })
             {
@@ -163,7 +164,7 @@ public sealed class ModuleGatingTests(WebApplicationFactory<Program> factory) : 
         Assert.DoesNotContain(ModuleDisabledResponse.ErrorCode, await missing.Content.ReadAsStringAsync());
         // Invalid endpoint ownership must also remain a configuration error.
         var unavailable = new ModuleStateService(new ModuleRegistry([]), store);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => unavailable.RequireEnabledAsync(module.Descriptor.Id));
+        await Assert.ThrowsAsync<ModuleUnavailableException>(() => unavailable.RequireEnabledAsync(module.Descriptor.Id));
         builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddSingleton(unavailable);

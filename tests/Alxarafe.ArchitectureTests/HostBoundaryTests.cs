@@ -92,7 +92,7 @@ public sealed class HostBoundaryTests
             {
                 source = source.Replace("using Alxarafe.Modules.Catalog.ModuleDefinition;", string.Empty, StringComparison.Ordinal)
                     .Replace("using Alxarafe.Modules.AiAgent.ModuleDefinition;", string.Empty, StringComparison.Ordinal)
-                    .Replace("builder.Services.AddAlxarafeModules(typeof(CatalogModule).Assembly, typeof(AiAgentModule).Assembly);", string.Empty, StringComparison.Ordinal);
+                    .Replace("var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(CatalogModule).Assembly, typeof(AiAgentModule).Assembly);", string.Empty, StringComparison.Ordinal);
             }
             foreach (var concept in forbidden)
                 Assert.False(source.Contains(concept, StringComparison.OrdinalIgnoreCase), $"{file} contains module concept '{concept}'.");

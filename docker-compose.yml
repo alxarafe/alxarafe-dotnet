@@ -53,6 +53,7 @@ services:
     profiles: [validation]
     environment:
       ASPNETCORE_ENVIRONMENT: Testing
+      Modules__ConformanceEnabled: "true"
       ConnectionStrings__Platform: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security_test;Username=alxarafe;Password=alxarafe_dev_only

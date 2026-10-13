@@ -57,7 +57,7 @@ public sealed class ModuleStateService
 
     private void RequireAvailable(string moduleId)
     {
-        if (!_available.ContainsKey(moduleId)) throw new InvalidOperationException($"Module '{moduleId}' is not AVAILABLE.");
+        if (!_available.ContainsKey(moduleId)) throw new ModuleUnavailableException(moduleId);
     }
 
     private void Validate(IDictionary<string, bool> states)
@@ -68,8 +68,11 @@ public sealed class ModuleStateService
                 throw new InvalidOperationException($"Module state is missing for '{module.Id}'.");
             if (!enabled) continue;
             foreach (var dependency in module.Dependencies)
-                if (!states.TryGetValue(dependency, out var dependencyEnabled) || !dependencyEnabled)
-                    throw new InvalidOperationException($"Enabled module '{module.Id}' requires enabled dependency '{dependency}'.");
+            {
+                if (!states.TryGetValue(dependency, out var dependencyEnabled))
+                    throw new InvalidOperationException($"Module state is missing for '{dependency}'.");
+                if (!dependencyEnabled) throw new ModuleDependencyConflictException(module.Id, dependency);
+            }
         }
     }
 }

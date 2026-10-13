@@ -10,7 +10,7 @@ internal sealed class CurrentUserMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, UserAdministration users)
     {
-        if (SharedUsersEndpoint.IsPath(context.Request.Path)) context.Response.Headers.CacheControl = "no-store";
+        if (SharedCoreEndpoint.IsPath(context.Request.Path)) context.Response.Headers.CacheControl = "no-store";
         var metadata = context.GetEndpoint()?.Metadata;
         bool protectedResource = metadata?.GetMetadata<IAllowAnonymous>() is null &&
             (metadata?.GetMetadata<IAuthorizeData>() is not null || metadata?.GetMetadata<AuthorizationPolicy>() is not null);
@@ -37,7 +37,7 @@ internal sealed class SharedUserAuthorizationResultHandler : IAuthorizationMiddl
     private readonly AuthorizationMiddlewareResultHandler fallback = new();
     public async Task HandleAsync(RequestDelegate next, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult result)
     {
-        if (SharedUsersEndpoint.IsPath(context.Request.Path) && (result.Challenged || result.Forbidden))
+        if (SharedCoreEndpoint.IsPath(context.Request.Path) && (result.Challenged || result.Forbidden))
         {
             if (result.Challenged) context.Response.Headers.WWWAuthenticate = "Bearer";
             await UserEndpoints.Error(result.Challenged ? 401 : 403, result.Challenged ? "unauthorized" : "forbidden").ExecuteAsync(context);
@@ -47,9 +47,10 @@ internal sealed class SharedUserAuthorizationResultHandler : IAuthorizationMiddl
     }
 }
 
-internal static class SharedUsersEndpoint
+internal static class SharedCoreEndpoint
 {
-    public static bool IsPath(PathString path) => path == "/api/auth/me" || path == "/api/users" || path.StartsWithSegments("/api/users");
+    public static bool IsPath(PathString path) => path == "/api/auth/me" || path == "/api/users" || path.StartsWithSegments("/api/users")
+        || path == ModuleEndpoints.Path || path.StartsWithSegments(ModuleEndpoints.Path);
     public static AuthorizationPolicy AdminPolicy { get; } = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser().RequireClaim(CoreUserClaims.Admin, "true").Build();
 }
