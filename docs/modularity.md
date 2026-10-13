@@ -63,7 +63,7 @@ introduced without a real consumer.
 
 **ENABLED** is administrative state stored in PostgreSQL, independently of
 AVAILABLE and INITIALIZED. **OPERATIONAL** is not modeled. State belongs to the
-platform/CORE, never to Catalog, Security or another business module.
+platform/CORE, never to Security or a business module.
 
 The platform table `module_states` has exactly two columns: `module_id TEXT
 COLLATE "C" PRIMARY KEY` and `enabled BOOLEAN NOT NULL`. IDs retain the descriptor's
@@ -143,8 +143,7 @@ Specified responses are JSON/no-store. Errors contain only `code`: 400
 
 ### Explicit conformance composition
 
-Normal composition remains `AiAgent` and `Catalog`, with unchanged services,
-permissions, functional routes, migrations and initialization. Only environment
+Normal composition has zero modules. Only environment
 `Testing` together with `Modules:ConformanceEnabled=true`
 (environment binding `Modules__ConformanceEnabled`) adds a
 `ConformanceModuleSource`. The flag defaults to false. Development/Production
@@ -160,8 +159,7 @@ and no functional HTTP endpoints.
 All sources enter one `ModuleBuilder` before its single `Build()`, yielding
 one registry/graph/runtime per application. Normal synchronization creates missing
 canonical rows as enabled, preserving existing choices without special SQL seeds
-or reset APIs. The published suite permits extra AVAILABLE modules, so validation
-retains Catalog/AiAgent alongside both canonical modules. It uses only disposable
+or reset APIs. Validation contains exactly the two canonical descriptors and uses disposable
 test databases; successful conformance restores both canonical flags to enabled.
 
 ## Functional HTTP gating
@@ -226,10 +224,8 @@ the supported version. `IModuleSource.GetModules()` supplies module instances.
 
 `BuiltInAssemblyModuleSource` confines existing exported-type reflection and
 construction to the explicitly selected built-in assemblies. It does not load
-external assemblies. `Program.cs` still selects the Catalog and AiAgent entry
-assemblies as temporary composition-root knowledge. No concrete module knowledge
-reaches the registry, graph or runtime. Existing IDs `Catalog` and `AiAgent`,
-services, endpoint mapping, permissions and persistence remain unchanged.
+external assemblies. The Host currently selects no built-in business assemblies.
+Future explicit sources enter the same registry/graph/runtime without a new loader.
 
 `ModuleBuilder.AddSource` accepts additional sources. The existing
 `AddModulesFromAssemblies`/`AddAlxarafeModules` convenience API wraps built-in
@@ -246,8 +242,7 @@ Modularity. Each check/transaction uses a fresh context from `IDbContextFactory`
 so tracked entities cannot become a permanent enabled-state cache.
 
 Configure the explicit `ConnectionStrings__Platform` connection. Compose points it
-at the existing physical `alxarafe` database (validation: `alxarafe_test`), alongside
-Catalog, without transferring table ownership to Catalog. Platform uses its own
+at `alxarafe` (validation: `alxarafe_test`). Platform uses its own
 `__PlatformMigrationsHistory`; migration `202610120001_ModuleStates` creates only
 platform state and can coexist with existing module migration histories. Security
 continues owning its separate context and tables. Testing rejects a Platform
@@ -268,8 +263,8 @@ ID; the module maps all routes against that protected builder. Nested groups inh
 the filter, including public endpoints. No path list, concrete module type or
 manual per-handler check is needed. ASP.NET Core authentication/authorization
 middleware runs before endpoint filters. The filter performs one enabled check
-per request and converts only `ModuleDisabledException`; Catalog and AiAgent
-need no functional changes or manual checks.
+per request and converts only `ModuleDisabledException`; functional modules need
+no manual checks.
 
 The group also receives native `ProducesResponseTypeMetadata` for the JSON
 `ModuleDisabledResponse` and HTTP 503. It is inherited by module endpoints and
@@ -284,14 +279,13 @@ Focused modularity tests in the existing architecture test project cover
 descriptor immutability, versions, sources, duplicate IDs, cross-source
 dependencies, missing dependencies, direct/indirect cycles, deterministic order,
 read-only collections, service configuration, sequential initialization and
-failure propagation. Existing Catalog/AiAgent composition and functional suites
-remain in place. PostgreSQL-backed `ModuleStateTests` cover defaults, retained
+failure propagation. PostgreSQL-backed `ModuleStateTests` cover defaults, retained
 and reinstalled state, immediate checks, idempotent transitions, dependency chains,
 technical initialization of disabled modules, rollback, case-sensitive IDs, clean
 and existing-schema migrations, snapshot consistency and competing transitions
-waiting on real database locks. `ModuleGatingTests` uses the actual Catalog and
-AiAgent routes and PostgreSQL state to verify the authorized disable/re-enable
-cycle, unchanged data/routes/migrations, CORE recovery access, 401/403 precedence,
+waiting on real database locks. `ModuleGatingTests` uses a test-only canonical Math
+HTTP probe and PostgreSQL state to verify disable/re-enable without restart,
+unchanged routes/migrations, CORE recovery access, 401/403 precedence,
 exact 503 response, and persistent OpenAPI publication. A small TestServer context
 also proves automatic gating of a test module's public nested groups, one state
 read per entry, no gate writes, and propagation of missing/unavailable state.
@@ -305,6 +299,6 @@ ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 pagination including repeated keys and huge offsets, security precedence, retained
 unavailable state, idempotence, both atomic conflicts, ordinal dependency ordering,
 zero modules and internal failure classification. Composition tests prove the
-normal business set is retained and canonical modules need both explicit switches.
-The existing gating test now includes CORE module listing while business modules
-are disabled. See [v0.5.0 adoption evidence](verification/modules-001e-dotnet.md).
+normal registry is empty and canonical modules need both explicit switches.
+The gating test includes CORE module listing while both canonical descriptors
+are disabled. See [cleanup verification](verification/cleanup-001.md).

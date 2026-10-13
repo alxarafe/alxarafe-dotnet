@@ -151,8 +151,6 @@ done
 echo "==> Checking validation application logs for known sensitive values"
 app_logs="$(docker compose logs --no-color validation-app)"
 if grep -Fq "$ERBAS_TEST_PASSWORD" <<<"$app_logs" || \
-   grep -Fq 'Reader_dev_only_123!' <<<"$app_logs" || \
-   grep -Fq 'Creator_dev_only_123!' <<<"$app_logs" || \
    grep -Fq 'Password123' <<<"$app_logs" || \
    grep -Eiq 'accessToken|AQAAAA[A-Za-z0-9+/=]{50,}|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' <<<"$app_logs"; then
     echo "ERROR: a password or bearer token marker was written to application logs" >&2

@@ -10,15 +10,15 @@
 
 Alxarafe.NET is an experimental modular framework built with .NET 10, ASP.NET
 Core, EF Core and PostgreSQL. It includes authentication, authorization,
-localization, a Catalog module and a preparatory AiAgent knowledge base.
+localization, CORE user/module administration and a persistent modular runtime.
 
 ## ERBAS ecosystem
 
 | Repository | Responsibility |
 | --- | --- |
 | [erbas-contract](https://github.com/alxarafe/erbas-contract) | Shared OpenAPI and the sole shared Bruno collection |
-| [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001; CI requires shared Bruno against v0.4.0 |
-| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001, COLLECTIONS-001 and CORE module administration, plus Catalog/AiAgent |
+| [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001; CI requires shared Bruno against v0.5.0 |
+| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001, COLLECTIONS-001 and CORE module administration, with no business modules yet |
 | [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health, AUTH-001, USERS-001 basic user administration and COLLECTIONS-001 pagination from either backend |
 
 The same client provides authenticated profiles and basic administrator user
@@ -35,8 +35,7 @@ Run full validation with an explicitly supplied clean contract checkout:
 ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 ```
 
-The host needs Git, Bash, Docker, Docker Compose and the fixture utilities
-listed in [API tests](api-tests/README.md). No host .NET, Node.js, Bruno or
+The host needs Git, Bash, Docker and Docker Compose. No host .NET, Node.js, Bruno or
 PostgreSQL runtime is required. See [usage](docs/usage.md) for development,
 networking, test isolation and cleanup.
 
@@ -45,7 +44,7 @@ networking, test isolation and cleanup.
 The .NET workflow runs the same `bin/check`, including native tests, local
 platform/module suites and shared Bruno. The combined badge is not a separate
 Bruno-only result. The Java badge reports Java's own CI, including mandatory
-shared conformance against published `v0.4.0`.
+shared conformance against published `v0.5.0`.
 It does not demonstrate .NET conformance. Angular client CI verifies client
 tests, build, runtime and isolated shared API proxies; its
 [real dual-backend demo evidence](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#web-002-integration-verification-2026-10-09)
@@ -60,14 +59,13 @@ CORE module administration.
 See [historical verification](docs/verification/users-001-collections-001.md) and
 [AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.5.0/docs/auth-001.md).
 AUTH-002, USERS-001 and COLLECTIONS-001 are implemented.
-The sole shared Bruno collection lives in erbas-contract; Identity registration and
-functional business module APIs remain .NET-specific. Identity bearer tokens stay opaque and need not
+The sole shared Bruno collection lives in erbas-contract; Identity registration remains .NET-specific. Identity bearer tokens stay opaque and need not
 interoperate with Java. Release checkout requirements are in [usage](docs/usage.md#full-validation).
 
-Normal composition retains Catalog and AiAgent. Explicit disposable validation
-adds canonical Math/Statistics descriptors without mathematical functionality;
+Normal composition has no functional modules. Explicit disposable validation
+registers canonical Math/Statistics descriptors without mathematical functionality;
 they are absent in normal execution. See [modularity](docs/modularity.md#core-module-administration)
-and [v0.5.0 adoption evidence](docs/verification/modules-001e-dotnet.md).
+and [cleanup verification](docs/verification/cleanup-001.md).
 
 `POST /api/auth/register` remains a .NET-specific Identity extension outside the
 shared contract and Bruno conformance. Portable clients must not depend on it;
@@ -75,7 +73,7 @@ it may change or disappear. Contractual account creation uses administrator-only
 `POST /api/users`. CORE admin is separate from module permissions.
 
 Browse the [documentation index](docs/README.md) for architecture, decisions,
-API scenarios and the AiAgent roadmap.
+API scenarios and verification evidence.
 
 ## License
 

@@ -12,15 +12,38 @@ public sealed class LocalizationHttpTests(WebApplicationFactory<Program> factory
     private static readonly string[] _identityShape = ["errors", "status", "title", "traceId", "type"];
 
     [Theory]
+    [InlineData("en", "The request contains invalid data.")]
+    [InlineData("es", "La solicitud contiene datos no válidos.")]
+    [InlineData(null, "The request contains invalid data.")]
+    [InlineData("fr", "The request contains invalid data.")]
+    [InlineData("es-ES", "La solicitud contiene datos no válidos.")]
+    [InlineData("en-US", "The request contains invalid data.")]
+    public async Task TransversalValidationProblemUsesCoreResourcesWithStableCode(string? language, string title)
+    {
+        using var application = RuntimeProbe.Configure(factory);
+        using var client = application.CreateClient();
+        if (language is not null) client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
+        var response = await client.GetAsync(RuntimeProbe.InvalidPath);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(Alxarafe.AspNetCore.CoreMessages.ValidationCode, body.GetProperty("code").GetString());
+        Assert.Equal(title, body.GetProperty("title").GetString());
+        Assert.Equal(400, body.GetProperty("status").GetInt32());
+        Assert.Empty(response.Headers.WwwAuthenticate);
+    }
+
+    [Theory]
     [InlineData("en", "Unauthorized")]
     [InlineData("es", "No autorizado")]
     [InlineData(null, "Unauthorized")]
     [InlineData("fr", "Unauthorized")]
     public async Task NativeHttpProblemTitlesUseCoreResources(string? language, string title)
     {
-        using var client = factory.CreateClient();
+        using var application = RuntimeProbe.Configure(factory);
+        using var client = application.CreateClient();
         if (language is not null) client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
-        var response = await client.GetAsync("/api/catalog/items/00000000-0000-0000-0000-000000000001");
+        var response = await client.GetAsync(RuntimeProbe.Path);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(401, problem.GetProperty("status").GetInt32());

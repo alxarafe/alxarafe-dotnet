@@ -5,10 +5,6 @@ using System.Text.Json;
 using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Modularity;
-using Alxarafe.Modules.AiAgent.Infrastructure;
-using Alxarafe.Modules.AiAgent.ModuleDefinition;
-using Alxarafe.Modules.Catalog.Infrastructure;
-using Alxarafe.Modules.Catalog.ModuleDefinition;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -25,103 +21,71 @@ namespace Alxarafe.Host.IntegrationTests;
 public sealed class ModuleGatingTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     private const string LoginPath = "/api/auth/login";
-    private const string AiPath = "/api/ai/knowledge";
-    private const string CatalogPath = "/api/catalog/items";
     private const string AdminPassword = "module-gate-admin-fixture-123";
 
     [Fact]
-    public async Task RealModulesUseDynamicPersistedGateAfterSecurityWithoutAffectingCoreOrData()
+    public async Task CanonicalPersistedGateFollowsSecurityAndPreservesCoreRoutesAndStateWithoutRestart()
     {
-        using var anonymous = factory.CreateClient();
-        using var aiWriter = await LoginAsync("ai-writer@example.test", "Creator_dev_only_123!");
-        using var catalogWriter = await LoginAsync("creator@example.test", "Creator_dev_only_123!");
-        using var noPermission = await LoginAsync("ai-reader@example.test", "Reader_dev_only_123!");
-        var runtime = factory.Services.GetRequiredService<ModuleRuntime>();
-        var states = factory.Services.GetRequiredService<ModuleStateService>();
-        var available = runtime.Modules.Where(module => module is IHttpModule).ToArray();
-        string aiId = Assert.Single(available.OfType<AiAgentModule>()).Descriptor.Id;
-        string catalogId = Assert.Single(available.OfType<CatalogModule>()).Descriptor.Id;
+        using var application = RuntimeProbe.Configure(factory);
+        using var anonymous = application.CreateClient();
+        var states = application.Services.GetRequiredService<ModuleStateService>();
+        var runtime = application.Services.GetRequiredService<ModuleRuntime>();
+        var endpoints = application.Services.GetRequiredService<EndpointDataSource>();
+        await using var scope = application.Services.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserAdministration>();
+        var identity = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<AlxarafeUser>>();
+        var admin = (await users.CreateAsync("gate-admin-" + Guid.NewGuid() + "@example.test", AdminPassword, true))!;
+        var permitted = (await users.CreateAsync("gate-user-" + Guid.NewGuid() + "@example.test", AdminPassword, false))!;
+        var account = (await identity.FindByIdAsync(permitted.Id.ToString()))!;
+        Assert.True((await identity.AddClaimAsync(account,
+            new System.Security.Claims.Claim(Alxarafe.Security.PermissionClaim.Type, RuntimeProbe.Permission))).Succeeded);
+        using var authorized = await LoginAsync(application, permitted.Email, AdminPassword);
+        using var coreAdmin = await LoginAsync(application, admin.Email, AdminPassword);
         var originals = new Dictionary<string, bool>(StringComparer.Ordinal);
-        foreach (var module in available)
-        {
-            originals.Add(module.Descriptor.Id, await states.IsEnabledAsync(module.Descriptor.Id));
-            await states.EnableAsync(module.Descriptor.Id);
-        }
-        var endpoints = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints;
-        Guid aiEntryId = Guid.Empty, catalogItemId = Guid.Empty, adminId = Guid.Empty;
+        foreach (var module in runtime.Modules)
+            originals[module.Descriptor.Id] = await states.IsEnabledAsync(module.Descriptor.Id);
+        var platformFactory = application.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>();
+        await using var platform = await platformFactory.CreateDbContextAsync();
+        var history = await platform.Database.GetAppliedMigrationsAsync();
         try
         {
-            var aiCreate = await aiWriter.PostAsJsonAsync(AiPath, new { question = "Gate survival", answer = "Persistent answer" });
-            Assert.Equal(HttpStatusCode.Created, aiCreate.StatusCode);
-            var aiEntry = await aiCreate.Content.ReadFromJsonAsync<JsonElement>();
-            aiEntryId = aiEntry.GetProperty("id").GetGuid();
-            var catalogCreate = await catalogWriter.PostAsJsonAsync(CatalogPath, new { sku = "gate-" + Guid.NewGuid().ToString("N"), name = "Surviving item" });
-            Assert.Equal(HttpStatusCode.Created, catalogCreate.StatusCode);
-            var catalogItem = await catalogCreate.Content.ReadFromJsonAsync<JsonElement>();
-            catalogItemId = catalogItem.GetProperty("id").GetGuid();
-            string aiReadPath = AiPath + "/" + aiEntryId;
-            string catalogReadPath = CatalogPath + "/" + catalogItemId;
+            await states.EnableAsync(ConformanceModuleSource.MathId);
+            await states.EnableAsync(ConformanceModuleSource.StatisticsId);
+            Assert.Equal(HttpStatusCode.OK, (await authorized.GetAsync(RuntimeProbe.Path)).StatusCode);
             var openapi = await ReadOpenApiAsync(anonymous);
-            var platformFactory = factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>();
-            await using var platform = await platformFactory.CreateDbContextAsync();
-            var history = await platform.Database.GetAppliedMigrationsAsync();
-            await using var scope = factory.Services.CreateAsyncScope();
-            var admin = await scope.ServiceProvider.GetRequiredService<UserAdministration>()
-                .CreateAsync("module-gate-" + Guid.NewGuid().ToString("N") + "@example.test", AdminPassword, true);
-            Assert.NotNull(admin);
-            adminId = admin.Id;
-
-            // Preserve graph invariants if the built-in dependency declarations evolve.
-            foreach (var module in available.Reverse()) await states.DisableAsync(module.Descriptor.Id);
-            Assert.False(await states.IsEnabledAsync(aiId));
-            Assert.False(await states.IsEnabledAsync(catalogId));
-            await AssertDisabledAsync(await aiWriter.GetAsync(aiReadPath));
-            await AssertDisabledAsync(await aiWriter.PostAsJsonAsync(AiPath, new { question = "Blocked", answer = "Blocked" }));
-            await AssertDisabledAsync(await catalogWriter.GetAsync(catalogReadPath));
-            await AssertDisabledAsync(await catalogWriter.PostAsJsonAsync(CatalogPath, new { sku = "blocked", name = "Blocked" }));
-            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync(aiReadPath)).StatusCode);
-            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync(catalogReadPath)).StatusCode);
-            Assert.Equal(HttpStatusCode.Forbidden, (await noPermission.PostAsJsonAsync(AiPath, new { question = "Denied", answer = "Denied" })).StatusCode);
-            Assert.Equal(HttpStatusCode.Forbidden, (await noPermission.GetAsync(catalogReadPath)).StatusCode);
+            await states.DisableAsync(ConformanceModuleSource.StatisticsId);
+            await states.DisableAsync(ConformanceModuleSource.MathId);
+            await AssertDisabledAsync(await authorized.GetAsync(RuntimeProbe.Path));
+            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync(RuntimeProbe.Path)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await coreAdmin.GetAsync(RuntimeProbe.Path)).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await anonymous.GetAsync("/health")).StatusCode);
-            using var coreAdmin = await LoginAsync(admin.Email, AdminPassword);
-            Assert.Equal(HttpStatusCode.OK, (await coreAdmin.GetAsync("/api/auth/me")).StatusCode);
-            Assert.Equal(HttpStatusCode.OK, (await coreAdmin.GetAsync("/api/users")).StatusCode);
-            Assert.Equal(HttpStatusCode.OK, (await coreAdmin.GetAsync(ModuleEndpoints.Path)).StatusCode);
-            var disabledOpenApi = await ReadOpenApiAsync(anonymous);
-            foreach (string path in new[] { AiPath, AiPath + "/{id}", CatalogPath, CatalogPath + "/{id}" })
-            {
-                Assert.Equal(openapi.GetProperty("paths").GetProperty(path).GetRawText(),
-                    disabledOpenApi.GetProperty("paths").GetProperty(path).GetRawText());
-                foreach (var operation in disabledOpenApi.GetProperty("paths").GetProperty(path).EnumerateObject())
-                    Assert.True(operation.Value.GetProperty("responses").GetProperty("503")
-                        .GetProperty("content").TryGetProperty("application/json", out _));
-            }
-            Assert.False(disabledOpenApi.GetProperty("paths").GetProperty(LoginPath).GetProperty("post")
+            foreach (var path in new[] { "/api/auth/me", "/api/users", ModuleEndpoints.Path })
+                Assert.Equal(HttpStatusCode.OK, (await coreAdmin.GetAsync(path)).StatusCode);
+            var disabledOpenapi = await ReadOpenApiAsync(anonymous);
+            Assert.Equal(openapi.GetProperty("paths").GetProperty(RuntimeProbe.Path).GetRawText(),
+                disabledOpenapi.GetProperty("paths").GetProperty(RuntimeProbe.Path).GetRawText());
+            Assert.True(disabledOpenapi.GetProperty("paths").GetProperty(RuntimeProbe.Path).GetProperty("get")
                 .GetProperty("responses").TryGetProperty("503", out _));
-            foreach (var module in available) await states.EnableAsync(module.Descriptor.Id);
-            var aiRead = await aiWriter.GetAsync(aiReadPath);
-            var catalogRead = await catalogWriter.GetAsync(catalogReadPath);
-            Assert.Equal(HttpStatusCode.OK, aiRead.StatusCode);
-            Assert.Equal(HttpStatusCode.OK, catalogRead.StatusCode);
-            Assert.Equal(aiEntry.GetRawText(), (await aiRead.Content.ReadFromJsonAsync<JsonElement>()).GetRawText());
-            Assert.Equal(catalogItem.GetRawText(), (await catalogRead.Content.ReadFromJsonAsync<JsonElement>()).GetRawText());
+            Assert.False(disabledOpenapi.GetProperty("paths").GetProperty(LoginPath).GetProperty("post")
+                .GetProperty("responses").TryGetProperty("503", out _));
+            await users.UpdateAsync(permitted.Id, false, null);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await authorized.GetAsync(RuntimeProbe.Path)).StatusCode);
+            await users.UpdateAsync(permitted.Id, true, null);
+            await states.EnableAsync(ConformanceModuleSource.MathId);
+            await states.EnableAsync(ConformanceModuleSource.StatisticsId);
+            Assert.Equal(HttpStatusCode.OK, (await authorized.GetAsync(RuntimeProbe.Path)).StatusCode);
             Assert.Equal(history, await platform.Database.GetAppliedMigrationsAsync());
-            Assert.Same(runtime, factory.Services.GetRequiredService<ModuleRuntime>());
-            Assert.Same(endpoints, factory.Services.GetRequiredService<EndpointDataSource>().Endpoints);
+            Assert.Same(runtime, application.Services.GetRequiredService<ModuleRuntime>());
+            Assert.Same(endpoints, application.Services.GetRequiredService<EndpointDataSource>());
         }
         finally
         {
-            foreach (var module in available) await states.EnableAsync(module.Descriptor.Id);
-            foreach (var module in available.Reverse())
+            await states.EnableAsync(ConformanceModuleSource.MathId);
+            await states.EnableAsync(ConformanceModuleSource.StatisticsId);
+            foreach (var module in runtime.Modules.Reverse())
                 if (!originals[module.Descriptor.Id]) await states.DisableAsync(module.Descriptor.Id);
-            await using var cleanup = factory.Services.CreateAsyncScope();
-            await cleanup.ServiceProvider.GetRequiredService<AiAgentDbContext>().Knowledge
-                .Where(row => row.Id == aiEntryId).ExecuteDeleteAsync();
-            await cleanup.ServiceProvider.GetRequiredService<CatalogDbContext>().Items
-                .Where(row => row.Id == catalogItemId).ExecuteDeleteAsync();
-            await cleanup.ServiceProvider.GetRequiredService<SecurityDbContext>().Users
-                .Where(row => row.Id == adminId).ExecuteDeleteAsync();
+            await scope.ServiceProvider.GetRequiredService<SecurityDbContext>().Users
+                .Where(user => user.Id == admin.Id || user.Id == permitted.Id).ExecuteDeleteAsync();
         }
     }
 
@@ -183,9 +147,9 @@ public sealed class ModuleGatingTests(WebApplicationFactory<Program> factory) : 
         Assert.DoesNotContain(ModuleDisabledResponse.ErrorCode, await unknown.Content.ReadAsStringAsync());
     }
 
-    private async Task<HttpClient> LoginAsync(string email, string password)
+    private static async Task<HttpClient> LoginAsync(WebApplicationFactory<Program> application, string email, string password)
     {
-        var client = factory.CreateClient();
+        var client = application.CreateClient();
         var response = await client.PostAsJsonAsync(LoginPath, new { email, password });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();

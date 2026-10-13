@@ -14,7 +14,7 @@ namespace Alxarafe.Host.IntegrationTests;
 public sealed class CoreAdministratorSeedTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     [Fact]
-    public async Task CurrentValidationAdminIsSeparateAndModuleUsersRemainNonAdmin()
+    public async Task CurrentValidationAdminHasNoModulePermissionsOrExperimentalSeeds()
     {
         using var client = factory.CreateClient();
         await using var scope = factory.Services.CreateAsyncScope();
@@ -23,12 +23,7 @@ public sealed class CoreAdministratorSeedTests(WebApplicationFactory<Program> fa
         var admin = await users.FindByEmailAsync("admin@example.test");
         Assert.True((await administration.FindAsync(admin!.Id)) is { Enabled: true, Admin: true });
         Assert.DoesNotContain(await users.GetClaimsAsync(admin), claim => claim.Type == PermissionClaim.Type);
-        foreach (var email in new[] { "reader@example.test", "creator@example.test" })
-        {
-            var moduleUser = await users.FindByEmailAsync(email);
-            Assert.True((await administration.FindAsync(moduleUser!.Id)) is { Enabled: true, Admin: false });
-            Assert.Contains(await users.GetClaimsAsync(moduleUser), claim => claim.Type == PermissionClaim.Type);
-        }
+        Assert.Empty(factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<DevelopmentUsersOptions>>().Value.Users);
     }
 
     [Fact]
@@ -84,7 +79,35 @@ public sealed class CoreAdministratorSeedTests(WebApplicationFactory<Program> fa
         finally { await scope.ServiceProvider.GetRequiredService<SecurityDbContext>().Users.Where(existing => existing.Email == email).ExecuteDeleteAsync(); }
     }
 
-    private ServiceProvider Provider(string email, string? password)
+    [Fact]
+    public async Task GenericDevelopmentUserSeedPreservesPermissionClaimsWithoutGrantingAdmin()
+    {
+        using var client = factory.CreateClient();
+        var email = "seed-permission-" + Guid.NewGuid() + "@example.test";
+        await using var provider = Provider("unused@example.test", null,
+            new DevelopmentUser(email, "Fixture_password_123", [RuntimeProbe.Permission]));
+        var environment = factory.Services.GetRequiredService<IHostEnvironment>();
+        try
+        {
+            await SecuritySeed.InitializeAsync(provider, environment);
+            await SecuritySeed.InitializeAsync(provider, environment);
+            await using var scope = provider.CreateAsyncScope();
+            var users = scope.ServiceProvider.GetRequiredService<UserManager<AlxarafeUser>>();
+            var user = (await users.FindByEmailAsync(email))!;
+            Assert.True((await scope.ServiceProvider.GetRequiredService<UserAdministration>().FindAsync(user.Id))
+                is { Enabled: true, Admin: false });
+            Assert.Single((await users.GetClaimsAsync(user)), claim =>
+                claim.Type == PermissionClaim.Type && claim.Value == RuntimeProbe.Permission);
+        }
+        finally
+        {
+            await using var scope = provider.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<SecurityDbContext>().Users
+                .Where(user => user.Email == email).ExecuteDeleteAsync();
+        }
+    }
+
+    private ServiceProvider Provider(string email, string? password, DevelopmentUser? fixture = null)
     {
         using var scope = factory.Services.CreateScope();
         var connection = scope.ServiceProvider.GetRequiredService<SecurityDbContext>().Database.GetConnectionString();
@@ -92,7 +115,10 @@ public sealed class CoreAdministratorSeedTests(WebApplicationFactory<Program> fa
         services.AddLogging();
         services.AddDbContext<SecurityDbContext>(options => options.UseNpgsql(connection));
         services.AddIdentityCore<AlxarafeUser>().AddEntityFrameworkStores<SecurityDbContext>();
-        services.Configure<DevelopmentUsersOptions>(_ => { });
+        services.Configure<DevelopmentUsersOptions>(options =>
+        {
+            if (fixture is not null) options.Users.Add(fixture);
+        });
         services.AddScoped<UserAdministration>();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -108,7 +134,10 @@ public sealed class CoreAdministratorSeedTests(WebApplicationFactory<Program> fa
         using var client = factory.CreateClient();
         await using var scope = factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
-        var reader = await database.Users.AsNoTracking().SingleAsync(user => user.Email == "reader@example.test");
+        var administration = scope.ServiceProvider.GetRequiredService<UserAdministration>();
+        var created = await administration.CreateAsync("legacy-" + Guid.NewGuid() + "@example.test", "Legacy_fixture_123", false);
+        Assert.NotNull(created);
+        var reader = await database.Users.AsNoTracking().SingleAsync(user => user.Id == created.Id);
         async Task AssertTextColumns()
         {
             var connection = database.Database.GetDbConnection();
@@ -130,6 +159,10 @@ public sealed class CoreAdministratorSeedTests(WebApplicationFactory<Program> fa
             Assert.Equal(reader.PasswordHash, preserved.PasswordHash);
             Assert.True((await scope.ServiceProvider.GetRequiredService<UserAdministration>().FindAsync(reader.Id)) is { Enabled: true, Admin: false });
         }
-        finally { await SecuritySchema.UpgradeEmailStorageAsync(database); }
+        finally
+        {
+            await SecuritySchema.UpgradeEmailStorageAsync(database);
+            await database.Users.Where(user => user.Id == reader.Id).ExecuteDeleteAsync();
+        }
     }
 }

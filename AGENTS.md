@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 
 This repository implements a .NET 10/ASP.NET Core modular platform, including
-shared Health and AUTH-001 login, authorization, Catalog and AiAgent. Production
+shared Health, authentication, Users, module administration and authorization. Production
 code lives in `src/`, automated tests in `tests/`, and documentation in `docs/`.
 Keep solution files and repository-wide build configuration at the root and use
 clear project names consistent with the existing modules.
@@ -145,7 +145,7 @@ failures and must not depend on localization, HTTP or request cultures. Use the
 native Identity error describer extension for Identity descriptions.
 
 Resources belong to the module/feature owning the text: Security owns Identity,
-Catalog and AiAgent own their functional/validation messages, and Core owns only
+functional modules own their messages, and Core owns only
 transversal HTTP text. Never place module translations in Host or a global
 catalog. The neutral `.resx` is English; `.es.resx` supplies Spanish. Use complete
 parameterized phrases rather than concatenated translated fragments. Do not
@@ -156,6 +156,16 @@ permissions/policies, claims, events, module names, configuration/technical keys
 database identifiers or internal operational/development logs. Preserve closed
 shared-contract errors. Prove locale selection, fallback, parameter interpolation,
 request isolation and stable technical response fields through HTTP tests.
+
+## Functional module boundaries
+
+Core must not absorb business domain logic. Future functional modules own their
+domain, use cases, ports, persistence/migrations, HTTP endpoints, permissions,
+resources and tests. No functional module may depend on removed examples.
+`erbas.dev.math` and `erbas.dev.statistics` are exclusively conformance/testing
+descriptors, registered only by explicit validation composition. They are never
+business capabilities or functional dependencies. Normal composition can contain
+zero modules. WMS and AI require their own separately approved designs.
 
 ## Engineering simplicity
 
