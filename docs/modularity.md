@@ -104,8 +104,65 @@ instances. Ordinary checks continue to read committed database state.
 Disabling never deletes module data, tables or configuration, reverts migrations,
 unloads code, or changes technical initialization. All available modules still
 initialize, including disabled ones. `requireEnabled` provides the shared internal
-guard now used by the platform HTTP gate. Module administration HTTP remains out of
-scope; INITIALIZED never substitutes for permission to execute functional work.
+guard used by the platform HTTP gate. CORE module administration is outside that
+gate; INITIALIZED never substitutes for permission to execute functional work.
+
+## CORE module administration
+
+Published ERBAS Contract `v0.5.0` defines `GET /api/modules` and
+`PATCH /api/modules/{id}`. The Host maps them as Minimal APIs, following the
+existing Auth/User endpoint pattern. They are outside the functional module group
+and never return `module_disabled`. Existing bearer authentication, current
+Identity state and the same CORE administrator policy apply before body/query
+parsing, registry lookup or state mutation. No new RBAC is introduced.
+
+The closed Module contains exactly `id`, `moduleApiVersion`, `dependencies`
+and `enabled`. Metadata comes from descriptors in the current registry;
+dependencies are sorted ordinally and enabled state is read from persistence
+for every response. Historical rows remain retained but do not imply availability.
+Registry IDs use ordinal case-sensitive order before pagination. The small
+`CollectionPagination` parser, fixed order metadata and arbitrary-size offset
+converter are shared with Users; its existing wire behavior is preserved.
+The published [OpenAPI](https://github.com/alxarafe/erbas-contract/blob/v0.5.0/openapi/erbas.yaml)
+owns the closed collection envelope and pagination rules.
+
+PATCH accepts exactly one required Boolean `enabled`, with exact property
+casing and no duplicates, extra fields, nulls or scalar coercion. JSON is parsed
+inside the authorized delegate. Success, including an idempotent transition,
+returns 200 with the complete current Module. There are no cascades.
+`ModuleUnavailableException` and `ModuleDependencyConflictException` identify
+only the contractual 404/409 outcomes; missing state and unexpected storage errors
+remain internal failures. No exception-message parsing or broad error conversion
+is used. The unchanged EF transaction and table lock still validate the snapshot
+before any writes, so a conflict persists no partial mutation.
+
+Specified responses are JSON/no-store. Errors contain only `code`: 400
+`invalid_request`, 401 `unauthorized`, 403 `forbidden`, 404
+`module_not_found`, 409 `module_dependency_conflict`. Only 401 carries
+`WWW-Authenticate: Bearer`; no dependency IDs or internal diagnostics are exposed.
+
+### Explicit conformance composition
+
+Normal composition remains `AiAgent` and `Catalog`, with unchanged services,
+permissions, functional routes, migrations and initialization. Only environment
+`Testing` together with `Modules:ConformanceEnabled=true`
+(environment binding `Modules__ConformanceEnabled`) adds a
+`ConformanceModuleSource`. The flag defaults to false. Development/Production
+do not activate the source even if the flag is supplied.
+
+Validation Compose explicitly enables it. The source supplies exactly
+`erbas.dev.math` without dependencies and `erbas.dev.statistics` depending on
+Math, both using `ModuleApi.CurrentVersion`. IDs and configuration/environment
+names are centralized in that source. Descriptors have no special environment
+field, and these technical modules have no business or mathematical functionality
+and no functional HTTP endpoints.
+
+All sources enter one `ModuleBuilder` before its single `Build()`, yielding
+one registry/graph/runtime per application. Normal synchronization creates missing
+canonical rows as enabled, preserving existing choices without special SQL seeds
+or reset APIs. The published suite permits extra AVAILABLE modules, so validation
+retains Catalog/AiAgent alongside both canonical modules. It uses only disposable
+test databases; successful conformance restores both canonical flags to enabled.
 
 ## Functional HTTP gating
 
@@ -153,7 +210,7 @@ not UNINSTALL, and UNINSTALL does not imply deleting data. PURGE, if ever provid
 will be explicit and independent. None of these operations is implemented.
 
 External directory discovery, JAR/DLL loading, hot loading/unloading, installers,
-module management endpoints and frontend remain out of scope. No start/stop,
+installation/uninstallation endpoints and frontend remain out of scope. No start/stop,
 activation hooks, event bus or cache invalidation infrastructure is introduced.
 The future package source will enter the existing registry/graph/runtime pipeline;
 state remains keyed by descriptor ID independently of its source.
@@ -178,7 +235,8 @@ services, endpoint mapping, permissions and persistence remain unchanged.
 `AddModulesFromAssemblies`/`AddAlxarafeModules` convenience API wraps built-in
 composition in a source. `Build()` gathers the registry, resolves the graph,
 configures services in dependency order and registers the registry and runtime.
-All sources must participate before this build and before the Host's
+The Host uses `ModuleBuilder` directly to add the optional conformance source
+before building once. All sources must participate before this build and before the Host's
 `builder.Build()`. A future external assembly source can enter at that point;
 no `AssemblyLoadContext` or external loader is implemented.
 
@@ -217,8 +275,8 @@ The group also receives native `ProducesResponseTypeMetadata` for the JSON
 `ModuleDisabledResponse` and HTTP 503. It is inherited by module endpoints and
 appears in generated OpenAPI without per-endpoint duplication. Disabled endpoints
 remain published; their route/operation metadata does not change with state.
-CORE endpoints do not inherit this module response metadata. The shared ERBAS
-contract and Module API version remain unchanged.
+CORE endpoints do not inherit this module response metadata. Functional gating
+adds no shared contractual response; the Module API version remains unchanged.
 
 ## Verification
 
@@ -242,3 +300,11 @@ Run complete Docker-only validation with the published contract:
 ```bash
 ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 ```
+
+`ModulesApiTests` exercises the real HTTP/Identity/EF boundary, closed responses,
+pagination including repeated keys and huge offsets, security precedence, retained
+unavailable state, idempotence, both atomic conflicts, ordinal dependency ordering,
+zero modules and internal failure classification. Composition tests prove the
+normal business set is retained and canonical modules need both explicit switches.
+The existing gating test now includes CORE module listing while business modules
+are disabled. See [v0.5.0 adoption evidence](verification/modules-001e-dotnet.md).
