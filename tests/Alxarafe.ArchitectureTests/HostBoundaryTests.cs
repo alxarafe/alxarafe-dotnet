@@ -2,80 +2,107 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Xml.Linq;
 using Alxarafe.Host;
+using Alxarafe.Modules.Wms;
+using Alxarafe.Modules.Wms.Application;
+using Alxarafe.Modules.Wms.Domain;
 using Xunit;
 
 namespace Alxarafe.ArchitectureTests;
 
 public sealed class HostBoundaryTests
 {
+    private const string ModulePrefix = "Alxarafe.Modules.";
+    private const string EntryAssembly = "Alxarafe.Modules.Wms.Module";
+    private const string EntryProject = "../Modules/Wms/Alxarafe.Modules.Wms.Module/Alxarafe.Modules.Wms.Module.csproj";
+
     [Fact]
     public void FrameworkAssembliesHaveNoModuleReferences()
     {
         Type[] markers =
         [
-            typeof(Alxarafe.Core.AssemblyMarker),
-            typeof(Alxarafe.Modularity.ModuleRuntime),
-            typeof(Alxarafe.AspNetCore.IHttpModule),
-            typeof(Alxarafe.EntityFrameworkCore.AssemblyMarker),
-            typeof(Alxarafe.Security.PermissionDefinition),
-            typeof(Alxarafe.Security.AspNetCore.PermissionRequirement),
+            typeof(Alxarafe.Core.AssemblyMarker), typeof(Alxarafe.Modularity.ModuleRuntime),
+            typeof(Alxarafe.AspNetCore.IHttpModule), typeof(Alxarafe.EntityFrameworkCore.AssemblyMarker),
+            typeof(Alxarafe.Security.PermissionDefinition), typeof(Alxarafe.Security.AspNetCore.PermissionRequirement),
             typeof(Alxarafe.Security.EntityFrameworkCore.SecurityDbContext)
         ];
         foreach (var marker in markers)
+        {
             Assert.DoesNotContain(marker.Assembly.GetReferencedAssemblies(),
-                reference => reference.Name?.StartsWith("Alxarafe.Modules.", StringComparison.Ordinal) == true);
+                reference => reference.Name?.StartsWith(ModulePrefix, StringComparison.Ordinal) == true);
+            string assemblyName = marker.Assembly.GetName().Name!;
+            var project = XDocument.Load(Path.Combine(RepositoryRoot, "src", assemblyName, assemblyName + ".csproj"));
+            Assert.DoesNotContain(project.Descendants("ProjectReference"),
+                reference => reference.Attribute("Include")!.Value.Contains("Modules/", StringComparison.Ordinal));
+        }
     }
 
     [Fact]
-    public void HostHasNoBusinessModuleAssemblyOrProjectReferences()
+    public void HostReferencesOnlyTheWmsEntryAssemblyAndProject()
     {
         var references = typeof(PlatformExceptionHandler).Assembly.GetReferencedAssemblies()
-            .Select(reference => reference.Name)
-            .Where(name => name?.StartsWith("Alxarafe.Modules.", StringComparison.Ordinal) == true)
-            .Order(StringComparer.Ordinal);
-        Assert.Empty(references);
-
+            .Select(reference => reference.Name).Where(name => name?.StartsWith(ModulePrefix, StringComparison.Ordinal) == true);
+        Assert.Equal([EntryAssembly], references);
         var project = XDocument.Load(Path.Combine(RepositoryRoot, "src/Alxarafe.Host/Alxarafe.Host.csproj"));
-        var moduleProjects = project.Descendants("ProjectReference")
-            .Select(reference => reference.Attribute("Include")!.Value)
-            .Where(path => path.Contains("Modules/", StringComparison.Ordinal))
-            .Order(StringComparer.Ordinal);
-        Assert.Empty(moduleProjects);
+        var moduleProjects = project.Descendants("ProjectReference").Select(reference => reference.Attribute("Include")!.Value)
+            .Where(path => path.Contains("Modules/", StringComparison.Ordinal));
+        Assert.Equal([EntryProject], moduleProjects);
     }
 
     [Fact]
-    public void HostHasNoBusinessModuleTypeOrSourceDependencies()
+    public void HostKnowsOnlyTheEntryTypeForExplicitComposition()
     {
         using var stream = File.OpenRead(typeof(PlatformExceptionHandler).Assembly.Location);
         using var pe = new PEReader(stream);
         var metadata = pe.GetMetadataReader();
         var types = metadata.TypeReferences.Select(handle => metadata.GetTypeReference(handle))
             .Select(type => $"{metadata.GetString(type.Namespace)}.{metadata.GetString(type.Name)}")
-            .Where(name => name.StartsWith("Alxarafe.Modules.", StringComparison.Ordinal))
-            .Order(StringComparer.Ordinal);
-        Assert.Empty(types);
-
-        // Compiled references do not detect unused using directives.
+            .Where(name => name.StartsWith(ModulePrefix, StringComparison.Ordinal));
+        Assert.Equal([typeof(WmsModule).FullName], types);
         foreach (var file in SourceFiles(Path.Combine(RepositoryRoot, "src/Alxarafe.Host")))
         {
-            foreach (var line in File.ReadLines(file).Where(line => line.Contains("Alxarafe.Modules.", StringComparison.Ordinal)))
+            foreach (var line in File.ReadLines(file).Where(line => line.Contains(ModulePrefix, StringComparison.Ordinal)))
             {
-                Assert.Fail($"Host source references a business module: {file}");
+                Assert.Equal("Program.cs", Path.GetFileName(file));
+                Assert.Equal("using Alxarafe.Modules.Wms;", line);
+            }
+            foreach (var line in File.ReadLines(file).Where(line => line.Contains(nameof(WmsModule), StringComparison.Ordinal)))
+            {
+                Assert.Equal("Program.cs", Path.GetFileName(file));
+                Assert.Equal("var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly);", line);
             }
         }
     }
 
     [Fact]
-    public void PlatformSourcesAndResourcesHaveNoModuleDomainKnowledge()
+    public void FrameworkSourcesAndResourcesHaveNoModuleDomainKnowledge()
     {
         var projects = Directory.GetDirectories(Path.Combine(RepositoryRoot, "src"))
-            .Where(path => Path.GetFileName(path).StartsWith("Alxarafe.", StringComparison.Ordinal));
-        string[] forbidden = ["Alxarafe.Modules."];
+            .Where(path => Path.GetFileName(path).StartsWith("Alxarafe.", StringComparison.Ordinal)
+                && Path.GetFileName(path) != "Alxarafe.Host");
         foreach (var file in projects.SelectMany(SourceFiles))
+            Assert.False(File.ReadAllText(file).Contains(ModulePrefix, StringComparison.OrdinalIgnoreCase),
+                $"{file} references a business module.");
+    }
+
+    [Fact]
+    public void WmsDomainAndApplicationHaveNoFrameworkOrAdapterDependencies()
+    {
+        foreach (var assembly in new[] { typeof(Uom).Assembly, typeof(UomCatalogue).Assembly })
         {
-            var source = File.ReadAllText(file);
-            foreach (var concept in forbidden)
-                Assert.False(source.Contains(concept, StringComparison.OrdinalIgnoreCase), $"{file} contains module concept '{concept}'.");
+            foreach (var reference in assembly.GetReferencedAssemblies())
+            {
+                string name = reference.Name!;
+                Assert.True(name.StartsWith("System.", StringComparison.Ordinal)
+                    || name == typeof(Uom).Assembly.GetName().Name, $"Unexpected pure-layer reference: {name}");
+            }
+        }
+        foreach (string layer in new[] { "Domain", "Application" })
+        {
+            var project = XDocument.Load(Path.Combine(RepositoryRoot, $"src/Modules/Wms/Alxarafe.Modules.Wms.{layer}/Alxarafe.Modules.Wms.{layer}.csproj"));
+            Assert.Empty(project.Descendants("FrameworkReference"));
+            Assert.Empty(project.Descendants("PackageReference"));
+            Assert.All(project.Descendants("ProjectReference"), reference =>
+                Assert.Equal("../Alxarafe.Modules.Wms.Domain/Alxarafe.Modules.Wms.Domain.csproj", reference.Attribute("Include")!.Value));
         }
     }
 

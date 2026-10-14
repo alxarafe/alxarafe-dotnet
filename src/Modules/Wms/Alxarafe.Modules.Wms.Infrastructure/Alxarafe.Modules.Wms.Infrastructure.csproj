@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Wms.Infrastructure</AssemblyName><RootNamespace>Alxarafe.Modules.Wms.Infrastructure</RootNamespace></PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Alxarafe.Modules.Wms.Application/Alxarafe.Modules.Wms.Application.csproj" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    </ItemGroup>
+</Project>

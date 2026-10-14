@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Wms.Application</AssemblyName><RootNamespace>Alxarafe.Modules.Wms.Application</RootNamespace></PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Alxarafe.Modules.Wms.Domain/Alxarafe.Modules.Wms.Domain.csproj" />
+    </ItemGroup>
+</Project>

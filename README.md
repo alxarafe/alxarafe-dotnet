@@ -10,15 +10,16 @@
 
 Alxarafe.NET is an experimental modular framework built with .NET 10, ASP.NET
 Core, EF Core and PostgreSQL. It includes authentication, authorization,
-localization, CORE user/module administration and a persistent modular runtime.
+localization, CORE user/module administration, a persistent modular runtime and
+the first production WMS unit-of-measure catalogue.
 
 ## ERBAS ecosystem
 
 | Repository | Responsibility |
 | --- | --- |
 | [erbas-contract](https://github.com/alxarafe/erbas-contract) | Shared OpenAPI and the sole shared Bruno collection |
-| [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend implementing Health, AUTH-001, USERS-001 and COLLECTIONS-001; CI requires shared Bruno against v0.5.0 |
-| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001, COLLECTIONS-001 and CORE module administration, with no business modules yet |
+| [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend; owns its implementation and shared-conformance validation |
+| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001, COLLECTIONS-001, CORE module administration and WMS UoM |
 | [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health, AUTH-001, USERS-001 basic user administration and COLLECTIONS-001 pagination from either backend |
 
 The same client provides authenticated profiles and basic administrator user
@@ -44,28 +45,29 @@ networking, test isolation and cleanup.
 The .NET workflow runs the same `bin/check`, including native tests, local
 platform/module suites and shared Bruno. The combined badge is not a separate
 Bruno-only result. The Java badge reports Java's own CI, including mandatory
-shared conformance against published `v0.5.0`.
+shared conformance against Java's adopted published release.
 It does not demonstrate .NET conformance. Angular client CI verifies client
 tests, build, runtime and isolated shared API proxies; its
 [real dual-backend demo evidence](https://github.com/alxarafe/erbas-client/blob/main/docs/full-stack-development.md#web-002-integration-verification-2026-10-09)
 records WEB-002 integration separately. Client CI does not perform backend
 shared-conformance validation.
 
-[contract.revision](contract.revision) declares published `v0.5.0`. Local and CI
+[contract.revision](contract.revision) declares published `v0.6.0`. Local and CI
 `./bin/check` verify the supplied checkout's origin, cleanliness, release-tag
 target and matching HEAD, then require shared conformance. Coverage includes HTTP
 liveness, login, basic CORE user administration, paged collections and dependency-safe
 CORE module administration.
 See [historical verification](docs/verification/users-001-collections-001.md) and
-[AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.5.0/docs/auth-001.md).
+[AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.6.0/docs/auth-001.md).
 AUTH-002, USERS-001 and COLLECTIONS-001 are implemented.
 The sole shared Bruno collection lives in erbas-contract; Identity registration remains .NET-specific. Identity bearer tokens stay opaque and need not
 interoperate with Java. Release checkout requirements are in [usage](docs/usage.md#full-validation).
 
-Normal composition has no functional modules. Explicit disposable validation
-registers canonical Math/Statistics descriptors without mathematical functionality;
+Normal composition includes erbas.wms with administrator-only UoM creation and
+paged listing. Explicit disposable validation additionally registers canonical
+Math/Statistics descriptors without mathematical functionality;
 they are absent in normal execution. See [modularity](docs/modularity.md#core-module-administration)
-and [cleanup verification](docs/verification/cleanup-001.md).
+and [WMS-001N evidence](docs/verification/wms-001-dotnet.md).
 
 `POST /api/auth/register` remains a .NET-specific Identity extension outside the
 shared contract and Bruno conformance. Portable clients must not depend on it;

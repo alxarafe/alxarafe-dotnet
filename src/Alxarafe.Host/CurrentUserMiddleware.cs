@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Alxarafe.Security;
+using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Policy;
 
 namespace Alxarafe.Host;
 
@@ -10,8 +10,9 @@ internal sealed class CurrentUserMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, UserAdministration users)
     {
-        if (SharedCoreEndpoint.IsPath(context.Request.Path)) context.Response.Headers.CacheControl = "no-store";
         var metadata = context.GetEndpoint()?.Metadata;
+        if (SharedCoreEndpoint.IsPath(context.Request.Path) || metadata?.GetMetadata<SharedContractErrorsMetadata>() is not null)
+            context.Response.Headers.CacheControl = "no-store";
         bool protectedResource = metadata?.GetMetadata<IAllowAnonymous>() is null &&
             (metadata?.GetMetadata<IAuthorizeData>() is not null || metadata?.GetMetadata<AuthorizationPolicy>() is not null);
         if (protectedResource && context.User.Identity?.IsAuthenticated == true)
@@ -32,25 +33,8 @@ internal sealed class CurrentUserMiddleware(RequestDelegate next)
     }
 }
 
-internal sealed class SharedUserAuthorizationResultHandler : IAuthorizationMiddlewareResultHandler
-{
-    private readonly AuthorizationMiddlewareResultHandler fallback = new();
-    public async Task HandleAsync(RequestDelegate next, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult result)
-    {
-        if (SharedCoreEndpoint.IsPath(context.Request.Path) && (result.Challenged || result.Forbidden))
-        {
-            if (result.Challenged) context.Response.Headers.WWWAuthenticate = "Bearer";
-            await UserEndpoints.Error(result.Challenged ? 401 : 403, result.Challenged ? "unauthorized" : "forbidden").ExecuteAsync(context);
-            return;
-        }
-        await fallback.HandleAsync(next, context, policy, result);
-    }
-}
-
 internal static class SharedCoreEndpoint
 {
     public static bool IsPath(PathString path) => path == "/api/auth/me" || path == "/api/users" || path.StartsWithSegments("/api/users")
         || path == ModuleEndpoints.Path || path.StartsWithSegments(ModuleEndpoints.Path);
-    public static AuthorizationPolicy AdminPolicy { get; } = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser().RequireClaim(CoreUserClaims.Admin, "true").Build();
 }

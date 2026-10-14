@@ -4,7 +4,9 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Alxarafe.AspNetCore;
 using Alxarafe.Modularity;
+using Alxarafe.Security.AspNetCore;
 using Microsoft.OpenApi;
 
 namespace Alxarafe.Host;
@@ -20,7 +22,7 @@ public static class ModuleEndpoints
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         // CORE group: deliberately outside MapAlxarafeModuleEndpoints and its gate.
-        var group = endpoints.MapGroup(Path).RequireAuthorization(SharedCoreEndpoint.AdminPolicy).WithTags("Modules");
+        var group = endpoints.MapGroup(Path).RequireAuthorization(CoreAdministration.Policy).WithTags("Modules").WithSharedContractErrors();
         group.MapGet("", ListAsync).Produces<ModulePage>().Produces<UserError>(StatusCodes.Status400BadRequest)
             .Produces<UserError>(StatusCodes.Status401Unauthorized).Produces<UserError>(StatusCodes.Status403Forbidden)
             .AddOpenApiOperationTransformer((operation, _, _) =>

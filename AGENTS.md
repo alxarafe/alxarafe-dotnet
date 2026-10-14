@@ -80,9 +80,9 @@ This backend cannot change their observable behavior unilaterally. The public
 `{"status":"ok"}`, independent of database, module or external-service checks.
 
 `contract.revision` declares the implemented published release, currently
-`v0.5.0`. `./bin/check` requires `ERBAS_CONTRACT_DIR` and verifies repository root,
+`v0.6.0`. `./bin/check` requires `ERBAS_CONTRACT_DIR` and verifies repository root,
 the expected GitHub origin, tracked/nonignored cleanliness, release-tag resolution
-to `35be07fe002c364f758ae50419d0ecb86d1f0c43` and matching HEAD. Ignored files are
+to `92d1282154f340aadcfdf93f52a82a1f3472b335` and matching HEAD. Ignored files are
 preserved. It invokes the public `bin/test` on the existing validation Docker
 network. Never assume a sibling path, fetch, pull, checkout or modify the supplied
 contract, or copy its OpenAPI/Bruno into this backend. Local and CI validation
@@ -164,8 +164,11 @@ domain, use cases, ports, persistence/migrations, HTTP endpoints, permissions,
 resources and tests. No functional module may depend on removed examples.
 `erbas.dev.math` and `erbas.dev.statistics` are exclusively conformance/testing
 descriptors, registered only by explicit validation composition. They are never
-business capabilities or functional dependencies. Normal composition can contain
-zero modules. WMS and AI require their own separately approved designs.
+business capabilities or functional dependencies. Normal composition includes
+WMS UoM through the existing pipeline. Host may
+reference only the WMS entry assembly for explicit composition; framework projects
+remain independent of all business modules. Further business capabilities and AI
+require separately approved designs.
 
 ## Engineering simplicity
 

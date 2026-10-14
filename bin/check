@@ -20,7 +20,7 @@ case "$contract_origin" in
     git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
     *) echo 'ERROR: unexpected contract origin' >&2; exit 2 ;;
 esac
-if [[ "$contract_revision" != v0.5.0 ]]; then
+if [[ "$contract_revision" != v0.6.0 ]]; then
     echo 'ERROR: unsupported release in contract.revision' >&2
     exit 2
 fi
@@ -28,7 +28,7 @@ contract_commit=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract
     echo 'ERROR: contract checkout is missing the configured release tag' >&2
     exit 2
 }
-if [[ "$contract_commit" != 35be07fe002c364f758ae50419d0ecb86d1f0c43 ]]; then
+if [[ "$contract_commit" != 92d1282154f340aadcfdf93f52a82a1f3472b335 ]]; then
     echo 'ERROR: contract release tag does not resolve to its immutable commit' >&2
     exit 2
 fi
@@ -92,6 +92,20 @@ echo "==> Starting isolated validation Host"
 docker compose up -d --wait --wait-timeout 120 validation-app
 
 echo "==> Verifying the pinned shared HTTP contract"
+docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+    IF (SELECT count(*) FROM "__PlatformMigrationsHistory" WHERE "MigrationId" = '202610120001_ModuleStates') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
+       OR to_regclass('public.module_states') IS NULL
+       OR (SELECT array_agg(column_name::text ORDER BY column_name COLLATE "C")
+           FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'wms_uoms')
+           IS DISTINCT FROM ARRAY['code', 'description', 'id']::text[]
+       OR (SELECT count(*) FROM wms_uoms) <> 0 THEN
+        RAISE EXCEPTION 'Missing isolated Platform/WMS migrations or nonempty initial WMS catalogue';
+    END IF;
+END $$;
+SQL
+echo 'WMS_FRESH_INSTALL=passed HISTORIES=separate CATALOGUE=empty'
 validation_container=$(docker compose ps --quiet validation-app)
 validation_network=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' "$validation_container")
 if [[ -z "$validation_network" || "$validation_network" == *$'\n'* ]]; then
@@ -143,6 +157,16 @@ DO $$ BEGIN
 END $$;
 SQL
 echo 'POST_CONFORMANCE_DATABASE=passed CORE_ADMIN=separate-from-module-permissions'
+docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM wms_uoms)
+       OR NOT EXISTS (SELECT 1 FROM module_states WHERE module_id = 'erbas.wms' AND enabled)
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 1 THEN
+        RAISE EXCEPTION 'Post-conformance WMS persistence, enabled state or migration invariant failed';
+    END IF;
+END $$;
+SQL
+echo 'POST_CONFORMANCE_WMS=passed PERSISTENCE=retained MIGRATIONS=separate'
 
 for assertions in api-tests/modules/*/assert-persistence.sh; do
     [[ ! -f "$assertions" ]] || bash "$assertions"

@@ -3,7 +3,9 @@
 ERBAS .NET is an API-only Core with independent modular/hexagonal boundaries.
 The reusable projects are Core, Modularity, AspNetCore, EntityFrameworkCore,
 Security, Security.AspNetCore, Security.EntityFrameworkCore and Host. Host is the
-composition root; it contains no business domain or business assembly references.
+composition root; it contains no business domain and references only the WMS entry
+assembly for explicit built-in composition. Framework projects never reference
+business modules.
 
 ## Module ownership and composition
 
@@ -20,9 +22,9 @@ ModuleSource(s) -> ModuleRegistry -> ModuleGraph -> ModuleRuntime
 ```
 
 `ModuleBuilder` accepts explicit sources before one Build. BuiltInAssemblyModuleSource
-remains available for future controlled composition; no external plugin loader
-exists. Normal startup has zero modules. Testing plus explicit conformance opt-in
-registers only Math/Statistics descriptors; they are not business dependencies and
+selects the explicit WMS entry assembly; no external plugin loader exists.
+Normal startup registers erbas.wms. Testing plus explicit conformance opt-in
+additionally registers Math/Statistics descriptors; they are not business dependencies and
 have no functional API. See [modularity](modularity.md).
 
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
@@ -48,7 +50,7 @@ RequestLocalization selects en/es from Accept-Language, with English fallback.
 CoreMessages belongs to the HTTP adapter, SecurityMessages to Security. Future
 modules own their resources and narrow exception handlers; Host never owns their
 texts. Native ProblemDetails and generic validation handling remain; shared
-v0.5.0 closed errors are unchanged. See [i18n](i18n.md).
+v0.6.0 closed errors are unchanged. See [i18n](i18n.md).
 
 ## Shared login and Identity
 
@@ -87,11 +89,12 @@ once for protected endpoints, removes stale CORE claims and supplies the current
 principal/admin flag. Disabled/deleted users lose their authenticated principal,
 including on module resources; re-enable/promotion/demotion affect the same token
 on its next request. Public liveness and other anonymous endpoints do not query
-user state. The shared authorization result handler emits closed 401/403 JSON
-only on user endpoints and delegates unrelated errors to existing middleware.
+user state. The shared authorization result handler emits closed 401/403 JSON on endpoints
+marked with WithSharedContractErrors metadata and delegates unrelated errors to
+existing middleware. Users, CORE modules and WMS opt in; there is no WMS path list.
 
-Administrative endpoints use one native AuthorizationPolicy requiring current
-CORE admin. Existing module policy providers and permission handlers remain
+Administrative endpoints reuse CoreAdministration.Policy in Security.AspNetCore,
+requiring current CORE admin. Existing module policy providers and permission handlers remain
 unchanged. Request bodies/queries are read inside authorized endpoint delegates
 to preserve authorization precedence. Generated .NET OpenAPI documents these
 endpoints and the .NET-only registration extension; shared OpenAPI remains the
@@ -114,16 +117,20 @@ no module permissions and never silently escalates an existing account.
 
 ## Verification and deliberate limits
 
-Architecture tests assert framework/Host isolation from business assemblies and
+Architecture tests assert framework isolation from business assemblies, Host's
+entry-only WMS reference, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses only the published immutable v0.5.0 checkout. Local Bruno
+Shared conformance uses only the published immutable v0.6.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 
-No business module, WMS, AI, capability bus, dynamic loader or install/uninstall API
-is implemented. Physical module loading and production Identity provisioning remain
+WMS owns only UoM creation/listing, with domain/application/EF/HTTP/entry projects.
+Its separate context, connection and migration history preserve Platform and
+Security ownership. Shared collection parsing/order/offset serialization now live
+in AspNetCore, without a second pagination implementation. No additional WMS
+concept, AI, capability bus, dynamic loader or install/uninstall API is implemented. Physical module loading and production Identity provisioning remain
 separate future concerns. Historical experiment data is preserved in existing
 installations without startup access or automated purge; new installations create
 no retired business schema. See [cleanup evidence](verification/cleanup-001.md).

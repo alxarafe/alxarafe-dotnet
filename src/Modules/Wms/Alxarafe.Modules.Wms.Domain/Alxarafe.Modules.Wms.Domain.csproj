@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Wms.Domain</AssemblyName><RootNamespace>Alxarafe.Modules.Wms.Domain</RootNamespace></PropertyGroup>
+</Project>
