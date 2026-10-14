@@ -3,6 +3,7 @@ using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
+using Alxarafe.Modules.Wms;
 using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -63,8 +64,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
     options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
 }).AddBearerToken(IdentityConstants.BearerScheme);
-// Normal composition has no business modules; conformance descriptors require explicit opt-in.
-var modules = new ModuleBuilder(builder.Services);
+// Production WMS and explicit conformance sources share one registry/runtime.
+var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly);
 if (builder.Environment.IsEnvironment(ConformanceModuleSource.EnvironmentName)
     && builder.Configuration.GetValue<bool>(ConformanceModuleSource.EnabledConfiguration))
     modules.AddSource(new ConformanceModuleSource());
@@ -73,7 +74,7 @@ modules.Build();
 builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddAlxarafePermissionAuthorization();
 builder.Services.AddScoped<UserAdministration>();
-builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, SharedUserAuthorizationResultHandler>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, SharedContractAuthorizationResultHandler>();
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var baseCulture = CultureInfo.GetCultureInfo("en");

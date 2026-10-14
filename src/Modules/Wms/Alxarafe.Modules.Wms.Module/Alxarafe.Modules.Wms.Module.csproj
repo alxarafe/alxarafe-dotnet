@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Wms.Module</AssemblyName><RootNamespace>Alxarafe.Modules.Wms.Module</RootNamespace></PropertyGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="../Alxarafe.Modules.Wms.Infrastructure/Alxarafe.Modules.Wms.Infrastructure.csproj" />
+        <ProjectReference Include="../Alxarafe.Modules.Wms.Http/Alxarafe.Modules.Wms.Http.csproj" />
+    </ItemGroup>
+</Project>

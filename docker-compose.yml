@@ -25,6 +25,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Platform: Host=postgres;Port=5432;Database=alxarafe;Username=alxarafe;Password=alxarafe_dev_only
+      ConnectionStrings__Wms: Host=postgres;Port=5432;Database=alxarafe;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security;Username=alxarafe;Password=alxarafe_dev_only
       SecuritySeed__AdminEmail: ${ERBAS_CORE_ADMIN_EMAIL:-admin@example.test}
       SecuritySeed__AdminPassword: ${ERBAS_CORE_ADMIN_PASSWORD:-}
@@ -51,6 +52,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Testing
       Modules__ConformanceEnabled: "true"
       ConnectionStrings__Platform: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
+      ConnectionStrings__Wms: Host=postgres;Port=5432;Database=alxarafe_test;Username=alxarafe;Password=alxarafe_dev_only
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security_test;Username=alxarafe;Password=alxarafe_dev_only
       SecuritySeed__AdminEmail: ${ERBAS_CORE_ADMIN_EMAIL:-admin@example.test}
       SecuritySeed__AdminPassword: ${ERBAS_CORE_ADMIN_PASSWORD:-}

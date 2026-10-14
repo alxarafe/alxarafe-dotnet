@@ -1,9 +1,10 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Http;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Alxarafe.Host;
+namespace Alxarafe.AspNetCore;
 
 // The existing COLLECTIONS-001 query policy, shared by Users and Modules.
 public sealed record CollectionPagination(BigInteger Offset, int Limit)

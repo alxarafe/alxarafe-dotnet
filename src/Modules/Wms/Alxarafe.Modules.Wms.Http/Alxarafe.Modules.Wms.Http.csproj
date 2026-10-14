@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Wms.Http</AssemblyName><RootNamespace>Alxarafe.Modules.Wms.Http</RootNamespace></PropertyGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="../Alxarafe.Modules.Wms.Application/Alxarafe.Modules.Wms.Application.csproj" />
+        <ProjectReference Include="../../../Alxarafe.AspNetCore/Alxarafe.AspNetCore.csproj" />
+        <ProjectReference Include="../../../Alxarafe.Security.AspNetCore/Alxarafe.Security.AspNetCore.csproj" />
+    </ItemGroup>
+</Project>

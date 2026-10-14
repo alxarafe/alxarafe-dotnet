@@ -2,11 +2,11 @@
 
 The active local collection is api-tests/platform: three requests covering Health,
 .NET-only Identity registration and Spanish validation with stable technical keys.
-Shared Health/Auth/Users/Modules conformance belongs exclusively to erbas-contract.
-No business collection is currently installed.
+Shared Health/Auth/Users/Modules/WMS conformance belongs exclusively to erbas-contract.
+WMS contractual tests run only in the shared collection; no duplicate local WMS collection is installed.
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.5.0-checkout ./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.6.0-checkout ./bin/check
 ./bin/bruno platform
 ```
 

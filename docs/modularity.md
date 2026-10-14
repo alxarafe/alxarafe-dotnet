@@ -109,7 +109,7 @@ gate; INITIALIZED never substitutes for permission to execute functional work.
 
 ## CORE module administration
 
-Published ERBAS Contract `v0.5.0` defines `GET /api/modules` and
+Published ERBAS Contract `v0.6.0` defines `GET /api/modules` and
 `PATCH /api/modules/{id}`. The Host maps them as Minimal APIs, following the
 existing Auth/User endpoint pattern. They are outside the functional module group
 and never return `module_disabled`. Existing bearer authentication, current
@@ -123,7 +123,7 @@ for every response. Historical rows remain retained but do not imply availabilit
 Registry IDs use ordinal case-sensitive order before pagination. The small
 `CollectionPagination` parser, fixed order metadata and arbitrary-size offset
 converter are shared with Users; its existing wire behavior is preserved.
-The published [OpenAPI](https://github.com/alxarafe/erbas-contract/blob/v0.5.0/openapi/erbas.yaml)
+The published [OpenAPI](https://github.com/alxarafe/erbas-contract/blob/v0.6.0/openapi/erbas.yaml)
 owns the closed collection envelope and pagination rules.
 
 PATCH accepts exactly one required Boolean `enabled`, with exact property
@@ -143,7 +143,7 @@ Specified responses are JSON/no-store. Errors contain only `code`: 400
 
 ### Explicit conformance composition
 
-Normal composition has zero modules. Only environment
+Normal composition includes erbas.wms. Only environment
 `Testing` together with `Modules:ConformanceEnabled=true`
 (environment binding `Modules__ConformanceEnabled`) adds a
 `ConformanceModuleSource`. The flag defaults to false. Development/Production
@@ -159,7 +159,7 @@ and no functional HTTP endpoints.
 All sources enter one `ModuleBuilder` before its single `Build()`, yielding
 one registry/graph/runtime per application. Normal synchronization creates missing
 canonical rows as enabled, preserving existing choices without special SQL seeds
-or reset APIs. Validation contains exactly the two canonical descriptors and uses disposable
+or reset APIs. Validation contains WMS plus exactly the two canonical descriptors and uses disposable
 test databases; successful conformance restores both canonical flags to enabled.
 
 ## Functional HTTP gating
@@ -224,14 +224,16 @@ the supported version. `IModuleSource.GetModules()` supplies module instances.
 
 `BuiltInAssemblyModuleSource` confines existing exported-type reflection and
 construction to the explicitly selected built-in assemblies. It does not load
-external assemblies. The Host currently selects no built-in business assemblies.
+external assemblies. The Host explicitly selects only typeof(WmsModule).Assembly, referencing the
+WMS entry project. It does not reference WMS Domain/Application/Infrastructure/Http
+directly. Framework assemblies remain independent of all business modules.
 Future explicit sources enter the same registry/graph/runtime without a new loader.
 
 `ModuleBuilder.AddSource` accepts additional sources. The existing
 `AddModulesFromAssemblies`/`AddAlxarafeModules` convenience API wraps built-in
 composition in a source. `Build()` gathers the registry, resolves the graph,
 configures services in dependency order and registers the registry and runtime.
-The Host uses `ModuleBuilder` directly to add the optional conformance source
+The Host uses `ModuleBuilder` directly to add production WMS and the optional conformance source
 before building once. All sources must participate before this build and before the Host's
 `builder.Build()`. A future external assembly source can enter at that point;
 no `AssemblyLoadContext` or external loader is implemented.
@@ -254,6 +256,20 @@ Before module initialization, the Host applies platform migrations and calls
 module endpoints/running the application. The runtime owns a defensive read-only
 copy of the ordered modules. `IHttpModule` remains a separate ASP.NET Core adapter;
 Java need not reproduce this endpoint abstraction or service-collection API.
+
+### Production WMS
+
+WmsModule.Id is the single production ID source for erbas.wms. Its descriptor
+uses ModuleApi.CurrentVersion and no dependencies. The five WMS projects own
+domain invariants, application/port, EF infrastructure/migration, HTTP and entry
+composition respectively. Domain/Application do not reference ASP.NET Core, EF,
+Host or localization. Entry initialization applies its own EF migration through
+the existing runtime, including when administratively disabled.
+
+WmsDbContext uses explicit ConnectionStrings:Wms, wms_uoms and its own
+__WmsMigrationsHistory; no WMS entity belongs to Platform or Security contexts.
+The unique C-collated code index supplies race-safe uniqueness and ordinal order.
+Testing only permits alxarafe_test. See [WMS-001N](verification/wms-001-dotnet.md).
 
 ### .NET HTTP adapter and OpenAPI
 
@@ -299,6 +315,6 @@ ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 pagination including repeated keys and huge offsets, security precedence, retained
 unavailable state, idempotence, both atomic conflicts, ordinal dependency ordering,
 zero modules and internal failure classification. Composition tests prove the
-normal registry is empty and canonical modules need both explicit switches.
+normal registry contains only WMS and canonical modules need both explicit switches.
 The gating test includes CORE module listing while both canonical descriptors
 are disabled. See [cleanup verification](verification/cleanup-001.md).

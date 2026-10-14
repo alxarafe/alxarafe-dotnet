@@ -5,7 +5,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Alxarafe.AspNetCore;
 using Alxarafe.Security;
+using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
@@ -16,8 +18,8 @@ public static class UserEndpoints
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/api/auth/me", (HttpContext context) => Json(200, User.From((CoreUserState)context.Items[typeof(CoreUserState)]!)))
-            .RequireAuthorization().WithTags("Authentication").Produces<User>().Produces<UserError>(401);
-        var group = endpoints.MapGroup("/api/users").RequireAuthorization(SharedCoreEndpoint.AdminPolicy).WithTags("Users");
+            .RequireAuthorization().WithSharedContractErrors().WithTags("Authentication").Produces<User>().Produces<UserError>(401);
+        var group = endpoints.MapGroup("/api/users").RequireAuthorization(CoreAdministration.Policy).WithTags("Users").WithSharedContractErrors();
         group.MapGet("", ListAsync).Produces<UserPage>().Produces<UserError>(400).Produces<UserError>(401).Produces<UserError>(403)
             .AddOpenApiOperationTransformer((operation, _, _) =>
             {
