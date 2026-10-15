@@ -85,6 +85,29 @@ public sealed class WmsTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => catalogue.CreateAsync("EA", "Each"));
     }
 
+    [Fact]
+    public void WmsProjectReferencesKeepEachLayerAndFunctionalModuleIndependent()
+    {
+        const string prefix = "Alxarafe.Modules.Wms.";
+        var expected = new Dictionary<string, string[]>
+        {
+            ["Domain"] = [],
+            ["Application"] = ["Domain"],
+            ["Infrastructure"] = ["Application"],
+            ["Http"] = ["Application"],
+            ["Module"] = ["Http", "Infrastructure"]
+        };
+        foreach (var (layer, dependencies) in expected)
+        {
+            var project = System.Xml.Linq.XDocument.Load(System.IO.Path.Combine(HostBoundaryTests.RepositoryRoot,
+                "src/Modules/Wms", prefix + layer, prefix + layer + ".csproj"));
+            var moduleReferences = project.Descendants("ProjectReference")
+                .Select(reference => System.IO.Path.GetFileNameWithoutExtension(reference.Attribute("Include")!.Value))
+                .Where(name => name.StartsWith("Alxarafe.Modules.", StringComparison.Ordinal)).Order(StringComparer.Ordinal);
+            Assert.Equal(dependencies.Select(name => prefix + name).Order(StringComparer.Ordinal), moduleReferences);
+        }
+    }
+
     private sealed class Store : IUomStore
     {
         public List<Uom> Inserted { get; } = [];

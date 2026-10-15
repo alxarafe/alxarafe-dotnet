@@ -2,6 +2,8 @@
     <PropertyGroup><AssemblyName>Alxarafe.Modules.Wms.Http</AssemblyName><RootNamespace>Alxarafe.Modules.Wms.Http</RootNamespace></PropertyGroup>
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+        <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
         <ProjectReference Include="../Alxarafe.Modules.Wms.Application/Alxarafe.Modules.Wms.Application.csproj" />
         <ProjectReference Include="../../../Alxarafe.AspNetCore/Alxarafe.AspNetCore.csproj" />
         <ProjectReference Include="../../../Alxarafe.Security.AspNetCore/Alxarafe.Security.AspNetCore.csproj" />

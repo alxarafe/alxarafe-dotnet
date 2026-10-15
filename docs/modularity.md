@@ -109,7 +109,7 @@ gate; INITIALIZED never substitutes for permission to execute functional work.
 
 ## CORE module administration
 
-Published ERBAS Contract `v0.6.0` defines `GET /api/modules` and
+Published ERBAS Contract `v0.7.0` defines `GET /api/modules` and
 `PATCH /api/modules/{id}`. The Host maps them as Minimal APIs, following the
 existing Auth/User endpoint pattern. They are outside the functional module group
 and never return `module_disabled`. Existing bearer authentication, current
@@ -123,7 +123,7 @@ for every response. Historical rows remain retained but do not imply availabilit
 Registry IDs use ordinal case-sensitive order before pagination. The small
 `CollectionPagination` parser, fixed order metadata and arbitrary-size offset
 converter are shared with Users; its existing wire behavior is preserved.
-The published [OpenAPI](https://github.com/alxarafe/erbas-contract/blob/v0.6.0/openapi/erbas.yaml)
+The published [OpenAPI](https://github.com/alxarafe/erbas-contract/blob/v0.7.0/openapi/erbas.yaml)
 owns the closed collection envelope and pagination rules.
 
 PATCH accepts exactly one required Boolean `enabled`, with exact property
@@ -263,13 +263,16 @@ WmsModule.Id is the single production ID source for erbas.wms. Its descriptor
 uses ModuleApi.CurrentVersion and no dependencies. The five WMS projects own
 domain invariants, application/port, EF infrastructure/migration, HTTP and entry
 composition respectively. Domain/Application do not reference ASP.NET Core, EF,
-Host or localization. Entry initialization applies its own EF migration through
+Host or localization. Entry initialization applies its own EF migrations through
 the existing runtime, including when administratively disabled.
 
-WmsDbContext uses explicit ConnectionStrings:Wms, wms_uoms and its own
+WmsDbContext uses explicit ConnectionStrings:Wms, wms_uoms, wms_storage_attributes and its own
 __WmsMigrationsHistory; no WMS entity belongs to Platform or Security contexts.
 The unique C-collated code index supplies race-safe uniqueness and ordinal order.
-Testing only permits alxarafe_test. See [WMS-001N](verification/wms-001-dotnet.md).
+Testing only permits alxarafe_test. Both catalogues use the same existing gate
+and CORE administrator policy; disable/re-enable preserves both without restart.
+The frozen UoM migration is unchanged; the second accumulated migration and
+snapshot add only Storage Attributes. See [WMS-002](verification/wms-002-dotnet.md).
 
 ### .NET HTTP adapter and OpenAPI
 

@@ -20,7 +20,7 @@ case "$contract_origin" in
     git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
     *) echo 'ERROR: unexpected contract origin' >&2; exit 2 ;;
 esac
-if [[ "$contract_revision" != v0.6.0 ]]; then
+if [[ "$contract_revision" != v0.7.0 ]]; then
     echo 'ERROR: unsupported release in contract.revision' >&2
     exit 2
 fi
@@ -28,7 +28,7 @@ contract_commit=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract
     echo 'ERROR: contract checkout is missing the configured release tag' >&2
     exit 2
 }
-if [[ "$contract_commit" != 92d1282154f340aadcfdf93f52a82a1f3472b335 ]]; then
+if [[ "$contract_commit" != 76618b4d6776dca5e13466e7fde44af675d5b08f ]]; then
     echo 'ERROR: contract release tag does not resolve to its immutable commit' >&2
     exit 2
 fi
@@ -96,11 +96,17 @@ docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v
 DO $$ BEGIN
     IF (SELECT count(*) FROM "__PlatformMigrationsHistory" WHERE "MigrationId" = '202610120001_ModuleStates') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 2
        OR to_regclass('public.module_states') IS NULL
        OR (SELECT array_agg(column_name::text ORDER BY column_name COLLATE "C")
            FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'wms_uoms')
            IS DISTINCT FROM ARRAY['code', 'description', 'id']::text[]
-       OR (SELECT count(*) FROM wms_uoms) <> 0 THEN
+       OR (SELECT array_agg(column_name::text ORDER BY column_name COLLATE "C")
+           FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'wms_storage_attributes')
+           IS DISTINCT FROM ARRAY['code', 'id', 'name']::text[]
+       OR (SELECT count(*) FROM wms_uoms) <> 0
+       OR (SELECT count(*) FROM wms_storage_attributes) <> 0 THEN
         RAISE EXCEPTION 'Missing isolated Platform/WMS migrations or nonempty initial WMS catalogue';
     END IF;
 END $$;
@@ -126,6 +132,8 @@ grep -Fq '"/api/users"' <<<"$openapi"
 grep -Fq '"/api/users/{id}"' <<<"$openapi"
 grep -Fq '"/api/modules"' <<<"$openapi"
 grep -Fq '"/api/modules/{id}"' <<<"$openapi"
+grep -Fq '"/api/wms/uoms"' <<<"$openapi"
+grep -Fq '"/api/wms/storage-attributes"' <<<"$openapi"
 
 echo "==> Running platform and module Bruno suites"
 ./bin/bruno --prepared
@@ -161,7 +169,10 @@ docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM wms_uoms)
        OR NOT EXISTS (SELECT 1 FROM module_states WHERE module_id = 'erbas.wms' AND enabled)
-       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 1 THEN
+       OR NOT EXISTS (SELECT 1 FROM wms_storage_attributes)
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 2
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1 THEN
         RAISE EXCEPTION 'Post-conformance WMS persistence, enabled state or migration invariant failed';
     END IF;
 END $$;

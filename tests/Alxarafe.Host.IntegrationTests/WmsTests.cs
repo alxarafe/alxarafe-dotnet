@@ -72,16 +72,16 @@ public sealed class WmsTests(WebApplicationFactory<Program> factory) : IClassFix
     public async Task WmsOwnsItsContextMigrationAndHistoryAlongsideUnchangedPlatform()
     {
         await using var context = await contexts.CreateDbContextAsync();
-        Assert.Equal(["202610140001_Uoms"], await context.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes"], await context.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.False(context.Database.HasPendingModelChanges());
         await context.Database.MigrateAsync();
-        var entity = Assert.Single(context.Model.GetEntityTypes());
-        Assert.Equal(WmsStorage.Table, entity.GetTableName());
+        var entity = context.Model.FindEntityType(typeof(UomRow))!;
+        Assert.Equal(WmsStorage.UomTable, entity.GetTableName());
         Assert.Equal(["code", "description", "id"], entity.GetProperties().Select(property => property.GetColumnName()).Order(StringComparer.Ordinal));
         var index = Assert.Single(entity.GetIndexes());
         Assert.True(index.IsUnique);
-        Assert.Equal(WmsStorage.CodeIndex, index.GetDatabaseName());
+        Assert.Equal(WmsStorage.UomCodeIndex, index.GetDatabaseName());
         await using var platform = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
         Assert.Equal(["202610120001_ModuleStates"], await platform.Database.GetAppliedMigrationsAsync());
         Assert.DoesNotContain(platform.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow));

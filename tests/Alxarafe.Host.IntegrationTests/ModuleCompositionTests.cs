@@ -21,7 +21,7 @@ public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factor
         using var client = factory.CreateClient();
         var document = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/openapi/v1.json");
         string[] corePaths = ["/health", "/api/auth/login", "/api/auth/register", "/api/auth/me",
-            "/api/users", "/api/users/{id}", "/api/modules", "/api/modules/{id}", UomEndpoints.Path];
+            "/api/users", "/api/users/{id}", "/api/modules", "/api/modules/{id}", UomEndpoints.Path, StorageAttributeEndpoints.Path];
         Assert.All(document.GetProperty("paths").EnumerateObject(), path => Assert.Contains(path.Name, corePaths));
         await using var context = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
         await context.Database.OpenConnectionAsync();
@@ -30,9 +30,9 @@ public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factor
         await using var reader = await command.ExecuteReaderAsync();
         var tables = new List<string>();
         while (await reader.ReadAsync()) tables.Add(reader.GetString(0));
-        Assert.Equal([PlatformStorage.MigrationHistory, WmsStorage.MigrationHistory, PlatformStorage.ModuleStatesTable, WmsStorage.Table], tables);
+        Assert.Equal([PlatformStorage.MigrationHistory, WmsStorage.MigrationHistory, PlatformStorage.ModuleStatesTable, WmsStorage.StorageAttributeTable, WmsStorage.UomTable], tables);
         Assert.Single(context.Model.GetEntityTypes());
-        Assert.DoesNotContain(context.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow));
+        Assert.DoesNotContain(context.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow) || type.ClrType == typeof(StorageAttributeRow));
     }
 
     [Theory]

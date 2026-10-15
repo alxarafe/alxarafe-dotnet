@@ -9,9 +9,9 @@ namespace Alxarafe.Modules.Wms.Infrastructure;
 public sealed class EfUomStore(IDbContextFactory<WmsDbContext> factory) : IUomStore
 {
     private const string Columns = WmsStorage.IdColumn + ", " + WmsStorage.CodeColumn + ", " + WmsStorage.DescriptionColumn;
-    private const string InsertSql = "INSERT INTO " + WmsStorage.Table + " (" + Columns
+    private const string InsertSql = "INSERT INTO " + WmsStorage.UomTable + " (" + Columns
         + ") VALUES ({0}, {1}, {2}) ON CONFLICT (" + WmsStorage.CodeColumn + ") DO NOTHING";
-    private const string PageSql = "SELECT " + Columns + " FROM " + WmsStorage.Table
+    private const string PageSql = "SELECT " + Columns + " FROM " + WmsStorage.UomTable
         + " ORDER BY " + WmsStorage.CodeColumn + " ASC LIMIT {0} OFFSET {1}";
     public async Task<bool> InsertIfCodeAvailableAsync(Uom uom, CancellationToken cancellationToken = default)
     {
