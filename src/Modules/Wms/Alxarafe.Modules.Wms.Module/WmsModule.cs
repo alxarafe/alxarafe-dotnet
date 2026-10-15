@@ -24,6 +24,8 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule
                 provider.GetRequiredService<IHostEnvironment>().IsEnvironment(WmsStorage.TestingEnvironment)));
         services.AddSingleton<IUomStore, EfUomStore>();
         services.AddSingleton<UomCatalogue>();
+        services.AddSingleton<IStorageAttributeStore, EfStorageAttributeStore>();
+        services.AddSingleton<StorageAttributeCatalogue>();
     }
 
     public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
@@ -32,5 +34,9 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule
         await context.Database.MigrateAsync(cancellationToken);
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints) => UomEndpoints.Map(endpoints);
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        UomEndpoints.Map(endpoints);
+        StorageAttributeEndpoints.Map(endpoints);
+    }
 }

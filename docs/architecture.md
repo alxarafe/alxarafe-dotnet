@@ -50,7 +50,7 @@ RequestLocalization selects en/es from Accept-Language, with English fallback.
 CoreMessages belongs to the HTTP adapter, SecurityMessages to Security. Future
 modules own their resources and narrow exception handlers; Host never owns their
 texts. Native ProblemDetails and generic validation handling remain; shared
-v0.6.0 closed errors are unchanged. See [i18n](i18n.md).
+v0.7.0 closed errors are unchanged. See [i18n](i18n.md).
 
 ## Shared login and Identity
 
@@ -122,15 +122,14 @@ entry-only WMS reference, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses only the published immutable v0.6.0 checkout. Local Bruno
+Shared conformance uses only the published immutable v0.7.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 
-WMS owns only UoM creation/listing, with domain/application/EF/HTTP/entry projects.
+WMS owns UoM and Storage Attribute creation/listing, with domain/application/EF/HTTP/entry projects.
 Its separate context, connection and migration history preserve Platform and
 Security ownership. Shared collection parsing/order/offset serialization now live
-in AspNetCore, without a second pagination implementation. No additional WMS
-concept, AI, capability bus, dynamic loader or install/uninstall API is implemented. Physical module loading and production Identity provisioning remain
+in AspNetCore, without a second pagination implementation. No family/Item, storage rules, topology, inventory, AI, capability bus, dynamic loader or install/uninstall API is implemented. Physical module loading and production Identity provisioning remain
 separate future concerns. Historical experiment data is preserved in existing
 installations without startup access or automated purge; new installations create
 no retired business schema. See [cleanup evidence](verification/cleanup-001.md).

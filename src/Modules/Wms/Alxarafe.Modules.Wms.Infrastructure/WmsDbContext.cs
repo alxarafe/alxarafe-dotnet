@@ -9,12 +9,20 @@ public static class WmsStorage
     public const string TestingEnvironment = "Testing";
     public const string ValidationDatabase = "alxarafe_test";
     public const string MigrationHistory = "__WmsMigrationsHistory";
-    public const string Table = "wms_uoms";
+    public const string UomTable = "wms_uoms";
+    public const string StorageAttributeTable = "wms_storage_attributes";
+    public const string StorageAttributePrimaryKey = "PK_wms_storage_attributes";
+    public const string StorageAttributeCodeIndex = "IX_wms_storage_attributes_code";
+    public const string NameColumn = "name";
+    // Compatibility aliases used only by the unchanged historical Uoms migration.
+    public const string Table = UomTable;
     public const string IdColumn = "id";
     public const string CodeColumn = "code";
     public const string DescriptionColumn = "description";
-    public const string CodeIndex = "IX_wms_uoms_code";
-    public const string PrimaryKey = "PK_wms_uoms";
+    public const string UomCodeIndex = "IX_wms_uoms_code";
+    public const string CodeIndex = UomCodeIndex;
+    public const string UomPrimaryKey = "PK_wms_uoms";
+    public const string PrimaryKey = UomPrimaryKey;
     public const string OrdinalCollation = "C";
 
     public static void Configure(DbContextOptionsBuilder options, string? connectionString, bool testing)
@@ -34,19 +42,36 @@ public sealed class UomRow
     public string Description { get; set; } = string.Empty;
 }
 
+public sealed class StorageAttributeRow
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
 public sealed class WmsDbContext(DbContextOptions<WmsDbContext> options) : DbContext(options)
 {
     public DbSet<UomRow> Uoms => Set<UomRow>();
+    public DbSet<StorageAttributeRow> StorageAttributes => Set<StorageAttributeRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var uoms = modelBuilder.Entity<UomRow>();
-        uoms.ToTable(WmsStorage.Table);
-        uoms.HasKey(uom => uom.Id).HasName(WmsStorage.PrimaryKey);
+        uoms.ToTable(WmsStorage.UomTable);
+        uoms.HasKey(uom => uom.Id).HasName(WmsStorage.UomPrimaryKey);
         uoms.Property(uom => uom.Id).HasColumnName(WmsStorage.IdColumn).HasColumnType("uuid").ValueGeneratedNever();
         uoms.Property(uom => uom.Code).HasColumnName(WmsStorage.CodeColumn).HasColumnType("text")
             .UseCollation(WmsStorage.OrdinalCollation).IsRequired();
         uoms.Property(uom => uom.Description).HasColumnName(WmsStorage.DescriptionColumn).HasColumnType("text").IsRequired();
-        uoms.HasIndex(uom => uom.Code).IsUnique().HasDatabaseName(WmsStorage.CodeIndex);
+        uoms.HasIndex(uom => uom.Code).IsUnique().HasDatabaseName(WmsStorage.UomCodeIndex);
+
+        var attributes = modelBuilder.Entity<StorageAttributeRow>();
+        attributes.ToTable(WmsStorage.StorageAttributeTable);
+        attributes.HasKey(attribute => attribute.Id).HasName(WmsStorage.StorageAttributePrimaryKey);
+        attributes.Property(attribute => attribute.Id).HasColumnName(WmsStorage.IdColumn).HasColumnType("uuid").ValueGeneratedNever();
+        attributes.Property(attribute => attribute.Code).HasColumnName(WmsStorage.CodeColumn).HasColumnType("text")
+            .UseCollation(WmsStorage.OrdinalCollation).IsRequired();
+        attributes.Property(attribute => attribute.Name).HasColumnName(WmsStorage.NameColumn).HasColumnType("text").IsRequired();
+        attributes.HasIndex(attribute => attribute.Code).IsUnique().HasDatabaseName(WmsStorage.StorageAttributeCodeIndex);
     }
 }
