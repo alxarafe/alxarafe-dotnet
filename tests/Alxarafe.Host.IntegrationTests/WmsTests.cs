@@ -72,7 +72,7 @@ public sealed class WmsTests(WebApplicationFactory<Program> factory) : IClassFix
     public async Task WmsOwnsItsContextMigrationAndHistoryAlongsideUnchangedPlatform()
     {
         await using var context = await contexts.CreateDbContextAsync();
-        Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes"], await context.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes", "202610160001_ItemFamilies"], await context.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.False(context.Database.HasPendingModelChanges());
         await context.Database.MigrateAsync();
@@ -299,8 +299,7 @@ public sealed class WmsTests(WebApplicationFactory<Program> factory) : IClassFix
     {
         Headers(response, status);
         var body = await Body(response);
-        Assert.Equal("code", Assert.Single(body.EnumerateObject()).Name);
-        Assert.Equal(code, body.GetProperty("code").GetString());
+        ContractErrors.Single(body, code);
     }
 
     private static void Headers(HttpResponseMessage response, HttpStatusCode status)

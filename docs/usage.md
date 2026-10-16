@@ -5,11 +5,11 @@
 Docker and Docker Compose are required; host .NET, Bruno, Node and PostgreSQL are not.
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.7.0-checkout ./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.8.0-checkout ./bin/check
 ```
 
 The checkout must have the expected origin, no tracked/nonignored changes, HEAD and
-v0.7.0 tag at 76618b4d6776dca5e13466e7fde44af675d5b08f. bin/check never modifies it.
+v0.8.0 tag at 9dcb1605bcddbd450d4c009285313a142ab9fb35. bin/check never modifies it.
 CI uses the same authority and pinned release. Check executes restore/build/native
 architecture and integration tests, clean migrations, isolated Host startup, full
 shared Bruno, local Core Bruno (three requests), OpenAPI/persistence/secrecy checks
@@ -27,10 +27,10 @@ Development alone never opts in. Startup synchronizes their initially enabled st
 through the normal pipeline. Shared conformance changes/restores both states.
 They expose no business or mathematical endpoints.
 
-Shared conformance executes the sole published collection: **266 requests / 1050
-named checks**, retaining the prior 182 / 714. Both WMS catalogues start empty
+Shared conformance executes the sole published collection: **494 requests / 2190
+named checks**, including the earlier UoM and Storage Attribute coverage. All three WMS catalogues and associations start empty
 in the disposable validation database. Post-conformance SQL verifies retained data and enabled state.
-See [WMS-002 evidence](verification/wms-002-dotnet.md); WMS-001 remains historical.
+See [WMS-003 evidence](verification/wms-003-dotnet.md); earlier verification reports remain historical.
 
 ## WMS unit of measure
 
@@ -76,7 +76,7 @@ defaults 0/50, limit 1–100, ordinal code ASC ordering before SQL slicing, tota
 before slicing and empty windows at/beyond total, including huge BigInteger offsets.
 Exact duplicates return 409 `wms_storage_attribute_code_conflict` without mutation.
 Authentication, administrator authorization and module gating all precede validation.
-Disable/re-enable blocks/restores both WMS catalogues immediately without restart
+Disable/re-enable blocks/restores all three WMS catalogues immediately without restart
 or lost data. Existing shared-error middleware supplies JSON/no-store and only
 401 has a Bearer challenge; 503 has no Retry-After.
 
@@ -86,9 +86,30 @@ Migration `202610150001_StorageAttributes` follows the unchanged UoM migration
 code has C collation and a unique index. INSERT ON CONFLICT is race-safe; COUNT
 and page share RepeatableRead. OpenAPI includes the two new operations with closed
 HTTP DTO schemas, preserving pure Domain/Application and Host's entry-only reference.
-There is no exclusive group, individual GET, PATCH/DELETE, family/Item, location/zone
-association, storage rule, inventory or AI API. See
+Storage Attributes have no individual GET or master PATCH/DELETE. There is no
+exclusive group, Item, location/zone association, storage rule, inventory or AI API. See
 [verification and scope](verification/wms-002-dotnet.md).
+
+## Item Families and associations (WMS-003)
+
+POST/GET `/api/wms/item-families` use the same closed code/name representation,
+Unicode normalization and pagination as Storage Attributes, with independent code
+uniqueness. GET/POST/PUT/PATCH under
+`/api/wms/item-families/{familyId}/storage-attributes` and DELETE of a specific
+attribute manage the N:M relation. PUT accepts `{storageAttributeIds:[...]}` and
+replaces the set; PATCH accepts `add`/`remove` arrays and validates all references
+before all pre-state conflicts. Either operation is atomic, with no partial
+writes on failure. POST returns the complete attribute and an exact relative
+Location; DELETE removes only the pair.
+
+Migration `202610160001_ItemFamilies` adds the family catalogue and FK-protected
+composite-key join table to WMS's existing history. Earlier migrations remain
+unchanged. A family row lock serializes association writes; PostgreSQL uniqueness
+arbitrates concurrent catalogue creates. Disable/re-enable preserves every table.
+All shared errors now use closed `{code, errors:[{code,...}]}` v0.8.0 envelopes;
+association details identify resources and RFC 6901 body locations. Technical
+codes and user names remain language invariant. See
+[verification and exclusions](verification/wms-003-dotnet.md).
 
 ## Development
 
@@ -103,7 +124,8 @@ The volume persists across stops. Do not use bin/down --volumes to clean validat
 it deletes development storage. A fresh volume creates alxarafe and alxarafe_security;
 Identity uses its existing initialization and Platform applies official EF migrations.
 ConnectionStrings__Platform and ConnectionStrings__Security select the respective
-contexts. WMS owns ConnectionStrings__Wms, its EF context, wms_uoms, wms_storage_attributes and
+contexts. WMS owns ConnectionStrings__Wms, its EF context, wms_uoms, wms_storage_attributes, wms_item_families,
+wms_item_family_storage_attributes and
 __WmsMigrationsHistory. Development uses the same physical alxarafe database;
 Testing requires alxarafe_test and rejects every other WMS database. WMS applies
 its migrations through normal module initialization, without changing Platform or
@@ -118,11 +140,11 @@ Validation always supplies its own generated administrator password.
 ## API and diagnostics
 
 Health is public process liveness, independent of database/modules. Auth login,
-current identity, user/module administration and both WMS catalogues implement published v0.7.0.
+current identity, user/module administration and all three WMS catalogues implement published v0.8.0.
 POST /api/auth/register remains .NET-specific; portable clients must not depend on it.
 CORE admin does not imply functional module permissions. Authentication/authorization
 precede parsing/lookup and functional gating. Local OpenAPI is available at
-/openapi/v1.json and remains one schema, including both WMS catalogues, without translated names.
+/openapi/v1.json and remains one schema, including all three WMS catalogues, without translated names.
 
 Use Accept-Language: en/es; absent/unsupported headers fall back to English and
 regional variants use native parent matching. Technical codes and fields remain stable.
@@ -141,7 +163,7 @@ schema/seed races. Test-only probes are never part of the production Host artifa
 
 ## Current limits
 
-No family/Item, storage rules, topology, inventory, AI, external plugin loader, hot loading, module
+No Item, storage rules, topology, inventory, AI, external plugin loader, hot loading, module
 installation/uninstallation, capability bus or production provisioning workflow exists.
 Future modules own their domain, resources, permissions, endpoints, persistence and
 tests and cannot depend on canonical dev descriptors. See [architecture](architecture.md)

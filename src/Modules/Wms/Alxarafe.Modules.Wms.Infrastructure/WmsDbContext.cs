@@ -13,6 +13,16 @@ public static class WmsStorage
     public const string StorageAttributeTable = "wms_storage_attributes";
     public const string StorageAttributePrimaryKey = "PK_wms_storage_attributes";
     public const string StorageAttributeCodeIndex = "IX_wms_storage_attributes_code";
+    public const string ItemFamilyTable = "wms_item_families";
+    public const string ItemFamilyPrimaryKey = "PK_wms_item_families";
+    public const string ItemFamilyCodeIndex = "IX_wms_item_families_code";
+    public const string AssociationTable = "wms_item_family_storage_attributes";
+    public const string AssociationPrimaryKey = "PK_wms_item_family_storage_attributes";
+    public const string FamilyIdColumn = "item_family_id";
+    public const string AttributeIdColumn = "storage_attribute_id";
+    public const string AssociationAttributeIndex = "IX_wms_item_family_storage_attributes_storage_attribute_id";
+    public const string FamilyForeignKey = "FK_wms_association_family";
+    public const string AttributeForeignKey = "FK_wms_association_attribute";
     public const string NameColumn = "name";
     // Compatibility aliases used only by the unchanged historical Uoms migration.
     public const string Table = UomTable;
@@ -49,10 +59,26 @@ public sealed class StorageAttributeRow
     public string Name { get; set; } = string.Empty;
 }
 
+public sealed class ItemFamilyRow
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class ItemFamilyAssociationRow
+{
+    public Guid ItemFamilyId { get; set; }
+    public Guid StorageAttributeId { get; set; }
+}
+
 public sealed class WmsDbContext(DbContextOptions<WmsDbContext> options) : DbContext(options)
 {
     public DbSet<UomRow> Uoms => Set<UomRow>();
     public DbSet<StorageAttributeRow> StorageAttributes => Set<StorageAttributeRow>();
+
+    public DbSet<ItemFamilyRow> ItemFamilies => Set<ItemFamilyRow>();
+    public DbSet<ItemFamilyAssociationRow> ItemFamilyAssociations => Set<ItemFamilyAssociationRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +90,26 @@ public sealed class WmsDbContext(DbContextOptions<WmsDbContext> options) : DbCon
             .UseCollation(WmsStorage.OrdinalCollation).IsRequired();
         uoms.Property(uom => uom.Description).HasColumnName(WmsStorage.DescriptionColumn).HasColumnType("text").IsRequired();
         uoms.HasIndex(uom => uom.Code).IsUnique().HasDatabaseName(WmsStorage.UomCodeIndex);
+
+        var families = modelBuilder.Entity<ItemFamilyRow>();
+        families.ToTable(WmsStorage.ItemFamilyTable);
+        families.HasKey(family => family.Id).HasName(WmsStorage.ItemFamilyPrimaryKey);
+        families.Property(family => family.Id).HasColumnName(WmsStorage.IdColumn).HasColumnType("uuid").ValueGeneratedNever();
+        families.Property(family => family.Code).HasColumnName(WmsStorage.CodeColumn).HasColumnType("text")
+            .UseCollation(WmsStorage.OrdinalCollation).IsRequired();
+        families.Property(family => family.Name).HasColumnName(WmsStorage.NameColumn).HasColumnType("text").IsRequired();
+        families.HasIndex(family => family.Code).IsUnique().HasDatabaseName(WmsStorage.ItemFamilyCodeIndex);
+
+        var associations = modelBuilder.Entity<ItemFamilyAssociationRow>();
+        associations.ToTable(WmsStorage.AssociationTable);
+        associations.HasKey(pair => new { pair.ItemFamilyId, pair.StorageAttributeId }).HasName(WmsStorage.AssociationPrimaryKey);
+        associations.Property(pair => pair.ItemFamilyId).HasColumnName(WmsStorage.FamilyIdColumn).HasColumnType("uuid");
+        associations.Property(pair => pair.StorageAttributeId).HasColumnName(WmsStorage.AttributeIdColumn).HasColumnType("uuid");
+        associations.HasOne<ItemFamilyRow>().WithMany().HasForeignKey(pair => pair.ItemFamilyId)
+            .OnDelete(DeleteBehavior.Restrict).HasConstraintName(WmsStorage.FamilyForeignKey);
+        associations.HasOne<StorageAttributeRow>().WithMany().HasForeignKey(pair => pair.StorageAttributeId)
+            .OnDelete(DeleteBehavior.Restrict).HasConstraintName(WmsStorage.AttributeForeignKey);
+        associations.HasIndex(pair => pair.StorageAttributeId).HasDatabaseName(WmsStorage.AssociationAttributeIndex);
 
         var attributes = modelBuilder.Entity<StorageAttributeRow>();
         attributes.ToTable(WmsStorage.StorageAttributeTable);

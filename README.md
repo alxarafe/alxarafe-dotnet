@@ -11,7 +11,7 @@
 Alxarafe.NET is an experimental modular framework built with .NET 10, ASP.NET
 Core, EF Core and PostgreSQL. It includes authentication, authorization,
 localization, CORE user/module administration, a persistent modular runtime and
-production WMS UoM and Storage Attribute catalogues.
+production WMS UoM, Storage Attribute and Item Family catalogues.
 
 ## ERBAS ecosystem
 
@@ -19,7 +19,7 @@ production WMS UoM and Storage Attribute catalogues.
 | --- | --- |
 | [erbas-contract](https://github.com/alxarafe/erbas-contract) | Shared OpenAPI and the sole shared Bruno collection |
 | [erbas](https://github.com/alxarafe/erbas) | Java/Spring Boot backend; owns its implementation and shared-conformance validation |
-| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001, COLLECTIONS-001, CORE module administration and WMS UoM/Storage Attributes |
+| [alxarafe-dotnet](https://github.com/alxarafe/alxarafe-dotnet) | .NET backend implementing Health, AUTH-001, USERS-001, COLLECTIONS-001, CORE module administration and WMS UoM/Storage Attributes/Item Families |
 | [erbas-client](https://github.com/alxarafe/erbas-client) | Angular 22 client consuming Health, AUTH-001, USERS-001 basic user administration and COLLECTIONS-001 pagination from either backend |
 
 The same client provides authenticated profiles and basic administrator user
@@ -52,22 +52,22 @@ tests, build, runtime and isolated shared API proxies; its
 records WEB-002 integration separately. Client CI does not perform backend
 shared-conformance validation.
 
-[contract.revision](contract.revision) declares published `v0.7.0`. Local and CI
+[contract.revision](contract.revision) declares published `v0.8.0`. Local and CI
 `./bin/check` verify the supplied checkout's origin, cleanliness, release-tag
 target and matching HEAD, then require shared conformance. Coverage includes HTTP
 liveness, login, basic CORE user administration, paged collections and dependency-safe
 CORE module administration.
 See [historical verification](docs/verification/users-001-collections-001.md) and
-[AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.7.0/docs/auth-001.md).
+[AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.8.0/docs/core/auth-001.md).
 AUTH-002, USERS-001 and COLLECTIONS-001 are implemented.
 The sole shared Bruno collection lives in erbas-contract; Identity registration remains .NET-specific. Identity bearer tokens stay opaque and need not
 interoperate with Java. Release checkout requirements are in [usage](docs/usage.md#full-validation).
 
-Normal composition includes erbas.wms with administrator-only UoM and Storage Attribute
-creation and paged listing. Explicit disposable validation additionally registers canonical
+Normal composition includes erbas.wms with administrator-only UoM, Storage Attribute and Item Family
+creation and paged listing, plus atomic family/attribute associations. Explicit disposable validation additionally registers canonical
 Math/Statistics descriptors without mathematical functionality;
 they are absent in normal execution. See [modularity](docs/modularity.md#core-module-administration)
-and [WMS-002 evidence](docs/verification/wms-002-dotnet.md).
+and [WMS-003 evidence](docs/verification/wms-003-dotnet.md).
 [WMS-001N](docs/verification/wms-001-dotnet.md) remains historical v0.6.0 evidence.
 
 `POST /api/auth/register` remains a .NET-specific Identity extension outside the

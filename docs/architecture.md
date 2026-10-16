@@ -50,11 +50,11 @@ RequestLocalization selects en/es from Accept-Language, with English fallback.
 CoreMessages belongs to the HTTP adapter, SecurityMessages to Security. Future
 modules own their resources and narrow exception handlers; Host never owns their
 texts. Native ProblemDetails and generic validation handling remain; shared
-v0.7.0 closed errors are unchanged. See [i18n](i18n.md).
+v0.8.0 errors use the closed code/errors envelope without human messages. See [i18n](i18n.md).
 
 ## Shared login and Identity
 
-[AUTH-001](https://github.com/alxarafe/erbas-contract/blob/main/docs/auth-001.md) is the authority for login HTTP behavior. Register remains .NET-specific and unchanged. `LoginEndpoint` reads JSON with endpoint-local System.Text.Json options: case-sensitive names and disallowed unmapped members, followed by nonempty-string checks. Parser failures return the closed contractual error without parser details. Global JSON binding and module errors are unchanged.
+[AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.8.0/docs/core/auth-001.md) is the authority for login HTTP behavior. Register remains .NET-specific and unchanged. `LoginEndpoint` reads JSON with endpoint-local System.Text.Json options: case-sensitive names and disallowed unmapped members, followed by nonempty-string checks. Parser failures return the closed contractual error without parser details. Global JSON binding and module errors are unchanged.
 
 Credential checks use `SignInManager.CheckPasswordSignInAsync` (including Identity prechecks and lockout), with email lookup owned by Identity. Accounts requiring a second factor cannot receive a password-only token. The principal comes from `CreateUserPrincipalAsync`, preserving configured claims and permissions. The public `BearerTokenOptions.BearerTokenProtector` for `IdentityConstants.BearerScheme` protects an `AuthenticationTicket` with expiry from the same scheme's clock and lifetime. The native bearer middleware reads this ticket; no new token system or internal framework API is used.
 
@@ -122,14 +122,15 @@ entry-only WMS reference, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses only the published immutable v0.7.0 checkout. Local Bruno
+Shared conformance uses only the published immutable v0.8.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 
-WMS owns UoM and Storage Attribute creation/listing, with domain/application/EF/HTTP/entry projects.
+WMS owns UoM, Storage Attribute and Item Family creation/listing plus atomic
+family/attribute N:M associations, with domain/application/EF/HTTP/entry projects.
 Its separate context, connection and migration history preserve Platform and
 Security ownership. Shared collection parsing/order/offset serialization now live
-in AspNetCore, without a second pagination implementation. No family/Item, storage rules, topology, inventory, AI, capability bus, dynamic loader or install/uninstall API is implemented. Physical module loading and production Identity provisioning remain
+in AspNetCore, without a second pagination implementation. No Item, storage rules, topology, inventory, AI, capability bus, dynamic loader or install/uninstall API is implemented. Physical module loading and production Identity provisioning remain
 separate future concerns. Historical experiment data is preserved in existing
 installations without startup access or automated purge; new installations create
 no retired business schema. See [cleanup evidence](verification/cleanup-001.md).

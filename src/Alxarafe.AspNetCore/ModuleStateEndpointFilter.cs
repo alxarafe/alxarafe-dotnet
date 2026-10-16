@@ -5,10 +5,9 @@ using Microsoft.Net.Http.Headers;
 
 namespace Alxarafe.AspNetCore;
 
-public sealed record ModuleDisabledResponse
+public sealed record ModuleDisabledResponse() : ContractError(ErrorCode)
 {
     public const string ErrorCode = "module_disabled";
-    public string Code { get; } = ErrorCode;
 }
 
 /// <summary>Checks dynamic state once at the module HTTP boundary, after authorization.</summary>

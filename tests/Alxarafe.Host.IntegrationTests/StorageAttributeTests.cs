@@ -77,10 +77,10 @@ public sealed class StorageAttributeTests(WebApplicationFactory<Program> factory
     public async Task FreshMigrationModelHasBothOwnedTablesAndExactStorageAttributeColumns()
     {
         await using var context = await contexts.CreateDbContextAsync();
-        Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes"], await context.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes", "202610160001_ItemFamilies"], await context.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(2, context.Model.GetEntityTypes().Count());
+        Assert.Equal(4, context.Model.GetEntityTypes().Count());
         var entity = context.Model.FindEntityType(typeof(StorageAttributeRow))!;
         Assert.Equal(WmsStorage.StorageAttributeTable, entity.GetTableName());
         Assert.Equal(["code", "id", "name"], entity.GetProperties().Select(property => property.GetColumnName()).Order(StringComparer.Ordinal));
@@ -128,7 +128,7 @@ public sealed class StorageAttributeTests(WebApplicationFactory<Program> factory
             context.Uoms.Add(retained);
             await context.SaveChangesAsync();
             await context.Database.MigrateAsync();
-            Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes"], await context.Database.GetAppliedMigrationsAsync());
+            Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes", "202610160001_ItemFamilies"], await context.Database.GetAppliedMigrationsAsync());
             Assert.False(context.Database.HasPendingModelChanges());
             Assert.Empty(await context.StorageAttributes.ToArrayAsync());
             await context.Entry(retained).ReloadAsync();
@@ -423,8 +423,7 @@ public sealed class StorageAttributeTests(WebApplicationFactory<Program> factory
     {
         Headers(response, status);
         var body = await Body(response);
-        Assert.Equal("code", Assert.Single(body.EnumerateObject()).Name);
-        Assert.Equal(code, body.GetProperty("code").GetString());
+        ContractErrors.Single(body, code);
     }
 
     private static void Headers(HttpResponseMessage response, HttpStatusCode status)

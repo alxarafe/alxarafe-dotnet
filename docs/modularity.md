@@ -109,7 +109,7 @@ gate; INITIALIZED never substitutes for permission to execute functional work.
 
 ## CORE module administration
 
-Published ERBAS Contract `v0.7.0` defines `GET /api/modules` and
+Published ERBAS Contract `v0.8.0` defines `GET /api/modules` and
 `PATCH /api/modules/{id}`. The Host maps them as Minimal APIs, following the
 existing Auth/User endpoint pattern. They are outside the functional module group
 and never return `module_disabled`. Existing bearer authentication, current
@@ -123,7 +123,7 @@ for every response. Historical rows remain retained but do not imply availabilit
 Registry IDs use ordinal case-sensitive order before pagination. The small
 `CollectionPagination` parser, fixed order metadata and arbitrary-size offset
 converter are shared with Users; its existing wire behavior is preserved.
-The published [OpenAPI](https://github.com/alxarafe/erbas-contract/blob/v0.7.0/openapi/erbas.yaml)
+The published [OpenAPI](https://github.com/alxarafe/erbas-contract/blob/v0.8.0/openapi/erbas.yaml)
 owns the closed collection envelope and pagination rules.
 
 PATCH accepts exactly one required Boolean `enabled`, with exact property
@@ -271,8 +271,11 @@ __WmsMigrationsHistory; no WMS entity belongs to Platform or Security contexts.
 The unique C-collated code index supplies race-safe uniqueness and ordinal order.
 Testing only permits alxarafe_test. Both catalogues use the same existing gate
 and CORE administrator policy; disable/re-enable preserves both without restart.
-The frozen UoM migration is unchanged; the second accumulated migration and
-snapshot add only Storage Attributes. See [WMS-002](verification/wms-002-dotnet.md).
+Frozen UoM and Storage Attribute migrations remain unchanged. The third WMS
+migration adds Item Families and the family/attribute join table under the same
+WMS-owned context and history. All association endpoints inherit the existing
+module gate; disabling WMS preserves catalogue and relation data. See
+[WMS-003](verification/wms-003-dotnet.md).
 
 ### .NET HTTP adapter and OpenAPI
 

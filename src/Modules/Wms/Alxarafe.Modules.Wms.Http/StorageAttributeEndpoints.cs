@@ -95,7 +95,7 @@ public static class StorageAttributeEndpoints
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record StorageAttributeError([property: Required] string Code);
+public sealed record StorageAttributeError(string Code) : ContractError(Code);
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record CreateStorageAttributeRequest(
     [property: Required, StringLength(StorageAttribute.CodeMaximum, MinimumLength = 1), RegularExpression(StorageAttribute.CodePattern)] string Code,

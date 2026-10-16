@@ -164,9 +164,7 @@ public sealed class ModuleGatingTests(WebApplicationFactory<Program> factory) : 
     {
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var property = Assert.Single(body.EnumerateObject());
-        Assert.Equal("code", property.Name);
-        Assert.Equal(ModuleDisabledResponse.ErrorCode, property.Value.GetString());
+        ContractErrors.Single(body, ModuleDisabledResponse.ErrorCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
         Assert.True(response.Headers.CacheControl?.NoStore);
         Assert.Empty(response.Headers.WwwAuthenticate);

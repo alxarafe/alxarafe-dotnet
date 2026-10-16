@@ -80,9 +80,9 @@ This backend cannot change their observable behavior unilaterally. The public
 `{"status":"ok"}`, independent of database, module or external-service checks.
 
 `contract.revision` declares the implemented published release, currently
-`v0.7.0`. `./bin/check` requires `ERBAS_CONTRACT_DIR` and verifies repository root,
+`v0.8.0`. `./bin/check` requires `ERBAS_CONTRACT_DIR` and verifies repository root,
 the expected GitHub origin, tracked/nonignored cleanliness, release-tag resolution
-to `76618b4d6776dca5e13466e7fde44af675d5b08f` and matching HEAD. Ignored files are
+to `9dcb1605bcddbd450d4c009285313a142ab9fb35` and matching HEAD. Ignored files are
 preserved. It invokes the public `bin/test` on the existing validation Docker
 network. Never assume a sibling path, fetch, pull, checkout or modify the supplied
 contract, or copy its OpenAPI/Bruno into this backend. Local and CI validation

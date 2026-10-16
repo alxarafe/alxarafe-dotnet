@@ -39,7 +39,7 @@ public sealed class UsersInvariantTests(WebApplicationFactory<Program> factory) 
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
             Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
             var error = await response.Content.ReadFromJsonAsync<JsonElement>();
-            Assert.Single(error.EnumerateObject());
+            ContractErrors.Single(error, "last_admin");
             Assert.Equal("last_admin", error.GetProperty("code").GetString());
             Assert.True((await users.FindAsync(admin.Id)) is { Enabled: true, Admin: true });
         });

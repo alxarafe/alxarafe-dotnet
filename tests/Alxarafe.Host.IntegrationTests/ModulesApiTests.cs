@@ -309,9 +309,7 @@ public sealed class ModulesApiTests(WebApplicationFactory<Program> factory) : IC
     private static async Task Error(HttpResponseMessage response, HttpStatusCode status, string code)
     {
         Assert.Equal(status, response.StatusCode);
-        var property = Assert.Single((await Body(response)).EnumerateObject());
-        Assert.Equal("code", property.Name);
-        Assert.Equal(code, property.Value.GetString());
+        ContractErrors.Single(await Body(response), code);
         if (status == HttpStatusCode.Unauthorized)
             Assert.Equal(BearerScheme, Assert.Single(response.Headers.WwwAuthenticate).Scheme);
         else Assert.Empty(response.Headers.WwwAuthenticate);
