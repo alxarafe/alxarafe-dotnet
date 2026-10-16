@@ -358,7 +358,7 @@ public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : ICla
     {
         Assert.Equal(status, (int)response.StatusCode);
         var body = await Body(response);
-        Assert.Single(body.EnumerateObject());
+        ContractErrors.Single(body, code);
         Assert.Equal(code, body.GetProperty("code").GetString());
         Assert.Equal(status == 401 ? BearerChallenge : [], response.Headers.WwwAuthenticate.Select(value => value.ToString()));
     }

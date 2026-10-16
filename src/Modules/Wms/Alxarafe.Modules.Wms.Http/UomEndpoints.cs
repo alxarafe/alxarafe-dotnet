@@ -77,7 +77,7 @@ public static class UomEndpoints
     private static IResult Error(int status, string code) => Results.Json(new UomError(code), statusCode: status);
 }
 
-public sealed record UomError(string Code);
+public sealed record UomError(string Code) : ContractError(Code);
 public sealed record CreateUomRequest(string Code, string Description);
 public sealed record UomPage(IReadOnlyList<Uom> Items, [property: JsonConverter(typeof(OffsetJsonConverter))] BigInteger Offset,
     int Limit, long Total, IReadOnlyList<CollectionOrder> Order);

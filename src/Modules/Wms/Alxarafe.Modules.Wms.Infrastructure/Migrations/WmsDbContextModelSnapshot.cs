@@ -7,5 +7,5 @@ namespace Alxarafe.Modules.Wms.Infrastructure.Migrations;
 [DbContext(typeof(WmsDbContext))]
 public sealed class WmsDbContextModelSnapshot : ModelSnapshot
 {
-    protected override void BuildModel(ModelBuilder modelBuilder) => StorageAttributes.BuildFrozenModel(modelBuilder);
+    protected override void BuildModel(ModelBuilder modelBuilder) => ItemFamilies.BuildFrozenModel(modelBuilder);
 }

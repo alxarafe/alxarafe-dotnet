@@ -119,9 +119,7 @@ public sealed class LocalizationHttpTests(WebApplicationFactory<Program> factory
         client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
         var response = await client.GetAsync("/api/modules");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        var code = Assert.Single((await response.Content.ReadFromJsonAsync<JsonElement>()).EnumerateObject());
-        Assert.Equal("code", code.Name);
-        Assert.Equal("unauthorized", code.Value.GetString());
+        ContractErrors.Single(await response.Content.ReadFromJsonAsync<JsonElement>(), "unauthorized");
         Assert.Equal("Bearer", Assert.Single(response.Headers.WwwAuthenticate).Scheme);
     }
 }

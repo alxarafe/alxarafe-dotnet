@@ -126,7 +126,7 @@ public sealed record User([property: Required, MinLength(1)] string Id, [propert
 {
     internal static User From(CoreUserState state) => new(state.Id.ToString(), state.Email, state.Enabled, state.Admin);
 }
-public sealed record UserError(string Code);
+public sealed record UserError(string Code) : ContractError(Code);
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record CreateUserRequest([property: Required, MinLength(1)] string Email,
     [property: Required, MinLength(12), MaxLength(256)] string Password, bool Admin);

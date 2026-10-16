@@ -20,7 +20,7 @@ case "$contract_origin" in
     git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
     *) echo 'ERROR: unexpected contract origin' >&2; exit 2 ;;
 esac
-if [[ "$contract_revision" != v0.7.0 ]]; then
+if [[ "$contract_revision" != v0.8.0 ]]; then
     echo 'ERROR: unsupported release in contract.revision' >&2
     exit 2
 fi
@@ -28,8 +28,13 @@ contract_commit=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract
     echo 'ERROR: contract checkout is missing the configured release tag' >&2
     exit 2
 }
-if [[ "$contract_commit" != 76618b4d6776dca5e13466e7fde44af675d5b08f ]]; then
+if [[ "$contract_commit" != 9dcb1605bcddbd450d4c009285313a142ab9fb35 ]]; then
     echo 'ERROR: contract release tag does not resolve to its immutable commit' >&2
+    exit 2
+fi
+contract_tag=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract_revision")
+if [[ "$contract_tag" != 303a61b0207d3984780539da4068ab68c1264a8d ]]; then
+    echo 'ERROR: contract release tag object does not match its immutable identity' >&2
     exit 2
 fi
 contract_head=$(git -C "$CONTRACT_DIR" rev-parse HEAD)
@@ -97,7 +102,8 @@ DO $$ BEGIN
     IF (SELECT count(*) FROM "__PlatformMigrationsHistory" WHERE "MigrationId" = '202610120001_ModuleStates') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1
-       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 2
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610160001_ItemFamilies') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 3
        OR to_regclass('public.module_states') IS NULL
        OR (SELECT array_agg(column_name::text ORDER BY column_name COLLATE "C")
            FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'wms_uoms')
@@ -106,7 +112,9 @@ DO $$ BEGIN
            FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'wms_storage_attributes')
            IS DISTINCT FROM ARRAY['code', 'id', 'name']::text[]
        OR (SELECT count(*) FROM wms_uoms) <> 0
-       OR (SELECT count(*) FROM wms_storage_attributes) <> 0 THEN
+       OR (SELECT count(*) FROM wms_storage_attributes) <> 0
+       OR (SELECT count(*) FROM wms_item_families) <> 0
+       OR (SELECT count(*) FROM wms_item_family_storage_attributes) <> 0 THEN
         RAISE EXCEPTION 'Missing isolated Platform/WMS migrations or nonempty initial WMS catalogue';
     END IF;
 END $$;
@@ -134,6 +142,9 @@ grep -Fq '"/api/modules"' <<<"$openapi"
 grep -Fq '"/api/modules/{id}"' <<<"$openapi"
 grep -Fq '"/api/wms/uoms"' <<<"$openapi"
 grep -Fq '"/api/wms/storage-attributes"' <<<"$openapi"
+grep -Fq '"/api/wms/item-families"' <<<"$openapi"
+grep -Fq '"/api/wms/item-families/{familyId}/storage-attributes"' <<<"$openapi"
+grep -Fq '"/api/wms/item-families/{familyId}/storage-attributes/{storageAttributeId}"' <<<"$openapi"
 
 echo "==> Running platform and module Bruno suites"
 ./bin/bruno --prepared
@@ -170,7 +181,10 @@ DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM wms_uoms)
        OR NOT EXISTS (SELECT 1 FROM module_states WHERE module_id = 'erbas.wms' AND enabled)
        OR NOT EXISTS (SELECT 1 FROM wms_storage_attributes)
-       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 2
+       OR NOT EXISTS (SELECT 1 FROM wms_item_families)
+       OR NOT EXISTS (SELECT 1 FROM wms_item_family_storage_attributes)
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610160001_ItemFamilies') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 3
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1 THEN
         RAISE EXCEPTION 'Post-conformance WMS persistence, enabled state or migration invariant failed';

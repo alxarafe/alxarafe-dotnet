@@ -30,7 +30,8 @@ public sealed class SharedContractAuthorizationResultHandler : IAuthorizationMid
         {
             context.Response.Headers.CacheControl = "no-store";
             if (authorizeResult.Challenged) context.Response.Headers.WWWAuthenticate = "Bearer";
-            await Results.Json(new { code = authorizeResult.Challenged ? "unauthorized" : "forbidden" },
+            string code = authorizeResult.Challenged ? "unauthorized" : "forbidden";
+            await Results.Json(new { code, errors = new[] { new { code } } },
                 statusCode: authorizeResult.Challenged ? StatusCodes.Status401Unauthorized : StatusCodes.Status403Forbidden).ExecuteAsync(context);
             return;
         }

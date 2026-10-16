@@ -29,8 +29,8 @@ public sealed class LoginOpenApiTests(WebApplicationFactory<Program> factory) : 
         var success = Schema(document, responses.GetProperty("200"));
         AssertClosedObject(success, ["accessToken"]);
         Assert.Equal("string", success.GetProperty("properties").GetProperty("accessToken").GetProperty("type").GetString());
-        AssertClosedObject(Schema(document, responses.GetProperty("400")), ["code"]);
-        AssertClosedObject(Schema(document, responses.GetProperty("401")), ["code"]);
+        AssertClosedObject(Schema(document, responses.GetProperty("400")), ["code", "errors"]);
+        AssertClosedObject(Schema(document, responses.GetProperty("401")), ["code", "errors"]);
     }
 
     private static JsonElement Schema(JsonElement document, JsonElement message)

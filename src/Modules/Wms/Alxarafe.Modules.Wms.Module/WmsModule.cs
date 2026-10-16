@@ -26,6 +26,10 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule
         services.AddSingleton<UomCatalogue>();
         services.AddSingleton<IStorageAttributeStore, EfStorageAttributeStore>();
         services.AddSingleton<StorageAttributeCatalogue>();
+        services.AddSingleton<IItemFamilyStore, EfItemFamilyStore>();
+        services.AddSingleton<ItemFamilyCatalogue>();
+        services.AddSingleton<IItemFamilyAssociationStore, EfItemFamilyAssociationStore>();
+        services.AddSingleton<ItemFamilyAssociations>();
     }
 
     public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
@@ -38,5 +42,7 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule
     {
         UomEndpoints.Map(endpoints);
         StorageAttributeEndpoints.Map(endpoints);
+        ItemFamilyEndpoints.Map(endpoints);
+        ItemFamilyAssociationEndpoints.Map(endpoints);
     }
 }

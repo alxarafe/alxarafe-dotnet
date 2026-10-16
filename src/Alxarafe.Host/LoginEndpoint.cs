@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Alxarafe.AspNetCore;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -90,4 +91,4 @@ public sealed record LoginRequest(
 public sealed record LoginResponse([property: Required, MinLength(1)] string AccessToken);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record LoginError([property: Required] string Code);
+public sealed record LoginError(string Code) : ContractError(Code);
