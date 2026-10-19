@@ -29,6 +29,39 @@ Use four spaces for indentation and follow standard C# conventions: `PascalCase`
 
 Use the repository’s selected .NET test framework (typically xUnit or NUnit) and keep tests beside the behavior they verify under `tests/`. Name test classes after the system under test and test methods in a descriptive form such as `Method_WhenCondition_ExpectedResult`. Add regression coverage for bug fixes and run `dotnet test` locally before opening a pull request.
 
+### Efficient validation execution
+
+During implementation, prefer the narrowest applicable validation that gives
+useful feedback, for example focused `dotnet test` runs against the affected
+projects or a subset of tests, before running the whole suite.
+
+Docker-only execution still applies: run .NET commands inside the `app` service
+as described above, and do not add host-installed tooling or new fast commands
+that the repository does not provide.
+
+Do not run a long-running repository-wide build/test, the final image build, or
+the full `./bin/check` shared-contract validation inside an AI-agent session merely
+to wait for it to finish when the developer or CI can run it directly. Repeatedly
+polling such a process is specifically discouraged: each poll may cost another
+model turn that reprocesses the existing conversation and repository context even
+though the external process itself needs no reasoning, consuming effort without
+adding engineering value.
+
+Whether a command is "long-running" depends on the repository and the task; no
+fixed duration threshold applies. When a required full validation is expected to
+take materially longer than the focused checks, normally provide the exact command
+for the developer or CI to execute. When that result is required before commit or
+task completion, stop and wait for it, continue only once it is provided, and
+never claim the validation passed unless its result is actually known.
+
+If a long-running command genuinely must be executed by the agent, avoid repeated
+polling, wait as efficiently as the available tooling permits, and do not
+repeatedly reread unchanged files or rerun unchanged validations.
+
+This changes execution responsibility, not validation authority. The Docker-only
+and shared HTTP contract requirements above are unchanged, and a failed or missing
+required validation still blocks task completion or commit exactly as before.
+
 ## Task lifecycle
 
 Follow this order for each task: obtain explicit approval, implement only its
