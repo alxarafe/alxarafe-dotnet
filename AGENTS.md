@@ -1,288 +1,192 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Structure and boundaries
 
-This repository implements a .NET 10/ASP.NET Core modular platform, including
-shared Health, authentication, Users, module administration and authorization. Production
-code lives in `src/`, automated tests in `tests/`, and documentation in `docs/`.
-Keep solution files and repository-wide build configuration at the root and use
-clear project names consistent with the existing modules.
+This .NET 10/ASP.NET Core modular platform provides shared Health, authentication,
+Users, module administration and authorization. Production code is in `src/`,
+tests in `tests/`, and documentation in `docs/`. Keep solution and repository-wide
+build configuration at the root, with project names consistent with existing modules.
 
-## Build, Test, and Development Commands
+Core must not absorb business domain logic. Functional modules own their domain,
+use cases, ports, persistence/migrations, HTTP endpoints, permissions, resources
+and tests; they must not depend on removed examples. `erbas.dev.math` and
+`erbas.dev.statistics` are exclusively conformance/testing descriptors, registered
+only by explicit validation composition, never business capabilities or functional
+dependencies. Normal composition includes WMS UoM and Storage Attributes through
+the existing pipeline. Host may reference only the WMS entry assembly for explicit
+composition; framework projects remain independent of business modules. Further
+business capabilities and AI require separately approved designs.
 
-Docker and Docker Compose are the only supported development environment. The host must not be expected to have the .NET SDK, PostgreSQL, or `psql` installed. Run .NET commands inside the `app` service:
+## Environment, tools and validation
 
-- `docker compose build` — build the development image.
-- `docker compose up -d` — start the application and PostgreSQL.
-- `docker compose exec app dotnet restore` — restore NuGet dependencies in the container.
-- `docker compose exec app dotnet build Alxarafe.sln` — compile the solution in the container.
-- `docker compose exec app dotnet test Alxarafe.sln` — execute the test suite in the container.
-- `docker compose logs -f app` — inspect application logs.
+Docker and Docker Compose are the only supported development environment; do not
+expect host .NET SDK, PostgreSQL or `psql`. Run .NET commands in the `app` service.
+When a task requires Docker, Compose, a database or another repository runtime,
+check its availability once before relying on it. If unavailable, do not start
+services, build images, retry, poll or investigate alternatives: report the exact
+preparation command for the developer and stop the task.
 
-Keep generated output (`bin/`, `obj/`, coverage reports, and local settings) out of version control.
+Perform only the minimum reconnaissance needed to act safely. Batch independent
+inspection where practical; bound output and prefer targeted searches and file
+ranges over whole trees, large logs, broad dumps or complete large files. Do not
+reread unchanged material without a concrete reason or explore unrelated
+alternatives after establishing an implementation path or blocker.
 
-## Coding Style & Naming Conventions
+Use the narrowest validation that gives useful evidence; short focused checks may
+run when the required environment is already available. Do not start materially
+long-running repository-wide builds, full test suites, image builds, benchmarks,
+full integration/conformance runs or similar validation merely to wait for them.
+Never repeatedly poll a process. When such validation is required, report the
+exact command for the developer or CI and stop pending its real result. Duration
+depends on the task, not a fixed threshold. Do not claim validation passed without
+its actual result; missing or failed mandatory validation blocks task completion
+and commit. Do not add host-installed tooling or new fast commands.
 
-Use four spaces for indentation and follow standard C# conventions: `PascalCase` for types, methods, and public members; `camelCase` for locals and parameters; and `_camelCase` for private fields. Prefer nullable reference types, expression-bodied members where they improve readability, and small focused classes. Add or preserve `.editorconfig` and use `dotnet format` before submitting changes when formatting rules are available.
+Standard repository commands, used directly or delegated to the developer or CI
+according to the validation rules above:
 
-## Testing Guidelines
+- `docker compose build`; `docker compose up -d` — prepare the environment.
+- `docker compose exec app dotnet restore` — restore dependencies.
+- `docker compose exec app dotnet build Alxarafe.sln` — build the solution.
+- `docker compose exec app dotnet test Alxarafe.sln` — run the suite; run before a PR.
+- `docker compose logs -f app` — inspect logs.
 
-Use the repository’s selected .NET test framework (typically xUnit or NUnit) and keep tests beside the behavior they verify under `tests/`. Name test classes after the system under test and test methods in a descriptive form such as `Method_WhenCondition_ExpectedResult`. Add regression coverage for bug fixes and run `dotnet test` locally before opening a pull request.
+Use the selected .NET test framework, keep tests under `tests/` beside the behavior,
+name classes after the system under test and methods descriptively (for example,
+`Method_WhenCondition_ExpectedResult`), and add regression coverage for bug fixes.
+Keep generated output (`bin/`, `obj/`, coverage reports and local settings) out of
+version control.
 
-### Efficient validation execution
+## Task lifecycle and Git
 
-During implementation, prefer the narrowest applicable validation that gives
-useful feedback, for example focused `dotnet test` runs against the affected
-projects or a subset of tests, before running the whole suite.
+For each task: obtain explicit approval, implement only its scope, pass applicable
+validation, review the diff and documentation impact, then close with a local
+atomic commit before requesting approval for the next task. Approval authorizes
+staging and the final local commit after validation and scope review; no second
+approval is needed for that commit. Use one atomic commit or the minimum required,
+with short imperative subjects consistent with history, preferably scoped.
 
-Docker-only execution still applies: run .NET commands inside the `app` service
-as described above, and do not add host-installed tooling or new fast commands
-that the repository does not provide.
+Do not commit incomplete tasks or failed validations; correct and revalidate defects.
+Do not start the next task with uncommitted changes from the previous one. If a task
+exceptionally starts with another task's pending changes, separate their commits.
+Push, PR creation, merge, tag, release, publication and deployment each require
+separate express authorization. PRs explain changes and validation, link related
+issues, call out configuration or migration steps, and include screenshots or
+sample requests for user-facing changes.
 
-Do not run a long-running repository-wide build/test, the final image build, or
-the full `./bin/check` shared-contract validation inside an AI-agent session merely
-to wait for it to finish when the developer or CI can run it directly. Repeatedly
-polling such a process is specifically discouraged: each poll may cost another
-model turn that reprocesses the existing conversation and repository context even
-though the external process itself needs no reasoning, consuming effort without
-adding engineering value.
+## Shared HTTP contract and configuration
 
-Whether a command is "long-running" depends on the repository and the task; no
-fixed duration threshold applies. When a required full validation is expected to
-take materially longer than the focused checks, normally provide the exact command
-for the developer or CI to execute. When that result is required before commit or
-task completion, stop and wait for it, continue only once it is provided, and
-never claim the validation passed unless its result is actually known.
+OpenAPI and the sole shared conformance Bruno collection belong to erbas-contract;
+this backend cannot change observable behavior unilaterally. `/health` is process
+liveness only: HTTP 200 `application/json` with exactly `{"status":"ok"}`,
+independent of database, module or external-service checks.
 
-If a long-running command genuinely must be executed by the agent, avoid repeated
-polling, wait as efficiently as the available tooling permits, and do not
-repeatedly reread unchanged files or rerun unchanged validations.
-
-This changes execution responsibility, not validation authority. The Docker-only
-and shared HTTP contract requirements above are unchanged, and a failed or missing
-required validation still blocks task completion or commit exactly as before.
-
-## Task lifecycle
-
-Follow this order for each task: obtain explicit approval, implement only its
-scope, pass applicable validations, review the diff, close it with a local atomic
-commit, then request and obtain approval before starting the next task.
-
-Task approval also authorizes staging and the final local commit once the task
-is implemented, validated and its diff contains only that task's changes. No
-second authorization is required solely for that commit. Use one atomic commit,
-or the minimum number its structure requires, with clear messages following this
-repository's commit guidelines. Preserve all other repository-specific rules.
-
-Do not commit incomplete tasks or tasks with failed validations. Correct and
-revalidate defects found before closing a task. Do not start the next task with
-uncommitted changes from the previous one. If a task exceptionally starts with
-another task's pending changes, separate their commits correctly before continuing.
-
-Task approval does not authorize push, PR creation, merge, tag, release,
-publication or deployment; each requires separate express authorization.
-
-## Commit & Pull Request Guidelines
-
-Use short imperative commit subjects consistent with repository history,
-preferably scoped when useful (for example, `api: add health endpoint`). Pull
-requests should explain the change and validation performed, link related issues,
-call out configuration or migration steps, and include screenshots or sample
-requests when user-facing behavior changes.
-
-## Security & Configuration Tips
+`contract.revision` declares the published release implemented, currently `v0.8.0`.
+`./bin/check` requires `ERBAS_CONTRACT_DIR`; it checks repository root, expected
+GitHub origin, tracked/nonignored cleanliness, release tag resolution to
+`9dcb1605bcddbd450d4c009285313a142ab9fb35` and matching HEAD, preserves ignored
+files, and invokes public `bin/test` on the existing validation Docker network.
+Never assume a sibling path, fetch, pull, checkout or modify the supplied contract,
+or copy its OpenAPI/Bruno into this backend. Local and CI validation must use the
+same published release and fail when shared conformance fails.
 
 Development publishes API container port 8080 only on
-`127.0.0.1:${ERBAS_DOTNET_PORT:-48081}`. Follow the shared local-infrastructure
-convention in `erbas-contract/docs/development-ports.md`; never fix host ports in
-HTTP contracts or Bruno requests. Keep PostgreSQL unpublished. Validation uses
-Docker network URLs and must not require the development host port. Avoid an
-additional automatic Dev Container forwarding of API port 8080.
+`127.0.0.1:${ERBAS_DOTNET_PORT:-48081}`; follow
+`erbas-contract/docs/development-ports.md`. Never fix host ports in HTTP contracts
+or Bruno requests, publish PostgreSQL, require the development host port for
+validation, or add automatic Dev Container forwarding of API port 8080. Validation
+uses Docker network URLs. Never commit credentials, tokens, connection strings or
+machine-specific settings; use environment variables or untracked local settings,
+and provide safe examples through templates or documentation.
 
-Never commit credentials, tokens, connection strings, or machine-specific settings. Use environment variables or an untracked local settings file, and provide safe examples through configuration templates or documentation.
+## API internationalization
 
-## Abstraction Guidelines
+All user-facing runtime literals use native i18n: English base and Spanish (`en`,
+`es`), deterministic fallback and standard `Accept-Language` negotiation including
+parent-culture fallback. Do not add language query parameters, custom headers,
+mutable global cultures or persistent preferences.
 
-Before introducing a custom abstraction, check whether .NET or ASP.NET Core already provides a suitable native capability. Add a new layer only when it delivers concrete decoupling, modularity, or meaningful ergonomics; document that benefit briefly in the code or architectural notes. Prefer direct, idiomatic framework APIs over wrappers that merely rename existing types or operations.
+Use `AddLocalization`, `RequestLocalization`, `IStringLocalizer<T>` and
+assembly-owned `.resx` resources. Preserve existing validation and native
+`ProblemDetails`; localize human text at the HTTP boundary without changing codes,
+status or JSON shape. Domain/Application express structured failures and do not
+depend on localization, HTTP or request cultures. Use the native Identity error
+describer extension for Identity descriptions.
 
-## Shared HTTP Contract
-
-OpenAPI and the sole shared conformance Bruno collection belong to erbas-contract.
-This backend cannot change their observable behavior unilaterally. The public
-`/health` endpoint is HTTP process liveness only: 200 application/json with exactly
-`{"status":"ok"}`, independent of database, module or external-service checks.
-
-`contract.revision` declares the implemented published release, currently
-`v0.8.0`. `./bin/check` requires `ERBAS_CONTRACT_DIR` and verifies repository root,
-the expected GitHub origin, tracked/nonignored cleanliness, release-tag resolution
-to `9dcb1605bcddbd450d4c009285313a142ab9fb35` and matching HEAD. Ignored files are
-preserved. It invokes the public `bin/test` on the existing validation Docker
-network. Never assume a sibling path, fetch, pull, checkout or modify the supplied
-contract, or copy its OpenAPI/Bruno into this backend. Local and CI validation
-must use the same published release and fail if shared conformance fails.
-
-## Documentation impact review
-
-Every task must review its documentation impact after implementation, validation
-and scope review, before the final local commit. If it changes public behavior,
-architecture, configuration, usage, development workflow, API capabilities,
-repository status or documented limitations, update the relevant documentation
-within the same task and the same future pull request. Otherwise, do not modify
-documentation merely to record that the review occurred.
-
-README.md is a stable, brief public landing page for project purpose, high-level
-capabilities, architecture and ecosystem relationships, essential quick start,
-onboarding and configuration, principal limitations, verifiable badges and links
-to detailed documentation. It is not a changelog, task history, endpoint catalog,
-record of individual WEB-003 slices or exhaustive inventory of internal checks.
-Do not change it merely because an endpoint, field, validation or test is added
-or changed, or an internal task is completed. Change README only when its
-high-level description, onboarding, architecture, essential configuration,
-principal capabilities or limitations become materially false or incomplete.
-
-Functional and technical detail belongs preferably in `docs/`. Feature code and
-documentation normally belong in the same task and pull request; use separate
-functional and documentation commits when that improves review, for example
-`feat(...): ...` and `docs: ...`. Do not automatically create a follow-up DOCS task
-or coordinated documentation synchronization after each feature.
-
-Cross-repository documentation synchronization is necessary only for a shared
-policy change, a contractual or published version change, an architecture or
-ecosystem change, materially false information in another repository, or a
-significant milestone that actually affects several repositories. Review related
-status references when one of these conditions applies; obtain task approval
-for necessary changes in other repositories and keep each repository's commits
-separate. Preserve historical references and reports as historical; never rewrite
-them to appear current. Change badges only when the verifiable fact they represent
-changes. Keep CI, local contract conformance and real full-stack demo verification
-distinct.
-
-Write public documentation in English. Complete necessary documentation updates
-before the final local commit, then obtain approval before starting the next task.
-Independent authorization for push, PR creation, merge, tag, release, publication
-and deployment remains required.
-
-## API Internationalization
-
-All user-facing runtime literals must use native i18n. Initial languages are
-`en` and `es`, with English as base and deterministic fallback. Use only standard
-`Accept-Language` request negotiation, including parent-culture fallback for
-regional variants. Do not add language query parameters, custom headers, mutable
-global cultures or persistent preferences.
-
-Use `AddLocalization`, `RequestLocalization`, `IStringLocalizer<T>` and assembly-
-owned `.resx` resources. Keep the existing validation infrastructure and native
-`ProblemDetails`; localize human text at the HTTP boundary without changing
-technical codes, status or JSON shape. Domain/Application express structured
-failures and must not depend on localization, HTTP or request cultures. Use the
-native Identity error describer extension for Identity descriptions.
-
-Resources belong to the module/feature owning the text: Security owns Identity,
-functional modules own their messages, and Core owns only
-transversal HTTP text. Never place module translations in Host or a global
-catalog. The neutral `.resx` is English; `.es.resx` supplies Spanish. Use complete
-parameterized phrases rather than concatenated translated fragments. Do not
-introduce translator interfaces, wrappers or a custom translation framework.
-
+Resources belong to the owning module/feature: Security owns Identity, functional
+modules own their messages, and Core owns only transversal HTTP text. Never put
+module translations in Host or a global catalog. Neutral `.resx` is English and
+`.es.resx` Spanish; use complete parameterized phrases, not concatenated fragments.
+Do not introduce translator interfaces, wrappers or a custom translation framework.
 Never translate routes, JSON properties, canonical field names/paths, codes, IDs,
 permissions/policies, claims, events, module names, configuration/technical keys,
 database identifiers or internal operational/development logs. Preserve closed
-shared-contract errors. Prove locale selection, fallback, parameter interpolation,
-request isolation and stable technical response fields through HTTP tests.
+shared-contract errors. HTTP tests must prove locale selection, fallback, parameter
+interpolation, request isolation and stable technical response fields.
 
-## Functional module boundaries
+## Documentation
 
-Core must not absorb business domain logic. Future functional modules own their
-domain, use cases, ports, persistence/migrations, HTTP endpoints, permissions,
-resources and tests. No functional module may depend on removed examples.
-`erbas.dev.math` and `erbas.dev.statistics` are exclusively conformance/testing
-descriptors, registered only by explicit validation composition. They are never
-business capabilities or functional dependencies. Normal composition includes
-WMS UoM and Storage Attributes through the existing pipeline. Host may
-reference only the WMS entry assembly for explicit composition; framework projects
-remain independent of all business modules. Further business capabilities and AI
-require separately approved designs.
+After implementation, validation and scope review, assess documentation impact
+before the final commit. Update relevant documentation in the same task and future
+PR for changes to public behavior, architecture, configuration, usage, development
+workflow, API capabilities, repository status or documented limitations; otherwise
+do not edit docs merely to record the review. Write public documentation in English.
+Functional and technical detail belongs preferably in `docs/`; use separate
+functional and documentation commits when useful, but do not automatically create
+follow-up DOCS tasks or synchronization after each feature.
 
-## Engineering simplicity
+Keep README.md a brief, stable landing page for purpose, high-level capabilities,
+architecture and ecosystem, essential quick start, onboarding and configuration,
+principal limitations, verifiable badges and links. It is not a changelog, task
+history, endpoint catalog, WEB-003 slice record or exhaustive internal check list.
+Change it only when those high-level descriptions become materially false or
+incomplete, not merely for an endpoint, field, validation, test or completed task.
 
-Prefer simple, explicit and maintainable solutions.
+Synchronize cross-repository documentation only for shared policy, contractual or
+published version, architecture or ecosystem changes, materially false information
+elsewhere, or a significant milestone affecting several repositories. Review related
+status references in those cases; obtain approval for changes elsewhere and keep
+repository commits separate. Preserve historical references and reports; change
+badges only when their verifiable fact changes. Keep CI, local contract conformance
+and real full-stack demo verification distinct. Keep detailed task-specific
+procedures in existing documentation rather than duplicating them here; do not
+create documentation merely to shorten this file.
 
-Apply these principles:
+## Style and engineering simplicity
 
-- **KISS** — keep solutions as simple as the requirements allow.
-- **DRY** — avoid duplicated logic and duplicated sources of truth.
-- **YAGNI** — do not build abstractions, extension points or infrastructure without a concrete current need.
-- **Occam's razor** — when several solutions satisfy the requirements equally well, prefer the one with fewer concepts, dependencies and moving parts.
-- **Reuse before invention** — prefer existing mechanisms, conventions and components before introducing new ones.
+Use four-space indentation and standard C# naming: `PascalCase` for types, methods
+and public members, `camelCase` for locals and parameters, `_camelCase` for private
+fields. Prefer nullable references, expression-bodied members where readable and
+small focused classes. Add or preserve `.editorconfig`; use `dotnet format` before
+submission when formatting rules exist.
 
-Do not introduce layers, helpers, factories, interfaces, services or abstractions merely for architectural symmetry or possible future use.
+Apply KISS, DRY, YAGNI, Occam's razor and reuse before invention: prefer simple,
+explicit, maintainable solutions, existing mechanisms and fewer concepts,
+dependencies and moving parts. Do not add layers, helpers, factories, interfaces,
+services, abstractions, extension points or infrastructure for symmetry or possible
+future use. Before a custom abstraction, check native .NET/ASP.NET Core capabilities;
+add a layer only for concrete decoupling, modularity or meaningful ergonomics and
+briefly document that benefit in code or architectural notes. Prefer idiomatic APIs
+over wrappers that merely rename operations. Small duplication is preferable to a
+more complex abstraction. Simplicity must not compromise correctness, security,
+performance, clarity, testability or contractual behavior.
 
-Simplicity must not compromise correctness, security, performance, clarity, testability or contractual behavior.
+Give literals with contractual, domain, protocol, configuration or behavioral
+meaning one explicit, descriptive source of truth across implementation, tests,
+templates, scripts and configuration. This includes meaningful numbers, strings,
+paths, URLs, headers, media types, status/error codes, protocol tokens, states,
+configuration/environment keys, contract fields, regexes, timeouts, limits, sizes,
+thresholds and database/schema identifiers. Prefer, in order: framework constants
+or enums; project/domain constants or types; existing configuration; then a narrowly
+scoped named constant or enum. Do not duplicate a clearer framework facility.
 
-When duplication is small and removing it would create a more complex abstraction, prefer the clearer solution over mechanically applying DRY.
-
-### No magic literals
-
-Do not use magic literals.
-
-Any literal with contractual, domain, protocol, configuration or behavioral
-meaning must have one explicit and descriptive source of truth instead of being
-scattered through implementation code, tests, templates, scripts or configuration.
-This includes, where applicable:
-
-- numeric and string values;
-- endpoint paths, URLs and path fragments;
-- HTTP header names, media types, HTTP/status/error codes and protocol tokens;
-- state names, configuration keys and environment-variable names;
-- contract field names and regular expressions with semantic meaning;
-- timeouts, limits, sizes and thresholds;
-- database/schema identifiers when they carry semantic meaning.
-
-Prefer, in this order:
-
-1. Existing framework/platform constants or enums.
-2. Existing project/domain constants or types.
-3. Existing configuration.
-4. A narrowly scoped named constant or enum introduced for the concrete need.
-
-Do not introduce local constants that merely duplicate an available and clearer
-framework facility, such as HTTP status, header or media-type abstractions.
-Examples of meaningful values that should not be scattered:
-
-```text
-USERS_PAGE_SIZE = 50
-USERS_ENDPOINT = "/api/users"
-JSON_MEDIA_TYPE = "application/json"
-```
-
-Do not mechanically replace every literal with a constant. A literal may remain
-inline when it has no independent semantic meaning, its value is obvious from
-the immediate local structure, naming it would reduce clarity, or it is incidental
-fixture data whose exact value is irrelevant. Examples include simple array
-indexes, trivial loop counters, structural zero/one values without domain meaning,
-and arbitrary test values used only as distinct fixtures. Do not introduce
-pointless constants such as `ZERO`, `ONE` or `TRUE` without a named domain or
-protocol concept.
-
-The objective is to eliminate hidden meaning and duplicated sources of truth,
-prevent accidental inconsistencies, and improve readability and maintainability.
-It is not a global constants catalog, needless abstraction, or replacement of
-every string or number. Apply KISS, DRY, YAGNI, Occam's razor and reuse before
-invention; this rule must reinforce simplicity.
-
-Tests are subject to the same rule for production, contractual, protocol or
-domain behavior. Do not duplicate production-significant literals unnecessarily:
-prefer an exported `USERS_PAGE_SIZE` when asserting the production page size.
-A deliberate contractual boundary such as 100 may use a named test/contract
-constant when that improves semantic clarity. Arbitrary fixture values may
-remain local. Do not couple tests unnecessarily to implementation internals;
-correctness and test independence remain important.
-
-The shared contract standardizes observable behavior, not implementation
-internals. Each stack may represent contractual values idiomatically in its own
-constants, enums or types. This rule does not make erbas-contract a general
-constants package or require shared cross-language source-code constants or
-generated constants infrastructure.
-
-During scope review, explicitly inspect newly introduced meaningful literals and
-confirm that no magic literals were added.
+Do not mechanically name incidental values: obvious local structure, indexes, loop
+counters, structural zero/one and arbitrary fixture values may stay inline when they
+have no independent meaning or naming reduces clarity. Tests follow the same rule
+for significant behavior, but preserve test independence; named test/contract
+constants may express deliberate contractual boundaries. Avoid global constants
+catalogs and needless abstraction. The shared contract standardizes observable
+behavior, not implementation internals: each stack may represent values idiomatically;
+it is not a cross-language constants package or generated constants infrastructure.
+During scope review explicitly inspect newly introduced meaningful literals and
+confirm no magic literals were added.
