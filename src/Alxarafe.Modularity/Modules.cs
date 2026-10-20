@@ -45,6 +45,7 @@ public sealed class ModuleBuilder(IServiceCollection services)
             _services.AddSingleton(module.GetType(), module);
         }
         _services.AddSingleton(registry);
+        _services.AddSingleton(new CapabilityRegistry(registry));
         _services.AddSingleton(new ModuleRuntime(modules));
     }
 }

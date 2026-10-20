@@ -129,6 +129,7 @@ app.MapOpenApi();
 AuthEndpoints.Map(app);
 UserEndpoints.Map(app);
 ModuleEndpoints.Map(app);
+CapabilityEndpoints.Map(app);
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     // Contractual HTTP liveness must not run database or module checks.

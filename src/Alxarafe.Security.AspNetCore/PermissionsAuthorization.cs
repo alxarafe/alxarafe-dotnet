@@ -30,7 +30,7 @@ public sealed class PermissionPolicyProvider(
 
     public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
-        if (!_permissions.Contains(policyName)) return Task.FromResult<AuthorizationPolicy?>(null);
+        if (!_permissions.Contains(policyName)) return fallback.GetPolicyAsync(policyName);
         var policy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .AddRequirements(new PermissionRequirement(policyName))
