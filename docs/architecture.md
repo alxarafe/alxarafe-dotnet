@@ -122,7 +122,7 @@ entry-only WMS reference, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses only the published immutable v0.8.0 checkout. Local Bruno
+Shared conformance uses the pinned v0.9.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 

@@ -1,5 +1,6 @@
 using Alxarafe.AspNetCore;
 using Alxarafe.Modularity;
+using Alxarafe.Security.AspNetCore;
 using Alxarafe.Modules.Wms.Application;
 using Alxarafe.Modules.Wms.Http;
 using Alxarafe.Modules.Wms.Infrastructure;
@@ -11,13 +12,22 @@ using Microsoft.Extensions.Hosting;
 
 namespace Alxarafe.Modules.Wms;
 
-public sealed class WmsModule : IAlxarafeModule, IHttpModule
+public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvider
 {
     public const string Id = "erbas.wms";
     public ModuleDescriptor Descriptor { get; } = new(Id, ModuleApi.CurrentVersion, []);
 
+    public IEnumerable<CapabilityDescriptor> GetCapabilities() => WmsCapabilities.All;
+    public IEnumerable<string> GetSchemaReferences() => WmsCapabilities.SchemaReferences;
+
     public void ConfigureServices(IServiceCollection services)
     {
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(WmsCapabilities.UomsRead, CoreAdministration.Policy);
+            options.AddPolicy(WmsCapabilities.StorageAttributesRead, CoreAdministration.Policy);
+            options.AddPolicy(WmsCapabilities.ItemFamiliesRead, CoreAdministration.Policy);
+        });
         services.AddDbContextFactory<WmsDbContext>((provider, options) =>
             WmsStorage.Configure(options,
                 provider.GetRequiredService<IConfiguration>().GetConnectionString(WmsStorage.ConnectionName),

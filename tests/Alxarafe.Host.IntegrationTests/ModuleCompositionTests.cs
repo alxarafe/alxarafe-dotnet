@@ -21,7 +21,7 @@ public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factor
         using var client = factory.CreateClient();
         var document = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/openapi/v1.json");
         string[] corePaths = ["/health", "/api/auth/login", "/api/auth/register", "/api/auth/me",
-            "/api/users", "/api/users/{id}", "/api/modules", "/api/modules/{id}", UomEndpoints.Path, StorageAttributeEndpoints.Path,
+            "/api/users", "/api/users/{id}", "/api/modules", "/api/modules/{id}", CapabilityEndpoints.Path, CapabilityEndpoints.Path + "/{capabilityId}", UomEndpoints.Path, StorageAttributeEndpoints.Path,
             ItemFamilyEndpoints.Path, ItemFamilyAssociationEndpoints.Path, ItemFamilyAssociationEndpoints.Path + "/{storageAttributeId}"];
         Assert.All(document.GetProperty("paths").EnumerateObject(), path => Assert.Contains(path.Name, corePaths));
         await using var context = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
