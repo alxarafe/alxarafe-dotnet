@@ -56,8 +56,9 @@ outside functional module activation. AUTH/USERS behavior is unchanged.
 
 Modules must not access another module's internal tables or private repositories.
 Future integration must use public contracts/capabilities of the owning module,
-including future Inventory and AI integrations. No bus or capability registry is
-introduced without a real consumer.
+including future Inventory and AI integrations. CORE now owns the capability
+registry, authenticated discovery and synchronous READ invocation; in-process
+module executors own capability business behavior. No capability bus is introduced.
 
 ## Persistent dynamic state
 

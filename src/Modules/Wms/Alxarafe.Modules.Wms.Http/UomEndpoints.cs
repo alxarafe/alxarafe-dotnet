@@ -71,8 +71,11 @@ public static class UomEndpoints
         var pagination = CollectionPagination.Read(context.Request.Query);
         if (pagination is null) return Error(StatusCodes.Status400BadRequest, InvalidRequest);
         var window = await catalogue.ListAsync(pagination.Offset, pagination.Limit, context.RequestAborted);
-        return Results.Json(new UomPage(window.Items, pagination.Offset, pagination.Limit, window.Total, CodeAscending));
+        return Results.Json(ToPage(window, pagination));
     }
+
+    public static UomPage ToPage(UomWindow window, CollectionPagination pagination) =>
+        new(window.Items, pagination.Offset, pagination.Limit, window.Total, CodeAscending);
 
     private static IResult Error(int status, string code) => Results.Json(new UomError(code), statusCode: status);
 }

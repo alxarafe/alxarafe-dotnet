@@ -16,10 +16,14 @@ public sealed record CollectionPagination(BigInteger Offset, int Limit)
     public const int MaximumLimit = 100;
     public static IReadOnlyList<CollectionOrder> IdAscending { get; } = Array.AsReadOnly(new CollectionOrder[] { new("id", "asc") });
 
-    public static CollectionPagination? Read(IQueryCollection query)
+    public static CollectionPagination? Read(IQueryCollection query) =>
+        Parse(query.ContainsKey(OffsetParameter) ? query[OffsetParameter].ToString() : null,
+            query.ContainsKey(LimitParameter) ? query[LimitParameter].ToString() : null);
+
+    public static CollectionPagination? Parse(string? offsetText, string? limitText)
     {
-        var offsetText = query.ContainsKey(OffsetParameter) ? query[OffsetParameter].ToString() : BigInteger.Zero.ToString(CultureInfo.InvariantCulture);
-        var limitText = query.ContainsKey(LimitParameter) ? query[LimitParameter].ToString() : DefaultLimit.ToString(CultureInfo.InvariantCulture);
+        offsetText ??= BigInteger.Zero.ToString(CultureInfo.InvariantCulture);
+        limitText ??= DefaultLimit.ToString(CultureInfo.InvariantCulture);
         return Integer(offsetText, out var offset) && Integer(limitText, out var limit) && limit >= MinimumLimit && limit <= MaximumLimit
             ? new(offset, (int)limit) : null;
     }

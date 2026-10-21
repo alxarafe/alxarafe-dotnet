@@ -88,8 +88,11 @@ public static class ItemFamilyEndpoints
         var pagination = CollectionPagination.Read(context.Request.Query);
         if (pagination is null) return Error(StatusCodes.Status400BadRequest, InvalidRequest);
         var window = await catalogue.ListAsync(pagination.Offset, pagination.Limit, context.RequestAborted);
-        return Results.Json(new ItemFamilyPage(window.Items.Select(ItemFamilyResponse.From).ToArray(), pagination.Offset, pagination.Limit, window.Total, CodeAscending));
+        return Results.Json(ToPage(window, pagination));
     }
+
+    public static ItemFamilyPage ToPage(ItemFamilyWindow window, CollectionPagination pagination) =>
+        new(window.Items.Select(ItemFamilyResponse.From).ToArray(), pagination.Offset, pagination.Limit, window.Total, CodeAscending);
 
     private static IResult Error(int status, string code) => Results.Json(new ItemFamilyError(code), statusCode: status);
 }

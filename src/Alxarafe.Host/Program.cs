@@ -116,6 +116,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseMiddleware<CurrentUserMiddleware>();
+app.UseMiddleware<CapabilityInvocationAuditMiddleware>();
 app.UseAuthorization();
 await SecuritySeed.InitializeAsync(app.Services, app.Environment);
 // Existing installations also need the small storage upgrade outside seed environments.
