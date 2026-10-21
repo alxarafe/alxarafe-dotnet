@@ -21,10 +21,11 @@ business capabilities and AI require separately approved designs.
 
 Docker and Docker Compose are the only supported development environment; do not
 expect host .NET SDK, PostgreSQL or `psql`. Run .NET commands in the `app` service.
-When a task requires Docker, Compose, a database or another repository runtime,
-check its availability once before relying on it. If unavailable, do not start
-services, build images, retry, poll or investigate alternatives: report the exact
-preparation command for the developer and stop the task.
+When a task requires Docker, Compose, a database or another repository runtime
+that is missing but normally preparable, prepare it using the repository's
+supported commands, including starting services and building required images. A
+missing but preparable environment is not by itself a reason to stop. Do not add
+host-installed tooling or new fast commands.
 
 Perform only the minimum reconnaissance needed to act safely. Batch independent
 inspection where practical; bound output and prefer targeted searches and file
@@ -32,18 +33,21 @@ ranges over whole trees, large logs, broad dumps or complete large files. Do not
 reread unchanged material without a concrete reason or explore unrelated
 alternatives after establishing an implementation path or blocker.
 
-Use the narrowest validation that gives useful evidence; short focused checks may
-run when the required environment is already available. Do not start materially
-long-running repository-wide builds, full test suites, image builds, benchmarks,
-full integration/conformance runs or similar validation merely to wait for them.
-Never repeatedly poll a process. When such validation is required, report the
-exact command for the developer or CI and stop pending its real result. Duration
-depends on the task, not a fixed threshold. Do not claim validation passed without
-its actual result; missing or failed mandatory validation blocks task completion
-and commit. Do not add host-installed tooling or new fast commands.
+Use the narrowest validation that gives useful evidence during implementation,
+then run broader validation, including repository-wide builds, full test suites
+and integration/conformance runs, when the task requires it. Do not avoid a
+command merely because it takes time; wait for legitimate validation to finish.
+Never repeatedly poll a process when the tool can wait efficiently, rerun
+unchanged failing commands without a concrete reason, or reread unchanged
+material. Never claim validation passed without its actual result; missing or
+failed mandatory validation blocks task completion and commit. Delegate work to
+the developer or CI only for a real external limitation such as unavailable
+credentials, an inaccessible external service, permissions genuinely unavailable
+to the agent, an operation requiring human authorization, or infrastructure that
+the repository's supported workflow cannot provision. Report actual commands,
+results and limitations. Do not add host-installed tooling or new fast commands.
 
-Standard repository commands, used directly or delegated to the developer or CI
-according to the validation rules above:
+Standard repository commands, used directly as needed:
 
 - `docker compose build`; `docker compose up -d` — prepare the environment.
 - `docker compose exec app dotnet restore` — restore dependencies.
