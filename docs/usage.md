@@ -5,11 +5,12 @@
 Docker and Docker Compose are required; host .NET, Bruno, Node and PostgreSQL are not.
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.9.0-checkout ./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.10.0-checkout ./bin/check
 ```
 
 The checkout must have the expected origin, no tracked/nonignored changes, HEAD and
-v0.9.0 tag at 138e2381e1010e994a0f9d6306af6f9d420658e5. bin/check never modifies it.
+v0.10.0 tag object at a55a8d25beef5c24bc9cdce956a2eb2b14f41fb3, resolving to commit
+1b7b182374ad432637dd41f46b94b4004470eba0. bin/check never modifies it.
 CI uses the same authority and pinned release. Check executes restore/build/native
 architecture and integration tests, clean migrations, isolated Host startup, full
 shared Bruno, local Core Bruno (three requests), OpenAPI/persistence/secrecy checks
@@ -27,8 +28,9 @@ Development alone never opts in. Startup synchronizes their initially enabled st
 through the normal pipeline. Shared conformance changes/restores both states.
 They expose no business or mathematical endpoints.
 
-Shared conformance executes the sole published collection: **494 requests / 2190
-named checks**, including the earlier UoM and Storage Attribute coverage. All three WMS catalogues and associations start empty
+Shared conformance executes the sole published collection: **560 requests / 2467
+named checks**, including the earlier UoM, Storage Attribute and Item Family
+coverage plus CORE capability discovery and synchronous READ invocation. All three WMS catalogues and associations start empty
 in the disposable validation database. Post-conformance SQL verifies retained data and enabled state.
 See [WMS-003 evidence](verification/wms-003-dotnet.md); earlier verification reports remain historical.
 
@@ -140,7 +142,7 @@ Validation always supplies its own generated administrator password.
 ## API and diagnostics
 
 Health is public process liveness, independent of database/modules. Auth login,
-current identity, user/module administration, WMS catalogues and contextual capability discovery implement v0.9.0.
+current identity, user/module administration, WMS catalogues, contextual capability discovery and synchronous READ invocation implement v0.10.0.
 POST /api/auth/register remains .NET-specific; portable clients must not depend on it.
 The WMS read discovery permissions map explicitly to the CORE administrator policy. Authentication/authorization
 precede parsing/lookup and functional gating. Local OpenAPI is available at
@@ -161,6 +163,21 @@ withholds application logs in diagnostics and asserts known credentials are abse
 Native tests serialize test projects sharing the same ephemeral databases to avoid
 schema/seed races. Test-only probes are never part of the production Host artifact.
 
+Capability discovery is available to authenticated users at `GET /api/core/capabilities` and `GET /api/core/capabilities/{capabilityId}`. It exposes the three WMS list descriptors only when WMS is enabled and the caller has the corresponding read permission (currently mapped to the administrator policy).
+
+## Capability invocation
+
+`POST /api/core/capabilities/{capabilityId}/invocations` executes an effective READ
+capability with a closed `{"input":{"offset":0,"limit":50}}` body. Authentication,
+capability ID syntax and effective discovery/authorization precede body parsing;
+unknown, disabled and unauthorized capabilities return the same masked 404 even
+with malformed input. Successful results contain a server-generated `invocationId`,
+the exact requested `capabilityId` and the provider collection. Invalid input
+returns 400, provider failures and known invalid output return the same safe 500,
+and all responses are `Cache-Control: no-store`. Audit logs retain the trusted
+invocation ID, correlation ID, capability, module, subject, timestamp, outcome,
+duration and safe error code without logging payloads.
+
 ## Current limits
 
 No Item, storage rules, topology, inventory, AI, external plugin loader, hot loading, module
@@ -168,5 +185,3 @@ installation/uninstallation, capability bus or production provisioning workflow 
 Future modules own their domain, resources, permissions, endpoints, persistence and
 tests and cannot depend on canonical dev descriptors. See [architecture](architecture.md)
 and [cleanup verification](verification/cleanup-001.md).
-
-Capability discovery is available to authenticated users at `GET /api/core/capabilities` and `GET /api/core/capabilities/{capabilityId}`. It exposes the three WMS list descriptors only when WMS is enabled and the caller has the corresponding read permission (currently mapped to the administrator policy). Discovery does not invoke capabilities.

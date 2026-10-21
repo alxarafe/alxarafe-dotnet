@@ -122,7 +122,7 @@ entry-only WMS reference, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses the pinned v0.9.0 checkout. Local Bruno
+Shared conformance uses the pinned v0.10.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 
@@ -130,7 +130,14 @@ WMS owns UoM, Storage Attribute and Item Family creation/listing plus atomic
 family/attribute N:M associations, with domain/application/EF/HTTP/entry projects.
 Its separate context, connection and migration history preserve Platform and
 Security ownership. Shared collection parsing/order/offset serialization now live
-in AspNetCore, without a second pagination implementation. No Item, storage rules, topology, inventory, AI, capability bus, dynamic loader or install/uninstall API is implemented. Physical module loading and production Identity provisioning remain
+in AspNetCore, without a second pagination implementation. CORE exposes authenticated
+capability discovery and synchronous READ invocation. CORE resolves the effective
+descriptor, enforces module availability and required permissions before body
+validation, validates closed input and provider output, and audits the trusted
+server-side invocation context. In-process module executors own the existing
+business behavior; no internal HTTP loopback or capability bus is introduced.
+No Item, storage rules, topology, inventory, AI, dynamic loader or install/uninstall
+API is implemented. Physical module loading and production Identity provisioning remain
 separate future concerns. Historical experiment data is preserved in existing
 installations without startup access or automated purge; new installations create
 no retired business schema. See [cleanup evidence](verification/cleanup-001.md).

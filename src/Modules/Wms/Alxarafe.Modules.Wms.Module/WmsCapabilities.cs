@@ -7,6 +7,9 @@ internal static class WmsCapabilities
     private const string Input = "#/components/schemas/CapabilityListInput";
     private const string Version = "1.0.0";
     private const string Read = "read";
+    public const string UomsList = "wms.uoms.list";
+    public const string StorageAttributesList = "wms.storage-attributes.list";
+    public const string ItemFamiliesList = "wms.item-families.list";
     public const string UomsRead = "wms.uoms.read";
     public const string StorageAttributesRead = "wms.storage-attributes.read";
     public const string ItemFamiliesRead = "wms.item-families.read";
@@ -18,13 +21,13 @@ internal static class WmsCapabilities
 
     public static IEnumerable<CapabilityDescriptor> All =>
     [
-        new("wms.uoms.list", WmsModule.Id, Version, "List units of measure",
+        new(UomsList, WmsModule.Id, Version, "List units of measure",
             "GET /api/wms/uoms with optional offset and limit; returns the existing paged catalogue.", Read,
             new(Input), new(UomOutput), [UomsRead]),
-        new("wms.storage-attributes.list", WmsModule.Id, Version, "List storage attributes",
+        new(StorageAttributesList, WmsModule.Id, Version, "List storage attributes",
             "GET /api/wms/storage-attributes with optional offset and limit; returns the existing paged catalogue.", Read,
             new(Input), new(StorageAttributeOutput), [StorageAttributesRead]),
-        new("wms.item-families.list", WmsModule.Id, Version, "List item families",
+        new(ItemFamiliesList, WmsModule.Id, Version, "List item families",
             "GET /api/wms/item-families with optional offset and limit; returns the existing paged catalogue.", Read,
             new(Input), new(ItemFamilyOutput), [ItemFamiliesRead])
     ];

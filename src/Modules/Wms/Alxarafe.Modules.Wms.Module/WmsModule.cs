@@ -40,6 +40,7 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
         services.AddSingleton<ItemFamilyCatalogue>();
         services.AddSingleton<IItemFamilyAssociationStore, EfItemFamilyAssociationStore>();
         services.AddSingleton<ItemFamilyAssociations>();
+        services.AddSingleton<ICapabilityExecutor, WmsCapabilityExecutor>();
     }
 
     public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
