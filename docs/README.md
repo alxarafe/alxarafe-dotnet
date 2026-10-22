@@ -3,6 +3,7 @@
 | Document | Purpose |
 | --- | --- |
 | [AI-001 verification](verification/ai-001-dotnet.md) | Provider-neutral assistant, effective READ tooling and published v0.11.1 adoption |
+| [Local AI assistant testing](ai-assistant-testing.md) | Backend-only provider setup, authentication, synthetic WMS data and live assistant verification |
 | [WMS-003 verification](verification/wms-003-dotnet.md) | Item Families, atomic N:M associations and published v0.8.0 adoption |
 | [WMS-002 verification](verification/wms-002-dotnet.md) | Storage Attributes, published v0.7.0 adoption, migrations, architecture and live conformance |
 | [WMS-001N verification](verification/wms-001-dotnet.md) | Production UoM, v0.6.0 adoption, architecture and validation evidence |

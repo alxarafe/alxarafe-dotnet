@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+ENV_FILE="$ROOT_DIR/.env"
+EXAMPLE_FILE="$ROOT_DIR/.env.example"
+DEFAULT_MODEL="qwen/qwen3.8-27b"
+DEFAULT_BASE_URL="https://api.groq.com/openai/v1"
+DEFAULT_TIMEOUT_SECONDS="60"
+TEMP_FILE=""
+
+cleanup() {
+    if [[ -n "${TEMP_FILE:-}" ]]; then
+        rm -f -- "$TEMP_FILE"
+    fi
+}
+trap cleanup EXIT
+
+die() {
+    printf 'ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+env_value() {
+    local key="$1" line value
+    line="$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}=" "${ENV_SOURCE:-$ENV_FILE}" 2>/dev/null | tail -n 1 || true)"
+    [[ -n "$line" ]] || return 1
+    value="${line#*=}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    if [[ ${#value} -ge 2 ]]; then
+        if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+            value="${value:1:${#value}-2}"
+        elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+            value="${value:1:${#value}-2}"
+        fi
+    fi
+    printf '%s' "$value"
+}
+
+env_has_nonempty() {
+    local value
+    value="$(env_value "$1")" || return 1
+    [[ -n "$value" ]]
+}
+
+prompt_with_default() {
+    local label="$1" default="$2" input
+    printf '%s [%s]: ' "$label" "$default" >&2
+    IFS= read -r input
+    PROMPT_RESULT="${input:-$default}"
+}
+
+ensure_env_is_safe() {
+    git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || die "this script must run inside the alxarafe-dotnet Git work tree."
+    if git -C "$ROOT_DIR" ls-files --error-unmatch -- .env >/dev/null 2>&1; then
+        die ".env is tracked by Git; refusing to write provider configuration."
+    fi
+    git -C "$ROOT_DIR" check-ignore -q -- .env \
+        || die ".env is not ignored by Git; refusing to write provider configuration."
+}
+
+ensure_env_file() {
+    if [[ ! -e "$ENV_FILE" ]]; then
+        if [[ -f "$EXAMPLE_FILE" ]]; then
+            (umask 077; cp -- "$EXAMPLE_FILE" "$ENV_FILE")
+        else
+            (umask 077; : > "$ENV_FILE")
+        fi
+    fi
+    chmod 600 "$ENV_FILE"
+}
+
+write_env() {
+    local line key seen_key=0 seen_model=0 seen_base=0 seen_timeout=0
+    TEMP_FILE="$(umask 077; mktemp "${TMPDIR:-/tmp}/erbas-env.XXXXXX")"
+    case "$TEMP_FILE" in
+        "$ROOT_DIR"/*)
+            rm -f -- "$TEMP_FILE"
+            TEMP_FILE=""
+            die "temporary configuration directory must be outside the repository."
+            ;;
+    esac
+    chmod 600 "$TEMP_FILE"
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ ^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)= ]]; then
+            key="${BASH_REMATCH[2]}"
+            case "$key" in
+                AI_GROQ_API_KEY)
+                    if (( update_key )); then
+                        printf 'AI_GROQ_API_KEY=%s\n' "$api_key" >>"$TEMP_FILE"
+                        seen_key=1
+                    else
+                        printf '%s\n' "$line" >>"$TEMP_FILE"
+                    fi
+                    continue
+                    ;;
+                AI_GROQ_MODEL)
+                    printf 'AI_GROQ_MODEL=%s\n' "$model" >>"$TEMP_FILE"
+                    seen_model=1
+                    continue
+                    ;;
+                AI_GROQ_BASE_URL)
+                    printf 'AI_GROQ_BASE_URL=%s\n' "$base_url" >>"$TEMP_FILE"
+                    seen_base=1
+                    continue
+                    ;;
+                AI_GROQ_TIMEOUT_SECONDS)
+                    printf 'AI_GROQ_TIMEOUT_SECONDS=%s\n' "$timeout_seconds" >>"$TEMP_FILE"
+                    seen_timeout=1
+                    continue
+                    ;;
+            esac
+        fi
+        printf '%s\n' "$line" >>"$TEMP_FILE"
+    done <"$ENV_FILE"
+
+    if (( update_key )) && (( ! seen_key )); then
+        printf 'AI_GROQ_API_KEY=%s\n' "$api_key" >>"$TEMP_FILE"
+    fi
+    (( seen_model )) || printf 'AI_GROQ_MODEL=%s\n' "$model" >>"$TEMP_FILE"
+    (( seen_base )) || printf 'AI_GROQ_BASE_URL=%s\n' "$base_url" >>"$TEMP_FILE"
+    (( seen_timeout )) || printf 'AI_GROQ_TIMEOUT_SECONDS=%s\n' "$timeout_seconds" >>"$TEMP_FILE"
+
+    mv -- "$TEMP_FILE" "$ENV_FILE"
+    TEMP_FILE=""
+    chmod 600 "$ENV_FILE"
+}
+
+ensure_env_is_safe
+if [[ -e "$ENV_FILE" ]]; then
+    chmod 600 "$ENV_FILE"
+fi
+ENV_SOURCE="$ENV_FILE"
+if [[ ! -e "$ENV_FILE" && -f "$EXAMPLE_FILE" ]]; then
+    ENV_SOURCE="$EXAMPLE_FILE"
+fi
+
+printf '\nERBAS local AI configuration\n\n' >&2
+
+update_key=1
+if env_has_nonempty AI_GROQ_API_KEY; then
+    update_key=0
+    printf 'Groq API key is already configured.\n' >&2
+    printf 'Replace existing key? [y/N]: ' >&2
+    IFS= read -r replace_key
+    case "${replace_key:-}" in
+        y|Y|yes|YES) update_key=1 ;;
+    esac
+fi
+
+if (( update_key )); then
+    printf 'Groq API key: ' >&2
+    IFS= read -r -s api_key
+    printf '\n' >&2
+    [[ -n "$api_key" ]] || die "Groq API key must not be empty."
+else
+    api_key=""
+fi
+
+current_model="$(env_value AI_GROQ_MODEL || true)"
+prompt_with_default "Model" "${current_model:-$DEFAULT_MODEL}"
+model="$PROMPT_RESULT"
+[[ -n "$model" ]] || die "Model must not be empty."
+
+current_base_url="$(env_value AI_GROQ_BASE_URL || true)"
+prompt_with_default "Base URL" "${current_base_url:-$DEFAULT_BASE_URL}"
+base_url="$PROMPT_RESULT"
+[[ -n "$base_url" ]] || die "Base URL must not be empty."
+
+current_timeout="$(env_value AI_GROQ_TIMEOUT_SECONDS || true)"
+prompt_with_default "Timeout seconds" "${current_timeout:-$DEFAULT_TIMEOUT_SECONDS}"
+timeout_seconds="$PROMPT_RESULT"
+[[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || die "Timeout seconds must be a positive integer."
+
+ensure_env_file
+write_env
+
+printf '\nAI configuration saved to %s\n' "$ENV_FILE"

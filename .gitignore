@@ -3,6 +3,7 @@
 !/bin/
 !bin/up
 !bin/down
+!bin/configure-ai
 !bin/test
 !bin/bruno
 !bin/check
