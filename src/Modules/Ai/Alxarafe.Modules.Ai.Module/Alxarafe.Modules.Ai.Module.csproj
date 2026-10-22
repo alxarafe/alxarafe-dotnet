@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Ai.Module</AssemblyName><RootNamespace>Alxarafe.Modules.Ai.Module</RootNamespace></PropertyGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="../Alxarafe.Modules.Ai.Infrastructure/Alxarafe.Modules.Ai.Infrastructure.csproj" />
+        <ProjectReference Include="../Alxarafe.Modules.Ai.Http/Alxarafe.Modules.Ai.Http.csproj" />
+    </ItemGroup>
+</Project>

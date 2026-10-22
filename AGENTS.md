@@ -12,10 +12,11 @@ use cases, ports, persistence/migrations, HTTP endpoints, permissions, resources
 and tests; they must not depend on removed examples. `erbas.dev.math` and
 `erbas.dev.statistics` are exclusively conformance/testing descriptors, registered
 only by explicit validation composition, never business capabilities or functional
-dependencies. Normal composition includes WMS UoM and Storage Attributes through
-the existing pipeline. Host may reference only the WMS entry assembly for explicit
-composition; framework projects remain independent of business modules. Further
-business capabilities and AI require separately approved designs.
+dependencies. Normal composition includes WMS UoM, Storage Attributes, Item Families and the
+AI assistant module through the existing pipeline. Host may reference only the WMS
+and AI entry assemblies for explicit composition; framework projects remain
+independent of business modules. Further business capabilities require separately
+approved designs.
 
 ## Environment, tools and validation
 
@@ -85,11 +86,11 @@ this backend cannot change observable behavior unilaterally. `/health` is proces
 liveness only: HTTP 200 `application/json` with exactly `{"status":"ok"}`,
 independent of database, module or external-service checks.
 
-`contract.revision` declares the published release implemented, currently `v0.10.0`.
+`contract.revision` declares the published release implemented, currently `v0.11.0`.
 `./bin/check` requires `ERBAS_CONTRACT_DIR`; it checks repository root, expected
 GitHub origin, tracked/nonignored cleanliness, release tag object
-`a55a8d25beef5c24bc9cdce956a2eb2b14f41fb3`, its target commit
-`1b7b182374ad432637dd41f46b94b4004470eba0` and matching HEAD, preserves ignored
+`fe25924bcf92b30977be3ef3ffb2d484445e0e98`, its target commit
+`1211a48b78452db794c5ffb01ff2e1d0ba56605a` and matching HEAD, preserves ignored
 files, and invokes public `bin/test` on the existing validation Docker network.
 Never assume a sibling path, fetch, pull, checkout or modify the supplied contract,
 or copy its OpenAPI/Bruno into this backend. Local and CI validation must use the
