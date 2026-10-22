@@ -54,7 +54,7 @@ tests, build, runtime and isolated shared API proxies; its
 records WEB-002 integration separately. Client CI does not perform backend
 shared-conformance validation.
 
-[contract.revision](contract.revision) declares published `v0.11.0`. Local and CI
+[contract.revision](contract.revision) declares published `v0.11.1`. Local and CI
 `./bin/check` verify the supplied checkout's origin, cleanliness, release-tag
 target and matching HEAD, then require shared conformance. Coverage includes HTTP
 liveness, login, basic CORE user administration, paged collections, dependency-safe

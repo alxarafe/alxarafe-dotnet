@@ -5,12 +5,12 @@
 Docker and Docker Compose are required; host .NET, Bruno, Node and PostgreSQL are not.
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.11.0-checkout ./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.11.1-checkout ./bin/check
 ```
 
 The checkout must have the expected origin, no tracked/nonignored changes, HEAD and
-v0.11.0 tag object at fe25924bcf92b30977be3ef3ffb2d484445e0e98, resolving to commit
-1211a48b78452db794c5ffb01ff2e1d0ba56605a. bin/check never modifies it.
+v0.11.1 tag object at 5ea047b3375cf0362397ee1e21c95d4991f09c10, resolving to commit
+5517f0df5d3cacc57c35ef704131dcb30ad9dde2. bin/check never modifies it.
 CI uses the same authority and pinned release. Check executes restore/build/native
 architecture and integration tests, clean migrations, isolated Host startup, full
 shared Bruno, local Core Bruno (three requests), OpenAPI/persistence/secrecy checks
@@ -145,7 +145,7 @@ Validation always supplies its own generated administrator password.
 ## API and diagnostics
 
 Health is public process liveness, independent of database/modules. Auth login,
-current identity, user/module administration, WMS catalogues, contextual capability discovery, synchronous READ invocation and AI assistant invocation implement v0.11.0.
+current identity, user/module administration, WMS catalogues, contextual capability discovery, synchronous READ invocation and AI assistant invocation implement v0.11.1.
 POST /api/auth/register remains .NET-specific; portable clients must not depend on it.
 The WMS read discovery permissions map explicitly to the CORE administrator policy. Authentication/authorization
 precede parsing/lookup and functional gating. Local OpenAPI is available at
