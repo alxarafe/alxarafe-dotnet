@@ -5,12 +5,12 @@
 Docker and Docker Compose are required; host .NET, Bruno, Node and PostgreSQL are not.
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.10.0-checkout ./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.11.1-checkout ./bin/check
 ```
 
 The checkout must have the expected origin, no tracked/nonignored changes, HEAD and
-v0.10.0 tag object at a55a8d25beef5c24bc9cdce956a2eb2b14f41fb3, resolving to commit
-1b7b182374ad432637dd41f46b94b4004470eba0. bin/check never modifies it.
+v0.11.1 tag object at 5ea047b3375cf0362397ee1e21c95d4991f09c10, resolving to commit
+5517f0df5d3cacc57c35ef704131dcb30ad9dde2. bin/check never modifies it.
 CI uses the same authority and pinned release. Check executes restore/build/native
 architecture and integration tests, clean migrations, isolated Host startup, full
 shared Bruno, local Core Bruno (three requests), OpenAPI/persistence/secrecy checks
@@ -23,16 +23,19 @@ bin/bruno runs isolated HTTP checks. These are components of bin/check, not subs
 No shared test is run against persistent development.
 
 Testing plus Modules:ConformanceEnabled=true registers the two canonical dev
-modules. Validation Compose enables it explicitly. Normal startup includes production WMS;
-Development alone never opts in. Startup synchronizes their initially enabled state
-through the normal pipeline. Shared conformance changes/restores both states.
-They expose no business or mathematical endpoints.
+modules. Validation Compose enables it explicitly. Normal startup includes production WMS and AI;
+Development alone never opts into canonical descriptors. Startup synchronizes their
+initially enabled state through the normal pipeline. Shared conformance
+changes/restores module states. Canonical descriptors expose no business or
+mathematical endpoints.
 
-Shared conformance executes the sole published collection: **560 requests / 2467
+Shared conformance executes the sole published collection: **590 requests / 2587
 named checks**, including the earlier UoM, Storage Attribute and Item Family
-coverage plus CORE capability discovery and synchronous READ invocation. All three WMS catalogues and associations start empty
+coverage plus CORE capability discovery, synchronous READ invocation and AI
+assistant invocation. All three WMS catalogues and associations start empty
 in the disposable validation database. Post-conformance SQL verifies retained data and enabled state.
-See [WMS-003 evidence](verification/wms-003-dotnet.md); earlier verification reports remain historical.
+See [AI-001 evidence](verification/ai-001-dotnet.md) and
+[WMS-003 evidence](verification/wms-003-dotnet.md); earlier verification reports remain historical.
 
 ## WMS unit of measure
 
@@ -89,7 +92,7 @@ code has C collation and a unique index. INSERT ON CONFLICT is race-safe; COUNT
 and page share RepeatableRead. OpenAPI includes the two new operations with closed
 HTTP DTO schemas, preserving pure Domain/Application and Host's entry-only reference.
 Storage Attributes have no individual GET or master PATCH/DELETE. There is no
-exclusive group, Item, location/zone association, storage rule, inventory or AI API. See
+exclusive group, Item, location/zone association, storage rule or inventory API. See
 [verification and scope](verification/wms-002-dotnet.md).
 
 ## Item Families and associations (WMS-003)
@@ -142,7 +145,7 @@ Validation always supplies its own generated administrator password.
 ## API and diagnostics
 
 Health is public process liveness, independent of database/modules. Auth login,
-current identity, user/module administration, WMS catalogues, contextual capability discovery and synchronous READ invocation implement v0.10.0.
+current identity, user/module administration, WMS catalogues, contextual capability discovery, synchronous READ invocation and AI assistant invocation implement v0.11.1.
 POST /api/auth/register remains .NET-specific; portable clients must not depend on it.
 The WMS read discovery permissions map explicitly to the CORE administrator policy. Authentication/authorization
 precede parsing/lookup and functional gating. Local OpenAPI is available at
@@ -178,10 +181,45 @@ and all responses are `Cache-Control: no-store`. Audit logs retain the trusted
 invocation ID, correlation ID, capability, module, subject, timestamp, outcome,
 duration and safe error code without logging payloads.
 
+## AI assistant
+
+`POST /api/ai/assistant/invocations` accepts exactly `{"message":"..."}` after
+authentication, the `ai.assistant.invoke` permission and the erbas.ai module gate.
+The message is required, nonempty, not whitespace-only, contains no NUL or
+unpaired surrogate and is limited to 4000 Unicode scalar values. The caller cannot
+supply history, prompts, tools, model/provider settings, permissions or invocation
+IDs. Responses are closed JSON with `Cache-Control: no-store`; only 401 carries a
+Bearer challenge.
+
+The server exposes only the caller's effective READ capabilities as tools and
+invokes each accepted call through CORE-CAP-002. It re-evaluates module state and
+permissions before every call, enforces finite turn/tool budgets and fails safely
+without leaking provider or capability metadata. Successful CORE invocation IDs
+appear in execution order in `toolsUsed`; the AI invocation ID is distinct from
+every CORE ID. AI permission grants no business permission.
+
+Production/Development Compose configuration maps these host variables into the
+container:
+
+```bash
+AI_GROQ_API_KEY=...                   # required for the Groq adapter
+AI_GROQ_MODEL=qwen/qwen3.8-27b        # optional override
+AI_GROQ_BASE_URL=https://api.groq.com/openai/v1
+AI_GROQ_TIMEOUT_SECONDS=60
+```
+
+Testing selects a deterministic adapter instead, so CI, `bin/test` and shared
+conformance never call a live provider or require a key. Development and
+Production select the Groq adapter; without a key, AI requests fail safely with
+`assistant_execution_failed`. Live provider quality and timeout behavior are not
+part of shared conformance.
+
 ## Current limits
 
-No Item, storage rules, topology, inventory, AI, external plugin loader, hot loading, module
-installation/uninstallation, capability bus or production provisioning workflow exists.
+No Item, storage rules, topology, inventory, external plugin loader, hot loading,
+module installation/uninstallation, capability bus or production provisioning
+workflow exists. AI persistence, conversations, memory, RAG, WRITE execution,
+streaming, model selection and provider fallback remain unimplemented.
 Future modules own their domain, resources, permissions, endpoints, persistence and
 tests and cannot depend on canonical dev descriptors. See [architecture](architecture.md)
 and [cleanup verification](verification/cleanup-001.md).

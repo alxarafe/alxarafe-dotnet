@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Ai.Application</AssemblyName><RootNamespace>Alxarafe.Modules.Ai.Application</RootNamespace></PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../../Alxarafe.Modularity/Alxarafe.Modularity.csproj" />
+    </ItemGroup>
+</Project>

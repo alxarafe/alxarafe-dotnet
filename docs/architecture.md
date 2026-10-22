@@ -3,9 +3,9 @@
 ERBAS .NET is an API-only Core with independent modular/hexagonal boundaries.
 The reusable projects are Core, Modularity, AspNetCore, EntityFrameworkCore,
 Security, Security.AspNetCore, Security.EntityFrameworkCore and Host. Host is the
-composition root; it contains no business domain and references only the WMS entry
-assembly for explicit built-in composition. Framework projects never reference
-business modules.
+composition root; it contains no business domain and references only the WMS and
+AI entry assemblies for explicit built-in composition. Framework projects never
+reference business modules.
 
 ## Module ownership and composition
 
@@ -22,10 +22,10 @@ ModuleSource(s) -> ModuleRegistry -> ModuleGraph -> ModuleRuntime
 ```
 
 `ModuleBuilder` accepts explicit sources before one Build. BuiltInAssemblyModuleSource
-selects the explicit WMS entry assembly; no external plugin loader exists.
-Normal startup registers erbas.wms. Testing plus explicit conformance opt-in
-additionally registers Math/Statistics descriptors; they are not business dependencies and
-have no functional API. See [modularity](modularity.md).
+selects the explicit WMS and AI entry assemblies; no external plugin loader exists.
+Normal startup registers erbas.wms and erbas.ai. Testing plus explicit conformance
+opt-in additionally registers Math/Statistics descriptors; they are not business
+dependencies and have no functional API. See [modularity](modularity.md).
 
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;
@@ -91,7 +91,7 @@ including on module resources; re-enable/promotion/demotion affect the same toke
 on its next request. Public liveness and other anonymous endpoints do not query
 user state. The shared authorization result handler emits closed 401/403 JSON on endpoints
 marked with WithSharedContractErrors metadata and delegates unrelated errors to
-existing middleware. Users, CORE modules and WMS opt in; there is no WMS path list.
+existing middleware. Users, CORE modules, WMS and AI opt in; there is no per-module path list.
 
 Administrative endpoints reuse CoreAdministration.Policy in Security.AspNetCore,
 requiring current CORE admin. Existing module policy providers and permission handlers remain
@@ -115,14 +115,38 @@ in local OpenAPI/tests and defaults to enabled non-admin. Contractual creation
 uses administrator-only `POST /api/users`. A dedicated configured seed admin has
 no module permissions and never silently escalates an existing account.
 
+## AI assistant
+
+The AI module owns Application, Infrastructure, Http and Module projects. Its
+Application orchestrator asks the shared CORE invocation service for the current
+effective catalogue, exposes only `effect: read` descriptors as provider tools and
+invokes every accepted tool through CORE-CAP-002. It re-evaluates availability and
+permissions before each call, never accepts caller-supplied prompts, tools, models
+or security context, and enforces finite server-owned turn/tool budgets. Tool
+input is untrusted and output is normalized by the same CORE path. Only successful
+CORE identities are returned in ordered `toolsUsed`.
+
+Infrastructure provides a production Groq HTTP adapter and a deterministic adapter
+selected only in the Testing environment. Application depends on its model port,
+not on either adapter. The Http adapter owns closed request validation, the public
+response/error envelope, `no-store` behavior and AI audit linkage. The Module entry
+registers the AI permission policy, model selection, endpoint mapping and audit
+middleware. The Host still exposes only the entry assemblies; framework projects
+do not reference AI projects.
+
+AI audit records the AI invocation ID, subject, timestamp, outcome, duration,
+correlation ID, safe failure code and successful capability/CORE invocation IDs.
+It does not log messages, prompts, provider bodies, credentials or capability
+payloads. CORE audit remains authoritative for each capability invocation.
+
 ## Verification and deliberate limits
 
 Architecture tests assert framework isolation from business assemblies, Host's
-entry-only WMS reference, pure WMS domain/application boundaries and
+entry-only WMS/AI references, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses the pinned v0.10.0 checkout. Local Bruno
+Shared conformance uses the pinned v0.11.1 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 
@@ -136,7 +160,7 @@ descriptor, enforces module availability and required permissions before body
 validation, validates closed input and provider output, and audits the trusted
 server-side invocation context. In-process module executors own the existing
 business behavior; no internal HTTP loopback or capability bus is introduced.
-No Item, storage rules, topology, inventory, AI, dynamic loader or install/uninstall
+No Item, storage rules, topology, inventory, dynamic loader or install/uninstall
 API is implemented. Physical module loading and production Identity provisioning remain
 separate future concerns. Historical experiment data is preserved in existing
 installations without startup access or automated purge; new installations create

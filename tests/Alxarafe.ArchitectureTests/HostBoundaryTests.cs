@@ -2,6 +2,7 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Xml.Linq;
 using Alxarafe.Host;
+using Alxarafe.Modules.Ai;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Modules.Wms.Application;
 using Alxarafe.Modules.Wms.Domain;
@@ -12,8 +13,18 @@ namespace Alxarafe.ArchitectureTests;
 public sealed class HostBoundaryTests
 {
     private const string ModulePrefix = "Alxarafe.Modules.";
-    private const string EntryAssembly = "Alxarafe.Modules.Wms.Module";
-    private const string EntryProject = "../Modules/Wms/Alxarafe.Modules.Wms.Module/Alxarafe.Modules.Wms.Module.csproj";
+    private static readonly string[] EntryAssemblies = ["Alxarafe.Modules.Ai.Module", "Alxarafe.Modules.Wms.Module"];
+    private static readonly string[] EntryProjects =
+    [
+        "../Modules/Ai/Alxarafe.Modules.Ai.Module/Alxarafe.Modules.Ai.Module.csproj",
+        "../Modules/Wms/Alxarafe.Modules.Wms.Module/Alxarafe.Modules.Wms.Module.csproj"
+    ];
+    private static readonly string[] AllowedModuleUsings = ["using Alxarafe.Modules.Ai;", "using Alxarafe.Modules.Wms;"];
+    private static readonly string[] AllowedEntryTypeLines =
+    [
+        "var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly, typeof(AiModule).Assembly);",
+        "AiModule.UseInvocationAudit(app);"
+    ];
 
     [Fact]
     public void FrameworkAssembliesHaveNoModuleReferences()
@@ -37,15 +48,16 @@ public sealed class HostBoundaryTests
     }
 
     [Fact]
-    public void HostReferencesOnlyTheWmsEntryAssemblyAndProject()
+    public void HostReferencesOnlyModuleEntryAssembliesAndProjects()
     {
         var references = typeof(PlatformExceptionHandler).Assembly.GetReferencedAssemblies()
-            .Select(reference => reference.Name).Where(name => name?.StartsWith(ModulePrefix, StringComparison.Ordinal) == true);
-        Assert.Equal([EntryAssembly], references);
+            .Select(reference => reference.Name).Where(name => name?.StartsWith(ModulePrefix, StringComparison.Ordinal) == true)
+            .Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(EntryAssemblies, references);
         var project = XDocument.Load(Path.Combine(RepositoryRoot, "src/Alxarafe.Host/Alxarafe.Host.csproj"));
         var moduleProjects = project.Descendants("ProjectReference").Select(reference => reference.Attribute("Include")!.Value)
-            .Where(path => path.Contains("Modules/", StringComparison.Ordinal));
-        Assert.Equal([EntryProject], moduleProjects);
+            .Where(path => path.Contains("Modules/", StringComparison.Ordinal)).Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(EntryProjects, moduleProjects);
     }
 
     [Fact]
@@ -57,18 +69,19 @@ public sealed class HostBoundaryTests
         var types = metadata.TypeReferences.Select(handle => metadata.GetTypeReference(handle))
             .Select(type => $"{metadata.GetString(type.Namespace)}.{metadata.GetString(type.Name)}")
             .Where(name => name.StartsWith(ModulePrefix, StringComparison.Ordinal));
-        Assert.Equal([typeof(WmsModule).FullName], types);
+        Assert.Equal(new[] { typeof(AiModule).FullName!, typeof(WmsModule).FullName! }, types.Order(StringComparer.Ordinal));
         foreach (var file in SourceFiles(Path.Combine(RepositoryRoot, "src/Alxarafe.Host")))
         {
             foreach (var line in File.ReadLines(file).Where(line => line.Contains(ModulePrefix, StringComparison.Ordinal)))
             {
                 Assert.Equal("Program.cs", Path.GetFileName(file));
-                Assert.Equal("using Alxarafe.Modules.Wms;", line);
+                Assert.Contains(line, AllowedModuleUsings);
             }
-            foreach (var line in File.ReadLines(file).Where(line => line.Contains(nameof(WmsModule), StringComparison.Ordinal)))
+            foreach (var line in File.ReadLines(file).Where(line => line.Contains(nameof(AiModule), StringComparison.Ordinal)
+                || line.Contains(nameof(WmsModule), StringComparison.Ordinal)))
             {
                 Assert.Equal("Program.cs", Path.GetFileName(file));
-                Assert.Equal("var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly);", line);
+                Assert.Contains(line, AllowedEntryTypeLines);
             }
         }
     }

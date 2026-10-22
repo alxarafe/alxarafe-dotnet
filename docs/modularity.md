@@ -55,10 +55,11 @@ authentication, the modular runtime and essential system administration remain
 outside functional module activation. AUTH/USERS behavior is unchanged.
 
 Modules must not access another module's internal tables or private repositories.
-Future integration must use public contracts/capabilities of the owning module,
-including future Inventory and AI integrations. CORE now owns the capability
-registry, authenticated discovery and synchronous READ invocation; in-process
-module executors own capability business behavior. No capability bus is introduced.
+Future integration must use public contracts/capabilities of the owning module;
+the AI assistant already does so through CORE, and future Inventory integrations
+must follow the same boundary. CORE owns the capability registry, authenticated
+discovery and synchronous READ invocation; in-process module executors own
+capability business behavior. No capability bus is introduced.
 
 ## Persistent dynamic state
 
@@ -160,8 +161,8 @@ and no functional HTTP endpoints.
 All sources enter one `ModuleBuilder` before its single `Build()`, yielding
 one registry/graph/runtime per application. Normal synchronization creates missing
 canonical rows as enabled, preserving existing choices without special SQL seeds
-or reset APIs. Validation contains WMS plus exactly the two canonical descriptors and uses disposable
-test databases; successful conformance restores both canonical flags to enabled.
+or reset APIs. Validation contains WMS, AI and exactly the two canonical descriptors and uses
+disposable test databases; successful conformance restores canonical flags to enabled.
 
 ## Functional HTTP gating
 
@@ -196,9 +197,10 @@ or bypasses dependency validation.
 CORE remains outside this gate: Health, authentication/login, user administration,
 the runtime and future recovery/administration infrastructure are not functional
 modules. All available modules still initialize technically even when disabled.
-Future scheduled jobs, event consumers, AI capabilities and other externally
-triggered internal actions must use the same `ModuleStateService.requireEnabled`
-authority at their entry boundary; no such execution mechanisms are implemented.
+Future scheduled jobs, event consumers and other externally triggered internal
+actions must use the same `ModuleStateService.requireEnabled` authority at their
+entry boundary. The AI assistant uses the normal HTTP module gate and re-checks
+child capability availability through CORE.
 Future external modules receive the same HTTP semantics through the public adapters.
 
 ## Future lifecycle, not implemented
@@ -225,17 +227,18 @@ the supported version. `IModuleSource.GetModules()` supplies module instances.
 
 `BuiltInAssemblyModuleSource` confines existing exported-type reflection and
 construction to the explicitly selected built-in assemblies. It does not load
-external assemblies. The Host explicitly selects only typeof(WmsModule).Assembly, referencing the
-WMS entry project. It does not reference WMS Domain/Application/Infrastructure/Http
-directly. Framework assemblies remain independent of all business modules.
+external assemblies. The Host explicitly selects WMS and AI entry assemblies,
+referencing only their Module projects. It does not reference their
+Domain/Application/Infrastructure/Http projects directly. Framework assemblies
+remain independent of all business modules.
 Future explicit sources enter the same registry/graph/runtime without a new loader.
 
 `ModuleBuilder.AddSource` accepts additional sources. The existing
 `AddModulesFromAssemblies`/`AddAlxarafeModules` convenience API wraps built-in
 composition in a source. `Build()` gathers the registry, resolves the graph,
 configures services in dependency order and registers the registry and runtime.
-The Host uses `ModuleBuilder` directly to add production WMS and the optional conformance source
-before building once. All sources must participate before this build and before the Host's
+The Host uses `ModuleBuilder` directly to add production WMS/AI and the optional
+conformance source before building once. All sources must participate before this build and before the Host's
 `builder.Build()`. A future external assembly source can enter at that point;
 no `AssemblyLoadContext` or external loader is implemented.
 
@@ -322,6 +325,6 @@ ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 pagination including repeated keys and huge offsets, security precedence, retained
 unavailable state, idempotence, both atomic conflicts, ordinal dependency ordering,
 zero modules and internal failure classification. Composition tests prove the
-normal registry contains only WMS and canonical modules need both explicit switches.
+normal registry contains WMS and AI, and canonical modules need both explicit switches.
 The gating test includes CORE module listing while both canonical descriptors
 are disabled. See [cleanup verification](verification/cleanup-001.md).

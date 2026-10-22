@@ -20,7 +20,7 @@ case "$contract_origin" in
     git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
     *) echo 'ERROR: unexpected contract origin' >&2; exit 2 ;;
 esac
-if [[ "$contract_revision" != v0.10.0 ]]; then
+if [[ "$contract_revision" != v0.11.1 ]]; then
     echo 'ERROR: unsupported release in contract.revision' >&2
     exit 2
 fi
@@ -28,12 +28,12 @@ contract_commit=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract
     echo 'ERROR: contract checkout is missing the configured release tag' >&2
     exit 2
 }
-if [[ "$contract_commit" != 1b7b182374ad432637dd41f46b94b4004470eba0 ]]; then
+if [[ "$contract_commit" != 5517f0df5d3cacc57c35ef704131dcb30ad9dde2 ]]; then
     echo 'ERROR: contract release tag does not resolve to its immutable commit' >&2
     exit 2
 fi
 contract_tag=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract_revision")
-if [[ "$contract_tag" != a55a8d25beef5c24bc9cdce956a2eb2b14f41fb3 ]]; then
+if [[ "$contract_tag" != 5ea047b3375cf0362397ee1e21c95d4991f09c10 ]]; then
     echo 'ERROR: contract release tag object does not match its immutable identity' >&2
     exit 2
 fi
@@ -140,6 +140,7 @@ grep -Fq '"/api/users"' <<<"$openapi"
 grep -Fq '"/api/users/{id}"' <<<"$openapi"
 grep -Fq '"/api/modules"' <<<"$openapi"
 grep -Fq '"/api/modules/{id}"' <<<"$openapi"
+grep -Fq '"/api/ai/assistant/invocations"' <<<"$openapi"
 grep -Fq '"/api/wms/uoms"' <<<"$openapi"
 grep -Fq '"/api/wms/storage-attributes"' <<<"$openapi"
 grep -Fq '"/api/wms/item-families"' <<<"$openapi"
@@ -180,6 +181,7 @@ docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM wms_uoms)
        OR NOT EXISTS (SELECT 1 FROM module_states WHERE module_id = 'erbas.wms' AND enabled)
+       OR NOT EXISTS (SELECT 1 FROM module_states WHERE module_id = 'erbas.ai' AND enabled)
        OR NOT EXISTS (SELECT 1 FROM wms_storage_attributes)
        OR NOT EXISTS (SELECT 1 FROM wms_item_families)
        OR NOT EXISTS (SELECT 1 FROM wms_item_family_storage_attributes)
@@ -187,11 +189,11 @@ DO $$ BEGIN
        OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 3
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1 THEN
-        RAISE EXCEPTION 'Post-conformance WMS persistence, enabled state or migration invariant failed';
+        RAISE EXCEPTION 'Post-conformance WMS/AI persistence, enabled state or migration invariant failed';
     END IF;
 END $$;
 SQL
-echo 'POST_CONFORMANCE_WMS=passed PERSISTENCE=retained MIGRATIONS=separate'
+echo 'POST_CONFORMANCE_WMS_AI=passed PERSISTENCE=retained MIGRATIONS=separate'
 
 for assertions in api-tests/modules/*/assert-persistence.sh; do
     [[ ! -f "$assertions" ]] || bash "$assertions"

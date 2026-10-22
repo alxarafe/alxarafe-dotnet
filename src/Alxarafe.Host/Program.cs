@@ -3,6 +3,7 @@ using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
+using Alxarafe.Modules.Ai;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
@@ -33,6 +34,7 @@ builder.Services.AddDbContextFactory<PlatformDbContext>(options =>
         ?? throw new InvalidOperationException("The Platform connection string must be configured.")));
 builder.Services.AddSingleton<IModuleStateStore, EfModuleStateStore>();
 builder.Services.AddSingleton<ModuleStateService>();
+builder.Services.AddScoped<ICapabilityInvocationService, CapabilityInvocationService>();
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
@@ -64,8 +66,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
     options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
 }).AddBearerToken(IdentityConstants.BearerScheme);
-// Production WMS and explicit conformance sources share one registry/runtime.
-var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly);
+// Production WMS/AI and explicit conformance sources share one registry/runtime.
+var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly, typeof(AiModule).Assembly);
 if (builder.Environment.IsEnvironment(ConformanceModuleSource.EnvironmentName)
     && builder.Configuration.GetValue<bool>(ConformanceModuleSource.EnabledConfiguration))
     modules.AddSource(new ConformanceModuleSource());
@@ -117,6 +119,7 @@ app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseMiddleware<CurrentUserMiddleware>();
 app.UseMiddleware<CapabilityInvocationAuditMiddleware>();
+AiModule.UseInvocationAudit(app);
 app.UseAuthorization();
 await SecuritySeed.InitializeAsync(app.Services, app.Environment);
 // Existing installations also need the small storage upgrade outside seed environments.
