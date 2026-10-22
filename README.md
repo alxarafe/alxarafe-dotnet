@@ -40,7 +40,9 @@ ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 
 The host needs Git, Bash, Docker and Docker Compose. No host .NET, Node.js, Bruno or
 PostgreSQL runtime is required. See [usage](docs/usage.md) for development,
-networking, test isolation and cleanup.
+networking, test isolation and cleanup. For real local AI assistant testing,
+configure the backend-only provider key with `./bin/configure-ai` and follow the
+[local AI assistant testing guide](docs/ai-assistant-testing.md).
 
 ## Status and documentation
 
