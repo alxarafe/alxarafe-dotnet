@@ -19,6 +19,10 @@ public sealed class GroqAiModelClient(HttpClient http, IConfiguration configurat
     public const int DefaultTimeoutSeconds = 60;
     private const string ChatPath = "/chat/completions";
     private const string FunctionType = "function";
+    private static readonly JsonSerializerOptions RequestJson = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
     public async Task<AiModelResponse> CompleteAsync(AiModelRequest request, CancellationToken cancellationToken = default)
     {
@@ -30,7 +34,7 @@ public sealed class GroqAiModelClient(HttpClient http, IConfiguration configurat
             request.Tools.Count == 0 ? null : false);
         using var message = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + ChatPath);
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        message.Content = JsonContent.Create(payload);
+        message.Content = JsonContent.Create(payload, options: RequestJson);
         try
         {
             using var response = await http.SendAsync(message, cancellationToken);
