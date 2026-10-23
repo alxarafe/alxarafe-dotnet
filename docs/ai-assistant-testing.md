@@ -186,6 +186,27 @@ curl -sS -H "Authorization: Bearer $TOKEN" \
 
 The expected result is HTTP 200 with a nonempty `answer` and `toolsUsed: []`.
 
+## Provider tool-generation failures
+
+Tools use semantic names derived from their capability IDs, with dots replaced by
+underscores and hyphens preserved (for example `wms_uoms_list`). This avoids opaque
+numeric aliases that Qwen was observed to misspell. Capability IDs longer than
+the provider's 64-character function-name limit retain a short numeric alias.
+Core still resolves and authorizes the original capability ID.
+
+Groq can reject an invalid model-generated tool call with HTTP 400 and
+`tool_use_failed`, for example when the generated function name is not among the
+supplied tools. The backend retries that completion once with temperature zero.
+It preserves the messages, tool definitions and any completed Core results; it
+never executes rejected tool calls or repeats completed capabilities as part of
+this retry. This also applies to a completion after a tool result.
+
+Other provider errors are not retried by this mechanism. A repeated generation
+failure still returns the safe contractual `500 assistant_execution_failed`;
+provider error bodies and failed generations are never exposed to the client.
+This bounded recovery does not guarantee that an external model will always
+produce a valid tool call.
+
 ## Security
 
 - Use only synthetic or otherwise non-sensitive data for external-provider testing.

@@ -19,6 +19,9 @@ public sealed class GroqAiModelClient(HttpClient http, IConfiguration configurat
     public const int DefaultTimeoutSeconds = 60;
     private const string ChatPath = "/chat/completions";
     private const string FunctionType = "function";
+    private const string ToolGenerationFailureCode = "tool_use_failed";
+    private const int MaximumToolGenerationRetries = 1;
+    private const double ToolRetryTemperature = 0;
     private static readonly JsonSerializerOptions RequestJson = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -32,17 +35,33 @@ public sealed class GroqAiModelClient(HttpClient http, IConfiguration configurat
         string model = configuration[ModelConfiguration] ?? DefaultModel;
         var payload = new ChatRequest(model, Messages(request), Tools(request), request.Tools.Count == 0 ? null : "auto",
             request.Tools.Count == 0 ? null : false);
-        using var message = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + ChatPath);
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        message.Content = JsonContent.Create(payload, options: RequestJson);
         try
         {
-            using var response = await http.SendAsync(message, cancellationToken);
-            if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)
-                throw new AiModelUnavailableException();
-            if (!response.IsSuccessStatusCode) throw new AiModelFailureException();
-            var body = await response.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken: cancellationToken);
-            return Parse(body);
+            for (int attempt = 0; attempt <= MaximumToolGenerationRetries; attempt++)
+            {
+                using var message = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + ChatPath);
+                message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                message.Content = JsonContent.Create(payload, options: RequestJson);
+                using var response = await http.SendAsync(message, cancellationToken);
+                if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)
+                    throw new AiModelUnavailableException();
+                if (response.StatusCode == HttpStatusCode.BadRequest && request.Tools.Count > 0
+                    && attempt < MaximumToolGenerationRetries)
+                {
+                    var error = await response.Content.ReadFromJsonAsync<ChatErrorResponse>(cancellationToken: cancellationToken);
+                    if (error?.Error?.Code == ToolGenerationFailureCode)
+                    {
+                        // Groq rejected the generated call before execution. Retry only this completion;
+                        // previously completed CORE calls and their tool messages remain unchanged.
+                        payload = payload with { Temperature = ToolRetryTemperature };
+                        continue;
+                    }
+                }
+                if (!response.IsSuccessStatusCode) throw new AiModelFailureException();
+                var body = await response.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken: cancellationToken);
+                return Parse(body);
+            }
+            throw new AiModelFailureException();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (OperationCanceledException) { throw new AiModelUnavailableException(); }
@@ -102,7 +121,8 @@ public sealed class GroqAiModelClient(HttpClient http, IConfiguration configurat
         [property: JsonPropertyName("messages")] IReadOnlyList<ChatMessage> Messages,
         [property: JsonPropertyName("tools")] IReadOnlyList<ChatTool>? Tools,
         [property: JsonPropertyName("tool_choice")] string? ToolChoice,
-        [property: JsonPropertyName("parallel_tool_calls")] bool? ParallelToolCalls);
+        [property: JsonPropertyName("parallel_tool_calls")] bool? ParallelToolCalls,
+        [property: JsonPropertyName("temperature")] double? Temperature = null);
 
     private sealed record ChatMessage([property: JsonPropertyName("role")] string Role,
         [property: JsonPropertyName("content")] string? Content,
@@ -122,6 +142,10 @@ public sealed class GroqAiModelClient(HttpClient http, IConfiguration configurat
 
     private sealed record ChatFunctionCall([property: JsonPropertyName("name")] string Name,
         [property: JsonPropertyName("arguments")] string Arguments);
+
+    private sealed record ChatErrorResponse([property: JsonPropertyName("error")] ChatError? Error);
+
+    private sealed record ChatError([property: JsonPropertyName("code")] string? Code);
 
     private sealed record ChatResponse([property: JsonPropertyName("choices")] IReadOnlyList<ChatChoice>? Choices);
 
