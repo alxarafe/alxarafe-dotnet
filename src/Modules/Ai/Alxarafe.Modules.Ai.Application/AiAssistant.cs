@@ -12,6 +12,7 @@ public sealed class AiAssistant(ICapabilityInvocationService capabilities, IAiMo
 {
     private const string ReadEffect = "read";
     private const string ToolNamePrefix = "capability_";
+    private const int MaximumToolNameLength = 64;
     private const int MaximumTurns = 8;
     private const int MaximumToolCalls = 8;
     private const string SystemPrompt =
@@ -34,7 +35,9 @@ public sealed class AiAssistant(ICapabilityInvocationService capabilities, IAiMo
     {
         var effective = await capabilities.EffectiveAsync(principal, cancellationToken);
         var tools = effective.Where(capability => capability.Effect == ReadEffect)
-            .Select((capability, index) => new AiToolDefinition(ToolNamePrefix + index, capability.Id, capability.Name,
+            .Select((capability, index) => new AiToolDefinition(
+                capability.Id.Length <= MaximumToolNameLength ? capability.Id.Replace('.', '_') : ToolNamePrefix + index,
+                capability.Id, capability.Name,
                 capability.Description, ToolInputSchema))
             .ToArray();
         var byName = tools.ToDictionary(tool => tool.Name, StringComparer.Ordinal);

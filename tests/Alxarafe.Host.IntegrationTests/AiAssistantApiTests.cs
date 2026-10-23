@@ -106,6 +106,34 @@ public sealed class AiAssistantApiTests(WebApplicationFactory<Program> factory) 
     }
 
     [Fact]
+    public async Task SemanticToolNamesSelectTheOriginalCapabilityThroughCore()
+    {
+        const string uomToolName = "wms_uoms_list";
+        var expectedNames = new Dictionary<string, string>
+        {
+            [UomCapability] = uomToolName,
+            [StorageAttributeCapability] = "wms_storage-attributes_list",
+            [ItemFamilyCapability] = "wms_item-families_list"
+        };
+        int completions = 0;
+        using var host = Host(new StubModelClient(request =>
+        {
+            completions++;
+            foreach (var tool in request.Tools.Where(tool => expectedNames.ContainsKey(tool.CapabilityId)))
+                Assert.Equal(expectedNames[tool.CapabilityId], tool.Name);
+            if (request.Messages.Any(message => message.Role == AiRoles.Tool))
+                return Task.FromResult(new AiModelResponse("Current units were retrieved.", []));
+            Assert.Contains(request.Tools, tool => tool.CapabilityId == UomCapability && tool.Name == uomToolName);
+            return Task.FromResult(new AiModelResponse(null, [new AiToolRequest("call-uoms", uomToolName, EmptyArguments)]));
+        }));
+        using var semantic = host.CreateClient();
+        var body = await Body(await SendMessage(semantic, OneToolMessage, admin), HttpStatusCode.OK);
+        Assert.Equal(UomCapability, Assert.Single(body.GetProperty("toolsUsed").EnumerateArray())
+            .GetProperty("capabilityId").GetString());
+        Assert.Equal(2, completions);
+    }
+
+    [Fact]
     public async Task AuthenticationPermissionModuleAndValidationPrecedenceIsNormative()
     {
         await Error(await Send(DirectMessage, ""), HttpStatusCode.Unauthorized, AiContract.Unauthorized);
