@@ -1,7 +1,7 @@
 # Local AI assistant testing
 
-This guide configures a real AI provider for local Development and verifies the
-AI-001 assistant end to end. It is intended for developers, evaluators and
+This guide verifies the AI assistant end to end after provider configuration
+for local Development. It is intended for developers, evaluators and
 technical users running the backend locally with Docker.
 
 Use synthetic, non-sensitive data. Real business data disclosure to an external
@@ -16,9 +16,10 @@ erbas-client
      v
 alxarafe-dotnet
      |
-     | backend-only provider credential
+     | backend-only provider connection
      v
-    Groq
+  selected provider
+  (Groq or local Ollama)
 ```
 
 | Repository | Responsibility |
@@ -27,42 +28,34 @@ alxarafe-dotnet
 | `alxarafe-dotnet` | Runs the backend and owns the local AI provider configuration. |
 | `erbas-client` | Talks only to ERBAS. It must never receive the Groq API key. |
 
-The browser must never call Groq directly. The API key belongs only to the backend
-runtime, normally as a local `.env` value consumed by Docker Compose.
+The browser must never call the provider directly. Provider credentials, when
+needed, belong only to the backend runtime. Local Ollama needs no API key.
 
-Groq and `qwen/qwen3.8-27b` are local backend choices. They are not fields in the
-public ERBAS contract, and clients must not select a provider or model.
+Provider/model selection and all provider-specific settings belong to the
+[canonical AI provider reference](ai-providers.md). It also defines the capability
+states, known limitations, retry policies and how to switch providers safely.
+
+## Provider, model and protocol
+
+Choose provider and model separately as described in
+[provider selection](ai-providers.md#provider-and-model-are-separate).
+The common transport does not make Groq and Ollama functionally equivalent; use
+the [capability matrix](ai-providers.md#capability-matrix) for the evidence scope.
+This guide covers the subsequent authenticated testing workflow, not a second
+configuration reference.
+
+## Loopback-only Ollama and the local smoke test
+
+See [Docker reachability and deployment limits](ai-providers.md#docker-reachability-and-deployment-boundary)
+and the [detailed Ollama smoke evidence](verification/ai-provider-001b.md).
+The successful host-network experiment is not the normal deployment design;
+`./bin/up` alone does not solve the host-loopback listener mismatch.
 
 ## Configure the backend
 
-The preferred workflow creates or updates the repository-root `.env`, which is
-local and ignored by Git:
-
-```bash
-./bin/configure-ai
-```
-
-The helper is safe to run from any directory. It:
-
-- asks for the Groq API key with hidden input;
-- shows only whether an existing key is already configured, never its value;
-- lets you keep an existing key or replace it intentionally;
-- uses existing model, base URL and timeout values as interactive defaults;
-- preserves unrelated `.env` variables and comments;
-- sets `.env` permissions to `600`;
-- refuses to write the key if `.env` is not ignored or is tracked by Git.
-
-It does not start Docker, call Groq, authenticate, create data or modify databases.
-
-A manual alternative is also available:
-
-```bash
-cp .env.example .env
-chmod 600 .env
-```
-
-Then edit `.env` locally. Never commit the populated file. `.env.example` is a
-non-secret template and is not loaded automatically by Docker Compose.
+Follow [configure or switch provider/model](ai-providers.md#configure-or-switch-providermodel),
+using the existing `./bin/configure-ai` helper. It saves local settings and makes
+no provider call. Keep provider secrets in the ignored backend configuration.
 
 The local administrator also needs a password:
 
@@ -196,18 +189,12 @@ numeric aliases that Qwen was observed to misspell. Capability IDs longer than
 the provider's 64-character function-name limit retain a short numeric alias.
 Core still resolves and authorizes the original capability ID.
 
-Groq can reject an invalid model-generated tool call with HTTP 400 and
-`tool_use_failed`, for example when the generated function name is not among the
-supplied tools. The backend retries that completion once with temperature zero.
-It preserves the messages, tool definitions and any completed Core results; it
-never executes rejected tool calls or repeats completed capabilities as part of
-this retry. This also applies to a completion after a tool result.
-
-Other provider errors are not retried by this mechanism. A repeated generation
-failure still returns the safe contractual `500 assistant_execution_failed`;
-provider error bodies and failed generations are never exposed to the client.
-This bounded recovery does not guarantee that an external model will always
-produce a valid tool call.
+For provider-specific retries, use the
+[canonical retry policy](ai-providers.md#groq-retry-policy).
+Invalid-argument recovery belongs to the shared assistant loop; it is not a
+promise that every provider/model will complete a business question. Compare
+[provider/model evidence and limits](ai-providers.md#capability-matrix) before
+interpreting a live test result.
 
 ## Security
 

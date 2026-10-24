@@ -6,9 +6,14 @@ cd "$ROOT_DIR"
 
 ENV_FILE="$ROOT_DIR/.env"
 EXAMPLE_FILE="$ROOT_DIR/.env.example"
+DEFAULT_PROVIDER="groq"
 DEFAULT_MODEL="qwen/qwen3.8-27b"
 DEFAULT_BASE_URL="https://api.groq.com/openai/v1"
 DEFAULT_TIMEOUT_SECONDS="60"
+OLLAMA_PROVIDER="ollama"
+OLLAMA_DEFAULT_MODEL="gemma4:latest"
+OLLAMA_DEFAULT_BASE_URL="http://127.0.0.1:11434/v1"
+OLLAMA_DEFAULT_TIMEOUT_SECONDS="1800"
 TEMP_FILE=""
 
 cleanup() {
@@ -75,7 +80,7 @@ ensure_env_file() {
 }
 
 write_env() {
-    local line key seen_key=0 seen_model=0 seen_base=0 seen_timeout=0
+    local line key seen_key=0 seen_provider=0 seen_model=0 seen_base=0 seen_timeout=0
     TEMP_FILE="$(umask 077; mktemp "${TMPDIR:-/tmp}/erbas-env.XXXXXX")"
     case "$TEMP_FILE" in
         "$ROOT_DIR"/*)
@@ -99,18 +104,29 @@ write_env() {
                     fi
                     continue
                     ;;
+                AI_PROVIDER)
+                    printf 'AI_PROVIDER=%s\n' "$provider" >>"$TEMP_FILE"
+                    seen_provider=1
+                    continue
+                    ;;
                 AI_GROQ_MODEL)
-                    printf 'AI_GROQ_MODEL=%s\n' "$model" >>"$TEMP_FILE"
+                    # Migrate only the selected Groq provider; preserve its settings otherwise.
+                    if [[ "$provider" == "$DEFAULT_PROVIDER" ]]; then continue; fi
+                    printf '%s\n' "$line" >>"$TEMP_FILE"
+                    continue
+                    ;;
+                AI_MODEL)
+                    printf 'AI_MODEL=%s\n' "$model" >>"$TEMP_FILE"
                     seen_model=1
                     continue
                     ;;
-                AI_GROQ_BASE_URL)
-                    printf 'AI_GROQ_BASE_URL=%s\n' "$base_url" >>"$TEMP_FILE"
+                "$base_url_key")
+                    printf '%s=%s\n' "$base_url_key" "$base_url" >>"$TEMP_FILE"
                     seen_base=1
                     continue
                     ;;
-                AI_GROQ_TIMEOUT_SECONDS)
-                    printf 'AI_GROQ_TIMEOUT_SECONDS=%s\n' "$timeout_seconds" >>"$TEMP_FILE"
+                "$timeout_key")
+                    printf '%s=%s\n' "$timeout_key" "$timeout_seconds" >>"$TEMP_FILE"
                     seen_timeout=1
                     continue
                     ;;
@@ -122,9 +138,10 @@ write_env() {
     if (( update_key )) && (( ! seen_key )); then
         printf 'AI_GROQ_API_KEY=%s\n' "$api_key" >>"$TEMP_FILE"
     fi
-    (( seen_model )) || printf 'AI_GROQ_MODEL=%s\n' "$model" >>"$TEMP_FILE"
-    (( seen_base )) || printf 'AI_GROQ_BASE_URL=%s\n' "$base_url" >>"$TEMP_FILE"
-    (( seen_timeout )) || printf 'AI_GROQ_TIMEOUT_SECONDS=%s\n' "$timeout_seconds" >>"$TEMP_FILE"
+    (( seen_provider )) || printf 'AI_PROVIDER=%s\n' "$provider" >>"$TEMP_FILE"
+    (( seen_model )) || printf 'AI_MODEL=%s\n' "$model" >>"$TEMP_FILE"
+    (( seen_base )) || printf '%s=%s\n' "$base_url_key" "$base_url" >>"$TEMP_FILE"
+    (( seen_timeout )) || printf '%s=%s\n' "$timeout_key" "$timeout_seconds" >>"$TEMP_FILE"
 
     mv -- "$TEMP_FILE" "$ENV_FILE"
     TEMP_FILE=""
@@ -142,38 +159,62 @@ fi
 
 printf '\nERBAS local AI configuration\n\n' >&2
 
-update_key=1
-if env_has_nonempty AI_GROQ_API_KEY; then
-    update_key=0
-    printf 'Groq API key is already configured.\n' >&2
-    printf 'Replace existing key? [y/N]: ' >&2
-    IFS= read -r replace_key
-    case "${replace_key:-}" in
-        y|Y|yes|YES) update_key=1 ;;
-    esac
-fi
+provider="$(env_value AI_PROVIDER || true)"
+provider="${provider:-$DEFAULT_PROVIDER}"
+case "$provider" in
+    "$DEFAULT_PROVIDER")
+        base_url_key=AI_GROQ_BASE_URL
+        timeout_key=AI_GROQ_TIMEOUT_SECONDS
+        model_default="$DEFAULT_MODEL"
+        base_url_default="$DEFAULT_BASE_URL"
+        timeout_default="$DEFAULT_TIMEOUT_SECONDS"
+        update_key=1
+        if env_has_nonempty AI_GROQ_API_KEY; then
+            update_key=0
+            printf 'Groq API key is already configured.\n' >&2
+            printf 'Replace existing key? [y/N]: ' >&2
+            IFS= read -r replace_key
+            case "${replace_key:-}" in
+                y|Y|yes|YES) update_key=1 ;;
+            esac
+        fi
 
-if (( update_key )); then
-    printf 'Groq API key: ' >&2
-    IFS= read -r -s api_key
-    printf '\n' >&2
-    [[ -n "$api_key" ]] || die "Groq API key must not be empty."
-else
-    api_key=""
-fi
+        if (( update_key )); then
+            printf 'Groq API key: ' >&2
+            IFS= read -r -s api_key
+            printf '\n' >&2
+            [[ -n "$api_key" ]] || die "Groq API key must not be empty."
+        else
+            api_key=""
+        fi
+        ;;
+    "$OLLAMA_PROVIDER")
+        base_url_key=AI_OLLAMA_BASE_URL
+        timeout_key=AI_OLLAMA_TIMEOUT_SECONDS
+        model_default="$OLLAMA_DEFAULT_MODEL"
+        base_url_default="$OLLAMA_DEFAULT_BASE_URL"
+        timeout_default="$OLLAMA_DEFAULT_TIMEOUT_SECONDS"
+        update_key=0
+        api_key=""
+        ;;
+    *) die "Unsupported AI_PROVIDER; supported providers: $DEFAULT_PROVIDER, $OLLAMA_PROVIDER." ;;
+esac
 
-current_model="$(env_value AI_GROQ_MODEL || true)"
-prompt_with_default "Model" "${current_model:-$DEFAULT_MODEL}"
+current_model="$(env_value AI_MODEL || true)"
+if [[ -z "$current_model" && "$provider" == "$DEFAULT_PROVIDER" ]]; then
+    current_model="$(env_value AI_GROQ_MODEL || true)"
+fi
+prompt_with_default "Model" "${current_model:-$model_default}"
 model="$PROMPT_RESULT"
 [[ -n "$model" ]] || die "Model must not be empty."
 
-current_base_url="$(env_value AI_GROQ_BASE_URL || true)"
-prompt_with_default "Base URL" "${current_base_url:-$DEFAULT_BASE_URL}"
+current_base_url="$(env_value "$base_url_key" || true)"
+prompt_with_default "Base URL" "${current_base_url:-$base_url_default}"
 base_url="$PROMPT_RESULT"
 [[ -n "$base_url" ]] || die "Base URL must not be empty."
 
-current_timeout="$(env_value AI_GROQ_TIMEOUT_SECONDS || true)"
-prompt_with_default "Timeout seconds" "${current_timeout:-$DEFAULT_TIMEOUT_SECONDS}"
+current_timeout="$(env_value "$timeout_key" || true)"
+prompt_with_default "Timeout seconds" "${current_timeout:-$timeout_default}"
 timeout_seconds="$PROMPT_RESULT"
 [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || die "Timeout seconds must be a positive integer."
 

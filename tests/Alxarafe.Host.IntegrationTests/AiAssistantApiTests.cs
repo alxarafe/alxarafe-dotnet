@@ -9,6 +9,7 @@ using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai;
 using Alxarafe.Modules.Ai.Application;
 using Alxarafe.Modules.Ai.Http;
+using Alxarafe.Modules.Ai.Infrastructure;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Security;
 using Alxarafe.Security.EntityFrameworkCore;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -261,6 +263,46 @@ public sealed class AiAssistantApiTests(WebApplicationFactory<Program> factory) 
             && message.Contains("outcome=completed"));
         Assert.DoesNotContain(secret, string.Join("\n", messages));
         Assert.DoesNotContain(OneToolMessage, string.Join("\n", messages));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ProviderReasoningNeverBecomesPublicContentOrFunctionalAudit(bool hasFinalContent)
+    {
+        const string reasoning = "private-provider-reasoning";
+        const string finalAnswer = "Safe final answer.";
+        using var handler = new ReasoningHandler(JsonSerializer.Serialize(new
+        {
+            choices = new[] { new { finish_reason = "stop", message = new { content = hasFinalContent ? finalAnswer : null, reasoning } } },
+            extra_provider_metadata = reasoning
+        }));
+        using var transport = new HttpClient(handler);
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [GroqAiModelClient.ApiKeyConfiguration] = "synthetic-key"
+        }).Build();
+        var capture = new CaptureLoggerProvider();
+        using var host = Host(new GroqAiModelClient(transport, configuration))
+            .WithWebHostBuilder(builder => builder.ConfigureLogging(logging => logging.AddProvider(capture)));
+        using var http = host.CreateClient();
+        using var response = await SendMessage(http, DirectMessage, admin);
+        var body = await Body(response, hasFinalContent ? HttpStatusCode.OK : HttpStatusCode.InternalServerError);
+        string json = body.GetRawText();
+        Assert.DoesNotContain(reasoning, json);
+        Assert.DoesNotContain("reasoning", json);
+        if (hasFinalContent)
+        {
+            Assert.Equal(finalAnswer, body.GetProperty("answer").GetString());
+            Assert.Equal(InvocationFields, body.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
+        }
+        Assert.DoesNotContain(capture.Messages, message => message.Contains(reasoning, StringComparison.Ordinal));
+    }
+
+    private sealed class ReasoningHandler(string completion) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(completion, Encoding.UTF8, "application/json") });
     }
 
     private async Task AssertSafeFailure(Func<AiModelRequest, AiModelResponse> response, HttpStatusCode status, string code)

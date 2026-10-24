@@ -127,9 +127,22 @@ are returned in ordered `toolsUsed`; input is untrusted and budgets remain finit
 See [AI-API-001 design](ai-read-primitives.md), including the published v0.12.0
 response extension and deterministic conformance validation.
 
-Infrastructure provides a production Groq HTTP adapter and a deterministic adapter
-selected only in the Testing environment. Application depends on its model port,
-not on either adapter. The Http adapter owns closed request validation, the public
+Infrastructure resolves `AI:Provider` behind `IAiModelClient`. Groq and local
+Ollama reuse the common OpenAI-compatible chat client. Groq retains its existing
+error/retry policy; Ollama supplies only configuration and explicit no-auth
+transport, with no provider-specific retry. Model selection uses `AI:Model` independently
+of the provider name, retaining the legacy Groq model alias. Testing selects the
+deterministic adapter. Application depends only on its model port; provider
+selection cannot change effective tools or authorization. See
+[canonical provider configuration and capabilities](ai-providers.md).
+The common abstraction does not imply functional equivalence: every observable
+difference, limitation, configuration requirement or unvalidated capability must
+be documented by provider and, when relevant, by model. Adding a provider requires
+implementation, tests, configuration, a capability matrix, known limitations and
+smoke evidence when viable. No provider may expand the caller's effective tools
+or bypass authorization.
+
+The Http adapter owns closed request validation, the public
 response/error envelope, `no-store` behavior and AI audit linkage. The Module entry
 registers the AI permission policy, model selection, endpoint mapping and audit
 middleware. The Host still exposes only the entry assemblies; framework projects

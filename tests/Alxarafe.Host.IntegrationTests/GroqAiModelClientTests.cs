@@ -220,6 +220,73 @@ public sealed class GroqAiModelClientTests
         Assert.Equal(content, messages[messages.GetArrayLength() - 1].GetProperty("content").GetString());
     }
 
+    [Fact]
+    public async Task ProviderConfigurationPreservesBearerEndpointModelAndTimeout()
+    {
+        using var handler = new ProviderHandler((HttpStatusCode.OK, ToolCompletion));
+        using var http = new HttpClient(handler);
+        const string configuredBaseUrl = "https://provider.example.test/openai/v1/";
+        const string configuredModel = "independently-selected-model";
+        const int timeoutSeconds = 17;
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [GroqAiModelClient.ApiKeyConfiguration] = "synthetic-key",
+            [GroqAiModelClient.BaseUrlConfiguration] = configuredBaseUrl,
+            [AiProviderResolver.ModelConfiguration] = configuredModel,
+            [GroqAiModelClient.ModelConfiguration] = "legacy-model",
+            [GroqAiModelClient.TimeoutConfiguration] = timeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        }).Build();
+        var result = await new GroqAiModelClient(http, configuration).CompleteAsync(Request());
+        Assert.Equal(configuredBaseUrl.TrimEnd('/') + "/chat/completions", handler.Uri!.AbsoluteUri);
+        Assert.Equal("Bearer synthetic-key", handler.Authorization);
+        Assert.Equal("application/json", handler.MediaType);
+        Assert.Equal(TimeSpan.FromSeconds(timeoutSeconds), http.Timeout);
+        var payload = Assert.Single(handler.Requests);
+        Assert.Equal(configuredModel, payload.GetProperty("model").GetString());
+        Assert.Equal("auto", payload.GetProperty("tool_choice").GetString());
+        Assert.False(payload.GetProperty("parallel_tool_calls").GetBoolean());
+        var function = Assert.Single(payload.GetProperty("tools").EnumerateArray()).GetProperty("function");
+        Assert.Equal(ToolName, function.GetProperty("name").GetString());
+        Assert.Equal(Tool.InputSchema.GetRawText(), function.GetProperty("parameters").GetRawText());
+        Assert.Equal(ToolName, Assert.Single(result.ToolCalls).Name);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.ServiceUnavailable, false)]
+    [InlineData(HttpStatusCode.InternalServerError, true)]
+    [InlineData(HttpStatusCode.TooManyRequests, false)]
+    public async Task UnavailableResponsesWithoutAnEligibleRetryAreNotReplayed(HttpStatusCode status, bool explicitDelay)
+    {
+        using var handler = new ProviderHandler((status, "{}"))
+        { RetryAfter = explicitDelay ? TimeSpan.Zero : null };
+        using var http = new HttpClient(handler);
+        await Assert.ThrowsAsync<AiModelUnavailableException>(() => Client(http).CompleteAsync(Request()));
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ServiceUnavailableWithRetryAfterRetriesTheSameCompletionOnce()
+    {
+        using var handler = new ProviderHandler((HttpStatusCode.ServiceUnavailable, "{}"), (HttpStatusCode.OK, FinalCompletion))
+        { RetryAfter = TimeSpan.Zero };
+        using var http = new HttpClient(handler);
+        Assert.Equal(FinalAnswer, (await Client(http).CompleteAsync(Request(true))).Answer);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(handler.Requests[0].GetRawText(), handler.Requests[1].GetRawText());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TransportFailuresAndTimeoutsRemainUnavailable(bool timeout)
+    {
+        using var handler = new ProviderHandler((HttpStatusCode.OK, FinalCompletion))
+        { AfterResponse = () => { if (timeout) throw new TaskCanceledException(); throw new HttpRequestException(); } };
+        using var http = new HttpClient(handler);
+        await Assert.ThrowsAsync<AiModelUnavailableException>(() => Client(http).CompleteAsync(Request()));
+        Assert.Single(handler.Requests);
+    }
+
     private static GroqAiModelClient Client(HttpClient http) => new(http,
         new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -240,11 +307,17 @@ public sealed class GroqAiModelClientTests
     private sealed class ProviderHandler(params (HttpStatusCode Status, string Body)[] responses) : HttpMessageHandler
     {
         public List<JsonElement> Requests { get; } = [];
+        public Uri? Uri { get; private set; }
+        public string? Authorization { get; private set; }
+        public string? MediaType { get; private set; }
         public TimeSpan? RetryAfter { get; init; }
         public Action? AfterResponse { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            Uri = request.RequestUri;
+            Authorization = request.Headers.Authorization?.ToString();
+            MediaType = request.Content!.Headers.ContentType?.MediaType;
             Requests.Add(await request.Content!.ReadFromJsonAsync<JsonElement>(cancellationToken));
             var response = responses[Requests.Count - 1];
             AfterResponse?.Invoke();

@@ -17,7 +17,7 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
 {
     public const string Id = AiContract.ModuleId;
     public const string DeterministicEnvironment = "Testing";
-    private const string HttpClientName = "ai-groq";
+    private const string HttpClientName = "ai-model";
     public ModuleDescriptor Descriptor { get; } = new(Id, ModuleApi.CurrentVersion, []);
 
     public void ConfigureServices(IServiceCollection services)
@@ -55,7 +55,6 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
             return new DeterministicAiModelClient();
         var configuration = provider.GetRequiredService<IConfiguration>();
         var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientName);
-        client.Timeout = TimeSpan.FromSeconds(configuration.GetValue(GroqAiModelClient.TimeoutConfiguration, GroqAiModelClient.DefaultTimeoutSeconds));
-        return new GroqAiModelClient(client, configuration, provider.GetRequiredService<ILogger<GroqAiModelClient>>());
+        return AiProviderResolver.Resolve(client, configuration, provider.GetRequiredService<ILoggerFactory>());
     }
 }

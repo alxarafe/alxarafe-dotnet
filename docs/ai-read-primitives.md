@@ -106,8 +106,9 @@ are not logged. AI final outcome and existing CORE audit allow cross-kind tracin
 Repeated successful calls and failures remain visible rather than silently hidden.
 There is no dashboard, automatic promotion policy or new public admin endpoint.
 
-Groq transport retains semantic names, null omission and the single
-`tool_use_failed` completion retry. A separate bounded retry (at most once)
+The shared OpenAI-compatible transport retains semantic names and null omission.
+Groq-specific policy retains the single `tool_use_failed` completion retry.
+A separate bounded Groq retry (at most once)
 honors an explicit `Retry-After` only for provider 429/503 responses, capped at
 60 seconds. Already obtained tool results are retained; completed operations
 are not replayed as part of transport recovery. No WRITE retry mechanism is

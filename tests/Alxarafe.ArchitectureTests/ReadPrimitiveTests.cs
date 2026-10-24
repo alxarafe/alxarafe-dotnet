@@ -16,6 +16,8 @@ public sealed class ReadPrimitiveTests
         foreach (var assembly in new[] { typeof(AiAssistant).Assembly, typeof(GroqAiModelClient).Assembly, typeof(AiAssistantEndpoints).Assembly })
             Assert.DoesNotContain(assembly.GetReferencedAssemblies(), reference => reference.Name!.Contains("Wms", StringComparison.Ordinal)
                 || reference.Name.Contains("EntityFramework", StringComparison.Ordinal));
+        Assert.DoesNotContain(typeof(AiAssistant).Assembly.GetReferencedAssemblies(),
+            reference => reference.Name == typeof(GroqAiModelClient).Assembly.GetName().Name);
         Assert.IsAssignableFrom<IReadPrimitiveProvider>(new WmsModule());
         Assert.Equal(5, WmsReadPrimitives.All.Count);
         Assert.Equal(5, WmsReadPrimitives.All.Select(primitive => primitive.Id).Distinct().Count());
