@@ -3,6 +3,7 @@ using Alxarafe.Modularity;
 using Alxarafe.Modules.Wms.Application;
 using Alxarafe.Modules.Wms.Http;
 using Alxarafe.Modules.Wms.Infrastructure;
+using Alxarafe.Security;
 using Alxarafe.Security.AspNetCore;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,9 @@ namespace Alxarafe.Modules.Wms;
 public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvider
 {
     public const string Id = "erbas.wms";
+    public const string DevelopmentUserEmailConfiguration = "Wms:DevelopmentUser:Email";
+    public const string DevelopmentUserPasswordConfiguration = "Wms:DevelopmentUser:Password";
+    public const string DefaultDevelopmentUserEmail = "user@example.test";
     public ModuleDescriptor Descriptor { get; } = new(Id, ModuleApi.CurrentVersion, []);
 
     public IEnumerable<CapabilityDescriptor> GetCapabilities() => WmsCapabilities.All;
@@ -33,6 +37,15 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
                 provider.GetRequiredService<IConfiguration>().GetConnectionString(WmsStorage.ConnectionName),
                 provider.GetRequiredService<IHostEnvironment>().IsEnvironment(WmsStorage.TestingEnvironment)));
         InventoryPermissions.Configure(services);
+        services.AddOptions<DevelopmentUsersOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
+        {
+            if (!environment.IsDevelopment()) return;
+            string? password = configuration[DevelopmentUserPasswordConfiguration];
+            if (string.IsNullOrEmpty(password)) return;
+            string? email = configuration[DevelopmentUserEmailConfiguration];
+            options.Users.Add(new DevelopmentUser(string.IsNullOrEmpty(email) ? DefaultDevelopmentUserEmail : email, password,
+                [InventoryPermissions.WarehousesRead, InventoryPermissions.LocationsRead, InventoryPermissions.ItemsRead, InventoryPermissions.InventoryRead]));
+        });
         services.AddSingleton<IInventoryStore, EfInventoryStore>();
         services.AddSingleton<InventoryService>();
         services.AddSingleton<IUomStore, EfUomStore>();

@@ -139,10 +139,20 @@ its migrations through normal module initialization, without changing Platform o
 Security entities or migration histories. Existing obsolete experiment databases/tables are neither accessed nor
 purged by startup. Retiring their projects does not rewrite applied migration history.
 
-No module users or business permissions are seeded. A local CORE administrator
-requires explicit ERBAS_CORE_ADMIN_PASSWORD; ERBAS_CORE_ADMIN_EMAIL defaults to
-admin@example.test. Seed does not reset credentials or escalate an existing account.
+A local CORE administrator requires explicit `ERBAS_CORE_ADMIN_PASSWORD`;
+`ERBAS_CORE_ADMIN_EMAIL` defaults to `admin@example.test`. The administrator seed
+does not reset credentials or escalate an existing non-administrator account.
 Validation always supplies its own generated administrator password.
+
+An optional WMS development reader is enabled by explicit
+`ERBAS_WMS_USER_PASSWORD`; `ERBAS_WMS_USER_EMAIL` defaults to `user@example.test`.
+Compose maps these to `Wms:DevelopmentUser:Email`/`Password`. WMS contributes the
+four warehouse/location/item/inventory READ claims through the existing generic
+`DevelopmentUsersOptions` seed in Development only. No movements or WRITE claims
+are granted. Testing and Production do not contribute this development profile,
+even when configured. Without a password no reader is provisioned. Store local
+passwords only in the ignored `.env` or your secret environment mechanism.
+See the [effective access matrix](wms-inventory.md#development-identities).
 
 ## API and diagnostics
 

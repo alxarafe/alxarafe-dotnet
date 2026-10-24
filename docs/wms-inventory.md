@@ -114,6 +114,37 @@ special seed identity or authentication bypass. Existing UoM/family creation
 still requires the existing CORE administrator authorization; the loader uses
 an existing normally authorized account. There is no new claim-management API.
 
+## Development identities
+
+`admin` means the normally configured CORE administrator; `user` means the
+optional WMS development reader. These are documentation labels, not username
+checks in authorization. Emails are configurable. The default reader email is
+`user@example.test`; provisioning requires an explicit `ERBAS_WMS_USER_PASSWORD`.
+`ERBAS_WMS_USER_EMAIL` optionally overrides the email. Compose exposes the pair
+as `Wms:DevelopmentUser:Email`/`Password` to the development `app` service.
+
+`WmsModule` contributes the reader's four READ permission claims through existing
+`DevelopmentUsersOptions`; generic `SecuritySeed` persists the Identity account
+and claims. The profile applies only in Development and is absent by default.
+Repeated provisioning does not reset an existing password or duplicate claims.
+It grants no administrator, movement or WRITE rights. Existing manually assigned
+rights are not revoked: to use this restricted profile, supply an ordinary
+account without additional privileged claims. Authorization always follows the
+account's effective permissions and current administrator/enabled state.
+
+| Operation | Configured admin | Restricted development user |
+| --- | --- | --- |
+| GET warehouses, locations, items, inventory | 200 | 200 |
+| GET movements | 200 | 403 |
+| Valid WMS creation | 201 | 403 |
+| Other WMS writes, including catalogue associations | Authorized | 403 |
+
+The administrator's access comes from the existing CORE administrator claim.
+The reader receives exactly `wms.warehouses.read`, `wms.locations.read`,
+`wms.items.read`, `wms.inventory.read`. Neither identity gains privileges from
+its name, a demo flag or AI. Existing shared UoM/family/storage-attribute
+permissions and AI capability definitions are unchanged.
+
 ## Persistence, validation and external loading
 
 Migration `202610240001_InventoryFoundation` adds four WMS-owned tables, unique
