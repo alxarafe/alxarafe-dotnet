@@ -13,6 +13,7 @@ public static class AiProviderResolver
         (configuration[ProviderConfiguration] ?? GroqAiModelClient.ProviderName) switch
         {
             GroqAiModelClient.ProviderName => new GroqAiModelClient(http, configuration, loggerFactory.CreateLogger<GroqAiModelClient>()),
-            _ => throw new InvalidOperationException("Unsupported AI:Provider. Supported provider: " + GroqAiModelClient.ProviderName + ".")
+            OllamaAiModelClient.ProviderName => new OllamaAiModelClient(http, configuration, loggerFactory.CreateLogger<OllamaAiModelClient>()),
+            _ => throw new InvalidOperationException("Unsupported " + ProviderConfiguration + ". Supported providers: " + GroqAiModelClient.ProviderName + ", " + OllamaAiModelClient.ProviderName + ".")
         };
 }

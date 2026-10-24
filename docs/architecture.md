@@ -127,9 +127,10 @@ are returned in ordered `toolsUsed`; input is untrusted and budgets remain finit
 See [AI-API-001 design](ai-read-primitives.md), including the published v0.12.0
 response extension and deterministic conformance validation.
 
-Infrastructure resolves `AI:Provider` behind `IAiModelClient`. Groq is the only
-real provider: its adapter specializes the common OpenAI-compatible chat client
-with its existing error/retry policy. Model selection uses `AI:Model` independently
+Infrastructure resolves `AI:Provider` behind `IAiModelClient`. Groq and local
+Ollama reuse the common OpenAI-compatible chat client. Groq retains its existing
+error/retry policy; Ollama supplies only configuration and explicit no-auth
+transport, with no provider-specific retry. Model selection uses `AI:Model` independently
 of the provider name, retaining the legacy Groq model alias. Testing selects the
 deterministic adapter. Application depends only on its model port; provider
 selection cannot change effective tools or authorization. See

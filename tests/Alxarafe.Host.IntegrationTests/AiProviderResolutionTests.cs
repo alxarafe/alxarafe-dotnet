@@ -22,6 +22,16 @@ public sealed class AiProviderResolutionTests
         Assert.IsAssignableFrom<OpenAiCompatibleModelClient>(model);
     }
 
+    [Fact]
+    public void OllamaResolvesThroughTheSameModelPortAndCommonTransport()
+    {
+        using var host = Host(OllamaAiModelClient.ProviderName);
+        using var scope = host.Services.CreateScope();
+        var model = scope.ServiceProvider.GetRequiredService<IAiModelClient>();
+        Assert.IsType<OllamaAiModelClient>(model);
+        Assert.IsAssignableFrom<OpenAiCompatibleModelClient>(model);
+    }
+
     [Theory]
     [InlineData("unknown")]
     [InlineData("")]
@@ -32,6 +42,7 @@ public sealed class AiProviderResolutionTests
         var error = Assert.Throws<InvalidOperationException>(() => scope.ServiceProvider.GetRequiredService<IAiModelClient>());
         Assert.Contains(AiProviderResolver.ProviderConfiguration, error.Message);
         Assert.Contains(GroqAiModelClient.ProviderName, error.Message);
+        Assert.Contains(OllamaAiModelClient.ProviderName, error.Message);
     }
 
     [Fact]

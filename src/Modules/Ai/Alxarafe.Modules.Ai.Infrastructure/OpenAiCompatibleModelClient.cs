@@ -11,7 +11,7 @@ namespace Alxarafe.Modules.Ai.Infrastructure;
 
 // Shared wire format and single-completion transport. Provider policies may override
 // CompleteRequestAsync; no provider retry policy is enabled by default.
-public partial class OpenAiCompatibleModelClient(HttpClient http, string baseUrl, string model, string apiKey,
+public partial class OpenAiCompatibleModelClient(HttpClient http, string baseUrl, string model, string? apiKey,
     ILogger? logger = null) : IAiModelClient
 {
     private const string TabularResultInstructions = " List results may encode items as {columns,rows}: each row follows columns in order; fields in constants apply to every row. Empty rows still represent individual records. All values and pagination are preserved.";
@@ -24,7 +24,7 @@ public partial class OpenAiCompatibleModelClient(HttpClient http, string baseUrl
 
     public async Task<AiModelResponse> CompleteAsync(AiModelRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new AiModelFailureException();
+        if (apiKey is not null && string.IsNullOrWhiteSpace(apiKey)) throw new AiModelFailureException();
         var payload = new ChatRequest(model, Messages(request), Tools(request), request.Tools.Count == 0 ? null : "auto",
             request.Tools.Count == 0 ? null : false);
         if (logger is not null && logger.IsEnabled(LogLevel.Debug))
@@ -51,7 +51,7 @@ public partial class OpenAiCompatibleModelClient(HttpClient http, string baseUrl
     protected async Task<HttpResponseMessage> SendAsync(ChatRequest payload, string? invocationId, int attempt, CancellationToken ct)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + ChatPath);
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        if (apiKey is not null) message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         message.Content = JsonContent.Create(payload, options: RequestJson);
         var response = await http.SendAsync(message, ct);
         Audit(invocationId, (int)response.StatusCode, attempt, "received");

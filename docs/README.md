@@ -2,6 +2,7 @@
 
 | Document | Purpose |
 | --- | --- |
+| [Ollama integration smoke](verification/ai-provider-001b.md) | AI-PROVIDER-001B: shared transport reuse, deterministic validation and real loopback-only Ollama evidence |
 | [Authorized READ primitives](ai-read-primitives.md) | AI-API-001: module ownership, persisted authority, routing and composition limits |
 | [AI-API-001 verification](verification/ai-api-001.md) | Published v0.12.0 adoption, historical candidate checks and observational Groq results |
 | [AI-001 verification](verification/ai-001-dotnet.md) | Provider-neutral assistant, effective READ tooling and published v0.11.1 adoption |

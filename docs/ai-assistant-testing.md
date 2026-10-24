@@ -18,7 +18,8 @@ alxarafe-dotnet
      |
      | backend-only provider credential
      v
-    Groq
+  selected provider
+  (Groq or local Ollama)
 ```
 
 | Repository | Responsibility |
@@ -27,16 +28,16 @@ alxarafe-dotnet
 | `alxarafe-dotnet` | Runs the backend and owns the local AI provider configuration. |
 | `erbas-client` | Talks only to ERBAS. It must never receive the Groq API key. |
 
-The browser must never call Groq directly. The API key belongs only to the backend
-runtime, normally as a local `.env` value consumed by Docker Compose.
+The browser must never call the provider directly. Provider credentials, when
+needed, belong only to the backend runtime. Local Ollama needs no API key.
 
 Groq and `qwen/qwen3.8-27b` are local backend choices. They are not fields in the
 public ERBAS contract, and clients must not select a provider or model.
 
 ## Provider, model and protocol
 
-`AI_PROVIDER` selects the backend provider; **Groq (`groq`) is the only supported
-provider in this phase**. `AI_MODEL` selects a model independently of that provider
+`AI_PROVIDER` selects the backend provider: **Groq (`groq`) or local Ollama
+(`ollama`)**. `AI_MODEL` selects a model independently of that provider
 name. The selected provider must actually serve that model. Neither setting is
 accepted in an ERBAS HTTP request or exposed to the client.
 
@@ -47,37 +48,88 @@ AI_GROQ_BASE_URL=https://api.groq.com/openai/v1
 AI_GROQ_TIMEOUT_SECONDS=60
 ```
 
-The backend-only credential remains `AI_GROQ_API_KEY`; never put its value in
+For local Ollama, explicitly select the model and the URL reachable from the
+backend container:
+
+```dotenv
+AI_PROVIDER=ollama
+AI_MODEL=gemma4:latest
+AI_OLLAMA_BASE_URL=http://127.0.0.1:11434/v1
+AI_OLLAMA_TIMEOUT_SECONDS=1800
+```
+
+That loopback URL requires the local smoke setup below; it cannot reach the host
+from an ordinary bridge container. Ollama sends no Authorization header and has
+no required API-key setting. Its configurable 1800-second completion timeout
+allows bounded waits for local CPU inference; it does not change the eight-call
+or eight-turn budget. No model/performance tuning is introduced.
+
+The backend-only Groq credential remains `AI_GROQ_API_KEY`; never put its value in
 client configuration or logs. Native .NET configuration uses `AI:Provider` and
 `AI:Model`, plus the existing `AI:Groq:ApiKey`, `BaseUrl` and `TimeoutSeconds`.
-Docker Compose maps the environment variables above to those keys.
+Ollama uses `AI:Ollama:BaseUrl` and `AI:Ollama:TimeoutSeconds`. Docker Compose maps
+the environment variables above to those keys.
 
 Existing configurations continue to work: omitted provider means `groq`, and
 `AI_GROQ_MODEL` / native `AI:Groq:Model` remain legacy model aliases. The new
 `AI_MODEL` / `AI:Model` takes precedence; otherwise the existing default model
 is retained. `bin/configure-ai` writes `AI_PROVIDER` and `AI_MODEL`, migrating an
-existing legacy model entry while preserving the key and unrelated settings.
+existing legacy Groq model entry while preserving the key and unrelated settings.
+Set `AI_PROVIDER` in the local file before running the helper; it skips the key
+prompt for Ollama and preserves the other provider's settings. Ollama reads
+`AI:Model` directly; when switching an existing environment, explicitly set
+`AI_MODEL` rather than inheriting its former model/default.
 No automatic rewrite of local configuration occurs during backend startup.
 An unknown provider fails clearly when `IAiModelClient` is resolved. Testing
 retains the deterministic adapter and does not resolve a real provider.
 
 The internal flow is `AiAssistant -> IAiModelClient -> AiProviderResolver ->
-GroqAiModelClient : OpenAiCompatibleModelClient -> Groq`. The common client owns
+the selected GroqAiModelClient or OllamaAiModelClient ->
+OpenAiCompatibleModelClient -> provider`. The common client owns
 chat-completion serialization, messages, tools/results, response parsing,
 transport errors/timeouts and the existing lossless tabular encoding. It reads
 completion metadata such as finish reason without extending the public result.
 Unknown fields, including provider `reasoning`, are ignored; reasoning is never
 used as an answer, persisted or recorded in functional audit. Usage is not consumed.
-The common client has no retry policy. Groq alone retains its bounded
+The common client permits explicit no-auth transport and has no retry policy.
+Groq still rejects missing/blank credentials and alone retains its bounded
 `tool_use_failed` and `Retry-After` recovery and quota-error classification.
 
 A future OpenAI-compatible provider needs its configuration and resolver entry;
 it can use the common client directly or specialize its completion method for
 provider-specific error/retry rules. This requires no change to `AiAssistant`,
-capabilities, primitives or authorization. A different wire protocol can implement
-`IAiModelClient` behind the same resolver. No second real provider, streaming,
+capabilities, primitives or authorization, as demonstrated by the Ollama adapter.
+A different wire protocol can implement `IAiModelClient` behind the same resolver.
+Only Groq and local Ollama are registered. No streaming,
 images, embeddings, Responses API, fallback, per-request/tenant selection,
 automatic routing, provider database or administration UI is implemented here.
+
+## Loopback-only Ollama and the local smoke test
+
+The observed Linux installation listens only on `127.0.0.1:11434`. A container
+using bridge networking plus `host.docker.internal:host-gateway` received a
+connection refusal: the host gateway is not the host loopback interface. Adding
+a DNS alias alone does not solve that listener mismatch. Ollama was not rebound
+to `0.0.0.0`, and its service configuration was not changed.
+
+The smoke uses a disposable backend container with `docker run --network host`.
+Its configured Ollama URL is `http://127.0.0.1:11434/v1`; the ERBAS listener is
+explicitly `http://127.0.0.1:EPHEMERAL_PORT`. No published ports are used. Normal
+Identity login supplies a disposable administrator, and the existing dataset
+loader writes through WMS HTTP APIs into backend-owned disposable databases.
+PostgreSQL stays on its private Docker bridge: the temporary backend receives
+its current container IP in connection strings, with no PostgreSQL port published.
+The native validation image is built before the real smoke. See
+[AI-PROVIDER-001B evidence](verification/ai-provider-001b.md).
+
+This is a Linux local smoke arrangement, not a production deployment mechanism.
+Host networking shares the host network namespace, bypasses bridge isolation,
+discards port publishing rules and loses ordinary Compose service-name discovery.
+A future production integration must decide isolation, reachability, bind
+addresses, port conflicts, authentication and platform support separately; this
+phase does not implement that deployment design. See the official
+[Docker host networking documentation](https://docs.docker.com/engine/network/drivers/host/)
+and [Ollama local OpenAI-compatible API](https://github.com/ollama/ollama/blob/main/docs/api/openai-compatibility.mdx).
 
 ## Configure the backend
 
@@ -90,11 +142,11 @@ local and ignored by Git:
 
 The helper is safe to run from any directory. It:
 
-- asks for the Groq API key with hidden input;
+- asks for the Groq API key with hidden input only when Groq is selected;
 - shows only whether an existing key is already configured, never its value;
 - lets you keep an existing key or replace it intentionally;
 - uses existing model, base URL and timeout values as interactive defaults;
-- selects the supported provider and migrates the legacy model name to `AI_MODEL`;
+- uses the selected supported provider and migrates the legacy Groq model name to `AI_MODEL`;
 - preserves unrelated `.env` variables and comments;
 - sets `.env` permissions to `600`;
 - refuses to write the key if `.env` is not ignored or is tracked by Git.
