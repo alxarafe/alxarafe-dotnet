@@ -13,7 +13,10 @@ Core, EF Core and PostgreSQL. It includes authentication, authorization,
 localization, CORE user/module administration, a persistent modular runtime,
 authenticated CORE capability discovery/read invocation, a provider-neutral AI
 assistant over effective READ capabilities and production WMS UoM, Storage
-Attribute and Item Family catalogues.
+Attribute and Item Family catalogues. WMS also provides a
+[warehouse inventory foundation](docs/wms-inventory.md) as a public .NET-specific
+extension, with persistent movements and current balances, outside shared
+contract conformance and AI tooling.
 
 ## ERBAS ecosystem
 

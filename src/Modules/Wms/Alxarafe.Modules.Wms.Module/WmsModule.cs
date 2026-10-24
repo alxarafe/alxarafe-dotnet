@@ -1,9 +1,9 @@
 using Alxarafe.AspNetCore;
 using Alxarafe.Modularity;
-using Alxarafe.Security.AspNetCore;
 using Alxarafe.Modules.Wms.Application;
 using Alxarafe.Modules.Wms.Http;
 using Alxarafe.Modules.Wms.Infrastructure;
+using Alxarafe.Security.AspNetCore;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -32,6 +32,9 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
             WmsStorage.Configure(options,
                 provider.GetRequiredService<IConfiguration>().GetConnectionString(WmsStorage.ConnectionName),
                 provider.GetRequiredService<IHostEnvironment>().IsEnvironment(WmsStorage.TestingEnvironment)));
+        InventoryPermissions.Configure(services);
+        services.AddSingleton<IInventoryStore, EfInventoryStore>();
+        services.AddSingleton<InventoryService>();
         services.AddSingleton<IUomStore, EfUomStore>();
         services.AddSingleton<UomCatalogue>();
         services.AddSingleton<IStorageAttributeStore, EfStorageAttributeStore>();
@@ -51,6 +54,7 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
+        InventoryEndpoints.Map(endpoints);
         UomEndpoints.Map(endpoints);
         StorageAttributeEndpoints.Map(endpoints);
         ItemFamilyEndpoints.Map(endpoints);

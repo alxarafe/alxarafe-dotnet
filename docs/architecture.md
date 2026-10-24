@@ -160,8 +160,12 @@ descriptor, enforces module availability and required permissions before body
 validation, validates closed input and provider output, and audits the trusted
 server-side invocation context. In-process module executors own the existing
 business behavior; no internal HTTP loopback or capability bus is introduced.
-No Item, storage rules, topology, inventory, dynamic loader or install/uninstall
-API is implemented. Physical module loading and production Identity provisioning remain
+WMS also owns the [inventory foundation](wms-inventory.md): warehouse/location
+masters, stockable references, immutable movements and balances derived from the
+ledger. These public .NET-specific extensions reuse existing UoMs/families and
+module boundaries and add no AI capabilities or shared contract behavior.
+Storage rules, advanced topology, a dynamic loader and install/uninstall APIs
+remain outside scope. Physical module loading and production Identity provisioning remain
 separate future concerns. Historical experiment data is preserved in existing
 installations without startup access or automated purge; new installations create
 no retired business schema. See [cleanup evidence](verification/cleanup-001.md).

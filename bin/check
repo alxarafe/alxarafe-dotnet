@@ -103,7 +103,8 @@ DO $$ BEGIN
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610160001_ItemFamilies') <> 1
-       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 3
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610240001_InventoryFoundation') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 4
        OR to_regclass('public.module_states') IS NULL
        OR (SELECT array_agg(column_name::text ORDER BY column_name COLLATE "C")
            FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'wms_uoms')
@@ -186,7 +187,8 @@ DO $$ BEGIN
        OR NOT EXISTS (SELECT 1 FROM wms_item_families)
        OR NOT EXISTS (SELECT 1 FROM wms_item_family_storage_attributes)
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610160001_ItemFamilies') <> 1
-       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 3
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610240001_InventoryFoundation') <> 1
+       OR (SELECT count(*) FROM "__WmsMigrationsHistory") <> 4
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1 THEN
         RAISE EXCEPTION 'Post-conformance WMS/AI persistence, enabled state or migration invariant failed';

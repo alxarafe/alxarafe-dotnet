@@ -91,8 +91,9 @@ Migration `202610150001_StorageAttributes` follows the unchanged UoM migration
 code has C collation and a unique index. INSERT ON CONFLICT is race-safe; COUNT
 and page share RepeatableRead. OpenAPI includes the two new operations with closed
 HTTP DTO schemas, preserving pure Domain/Application and Host's entry-only reference.
-Storage Attributes have no individual GET or master PATCH/DELETE. There is no
-exclusive group, Item, location/zone association, storage rule or inventory API. See
+Storage Attributes have no individual GET, master PATCH/DELETE, exclusive group,
+item/location association or storage rule. Warehouse inventory is provided
+separately by the [WMS inventory foundation](wms-inventory.md). See
 [verification and scope](verification/wms-002-dotnet.md).
 
 ## Item Families and associations (WMS-003)
@@ -130,8 +131,9 @@ it deletes development storage. A fresh volume creates alxarafe and alxarafe_sec
 Identity uses its existing initialization and Platform applies official EF migrations.
 ConnectionStrings__Platform and ConnectionStrings__Security select the respective
 contexts. WMS owns ConnectionStrings__Wms, its EF context, wms_uoms, wms_storage_attributes, wms_item_families,
-wms_item_family_storage_attributes and
-__WmsMigrationsHistory. Development uses the same physical alxarafe database;
+wms_item_family_storage_attributes, the four
+[inventory foundation tables](wms-inventory.md#persistence-validation-and-external-loading)
+and __WmsMigrationsHistory. Development uses the same physical alxarafe database;
 Testing requires alxarafe_test and rejects every other WMS database. WMS applies
 its migrations through normal module initialization, without changing Platform or
 Security entities or migration histories. Existing obsolete experiment databases/tables are neither accessed nor

@@ -244,7 +244,7 @@ public sealed partial class ItemFamilyTests
             await context.SaveChangesAsync();
             await context.Database.MigrateAsync();
             await context.Database.MigrateAsync();
-            Assert.Equal(before.Append(ItemFamilyMigration), await context.Database.GetAppliedMigrationsAsync());
+            Assert.Equal(before.Append(ItemFamilyMigration).Append(Alxarafe.Modules.Wms.Infrastructure.Migrations.InventoryFoundation.MigrationId), await context.Database.GetAppliedMigrationsAsync());
             Assert.False(context.Database.HasPendingModelChanges());
             Assert.Empty(await context.ItemFamilies.ToArrayAsync());
             Assert.Empty(await context.ItemFamilyAssociations.ToArrayAsync());

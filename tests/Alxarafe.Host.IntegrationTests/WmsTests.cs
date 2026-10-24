@@ -72,7 +72,7 @@ public sealed class WmsTests(WebApplicationFactory<Program> factory) : IClassFix
     public async Task WmsOwnsItsContextMigrationAndHistoryAlongsideUnchangedPlatform()
     {
         await using var context = await contexts.CreateDbContextAsync();
-        Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes", "202610160001_ItemFamilies"], await context.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610140001_Uoms", "202610150001_StorageAttributes", "202610160001_ItemFamilies", Alxarafe.Modules.Wms.Infrastructure.Migrations.InventoryFoundation.MigrationId], await context.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.False(context.Database.HasPendingModelChanges());
         await context.Database.MigrateAsync();
