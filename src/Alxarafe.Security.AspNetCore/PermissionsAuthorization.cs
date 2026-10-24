@@ -51,7 +51,7 @@ public static class PermissionAuthorizationExtensions
         services.AddSingleton<IAuthorizationPolicyProvider>(provider =>
             new PermissionPolicyProvider(
                 provider.GetServices<IPermissionDefinitionProvider>(),
-                new DefaultAuthorizationPolicyProvider(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorizationOptions>>() )));
+                new DefaultAuthorizationPolicyProvider(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorizationOptions>>())));
         return services;
     }
 }

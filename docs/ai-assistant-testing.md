@@ -110,8 +110,10 @@ not paste it into logs, screenshots, issues or commits.
 
 ## Verify the capability catalogue
 
-AI exposes only the authenticated user's effective READ capabilities. It does not
-grant business permissions by itself.
+The capability catalogue below remains capability-only. AI-API-001 under published v0.12.0
+also provides a separate internal registry of authorized READ primitives, with no
+new public catalogue endpoint. AI invoke grants no business permissions. See
+[primitives, published contract and differential evaluation](ai-read-primitives.md).
 
 ```bash
 curl -sS -H "Authorization: Bearer $TOKEN" \

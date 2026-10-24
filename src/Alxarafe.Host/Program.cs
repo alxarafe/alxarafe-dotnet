@@ -34,6 +34,8 @@ builder.Services.AddDbContextFactory<PlatformDbContext>(options =>
         ?? throw new InvalidOperationException("The Platform connection string must be configured.")));
 builder.Services.AddSingleton<IModuleStateStore, EfModuleStateStore>();
 builder.Services.AddSingleton<ModuleStateService>();
+builder.Services.AddScoped<ICurrentSecurityContext, CurrentSecurityContext>();
+builder.Services.AddScoped<IReadPrimitiveService, ReadPrimitiveService>();
 builder.Services.AddScoped<ICapabilityInvocationService, CapabilityInvocationService>();
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");

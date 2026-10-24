@@ -9,8 +9,14 @@ public sealed record InventoryWindow<T>(IReadOnlyList<T> Items, long Total);
 public sealed record InventoryFilter(Guid? WarehouseId = null, Guid? ItemId = null, Guid? LocationId = null,
     string? Code = null, string? Sku = null, DateTimeOffset? From = null, DateTimeOffset? To = null, Guid? Id = null);
 
+public sealed record InventoryReadLabels(IReadOnlyDictionary<Guid, string> Warehouses,
+    IReadOnlyDictionary<Guid, string> Locations, IReadOnlyDictionary<Guid, string> Items, IReadOnlyDictionary<Guid, string> Units);
+
 public interface IInventoryStore
 {
+    Task<InventoryReadLabels> ReadLabelsAsync(IReadOnlyCollection<Guid> warehouseIds, IReadOnlyCollection<Guid> locationIds,
+        IReadOnlyCollection<Guid> itemIds, IReadOnlyCollection<Guid> unitIds, CancellationToken ct);
+    Task<IReadOnlyDictionary<Guid, string>> UnitCodesAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct);
     Task<InventoryResult<Warehouse>> CreateWarehouseAsync(Warehouse warehouse, CancellationToken ct);
     Task<InventoryResult<Location>> CreateLocationAsync(Location location, CancellationToken ct);
     Task<InventoryResult<StockItem>> CreateItemAsync(StockItem item, CancellationToken ct);

@@ -118,13 +118,14 @@ no module permissions and never silently escalates an existing account.
 ## AI assistant
 
 The AI module owns Application, Infrastructure, Http and Module projects. Its
-Application orchestrator asks the shared CORE invocation service for the current
-effective catalogue, exposes only `effect: read` descriptors as provider tools and
-invokes every accepted tool through CORE-CAP-002. It re-evaluates availability and
-permissions before each call, never accepts caller-supplied prompts, tools, models
-or security context, and enforces finite server-owned turn/tool budgets. Tool
-input is untrusted and output is normalized by the same CORE path. Only successful
-CORE identities are returned in ordered `toolsUsed`.
+Application orchestrator combines effective capabilities and independently
+registered module READ primitives through neutral shared ports. Capabilities retain
+CORE-CAP-002 execution; primitives use a controlled router with authoritative
+persisted identity resolution at discovery and before each execution. AI never
+references WMS/persistence or accepts arbitrary HTTP. Successful typed identities
+are returned in ordered `toolsUsed`; input is untrusted and budgets remain finite.
+See [AI-API-001 design](ai-read-primitives.md), including the published v0.12.0
+response extension and deterministic conformance validation.
 
 Infrastructure provides a production Groq HTTP adapter and a deterministic adapter
 selected only in the Testing environment. Application depends on its model port,
@@ -138,6 +139,8 @@ AI audit records the AI invocation ID, subject, timestamp, outcome, duration,
 correlation ID, safe failure code and successful capability/CORE invocation IDs.
 It does not log messages, prompts, provider bodies, credentials or capability
 payloads. CORE audit remains authoritative for each capability invocation.
+Primitive audit separately links AI correlation, sequence, duration, logical
+outcome and bounded paging counts, without arguments/results.
 
 ## Verification and deliberate limits
 
@@ -146,7 +149,7 @@ entry-only WMS/AI references, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses the pinned v0.11.1 checkout. Local Bruno
+Shared conformance uses the pinned v0.12.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 

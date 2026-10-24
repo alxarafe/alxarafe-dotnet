@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Alxarafe.Modules.Wms;
 
-public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvider
+public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvider, IReadPrimitiveProvider
 {
     public const string Id = "erbas.wms";
     public const string DevelopmentUserEmailConfiguration = "Wms:DevelopmentUser:Email";
@@ -21,6 +21,7 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
     public const string DefaultDevelopmentUserEmail = "user@example.test";
     public ModuleDescriptor Descriptor { get; } = new(Id, ModuleApi.CurrentVersion, []);
 
+    public IEnumerable<ReadPrimitiveDescriptor> GetReadPrimitives() => WmsReadPrimitives.All;
     public IEnumerable<CapabilityDescriptor> GetCapabilities() => WmsCapabilities.All;
     public IEnumerable<string> GetSchemaReferences() => WmsCapabilities.SchemaReferences;
 
@@ -46,6 +47,7 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
             options.Users.Add(new DevelopmentUser(string.IsNullOrEmpty(email) ? DefaultDevelopmentUserEmail : email, password,
                 [InventoryPermissions.WarehousesRead, InventoryPermissions.LocationsRead, InventoryPermissions.ItemsRead, InventoryPermissions.InventoryRead]));
         });
+        services.AddSingleton<IReadPrimitiveExecutor, WmsReadPrimitiveExecutor>();
         services.AddSingleton<IInventoryStore, EfInventoryStore>();
         services.AddSingleton<InventoryService>();
         services.AddSingleton<IUomStore, EfUomStore>();

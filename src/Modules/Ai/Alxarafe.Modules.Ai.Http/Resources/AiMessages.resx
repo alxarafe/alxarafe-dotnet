@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="assistant.access_limited" xml:space="preserve"><value>I cannot determine that with the information I have access to.</value></data>
+  <data name="assistant.information_limited" xml:space="preserve"><value>I cannot determine that with the information ERBAS currently makes available to me.</value></data>
+</root>

@@ -6,8 +6,8 @@ These are public HTTP **implementation-specific .NET extensions**, under the
 [shared extension policy](https://github.com/alxarafe/erbas-contract/blob/main/docs/common/implementation-extensions.md).
 They are not contractual ERBAS APIs. Portable clients must not depend on them.
 The external scenario loader explicitly targets this .NET extension.
-`contract.revision` remains published immutable `v0.11.1`; shared OpenAPI,
-shared Bruno, tags, Java and existing HTTP behavior are unchanged.
+`contract.revision` selects published immutable `v0.12.0` for AI READ tooling;
+these WMS HTTP extensions remain outside the shared contract.
 
 Promoting this surface requires an approved cross-stack observable-behavior
 review, shared OpenAPI and conformance coverage, and an additive MINOR release.
@@ -17,7 +17,7 @@ EF Core is not a client-visible requirement. Review idempotency, numeric/time
 precision, permissions, errors and paging before promotion. No simultaneous Java
 implementation is required for an explicitly implementation-specific extension;
 this work does not claim Java support or cross-stack conformance for WMS-004.
-Existing shared v0.11.1 conformance remains mandatory.
+Shared v0.12.0 conformance remains mandatory.
 
 ## Ownership and domain
 
@@ -141,7 +141,8 @@ account's effective permissions and current administrator/enabled state.
 
 The administrator's access comes from the existing CORE administrator claim.
 The reader receives exactly `wms.warehouses.read`, `wms.locations.read`,
-`wms.items.read`, `wms.inventory.read`. Neither identity gains privileges from
+`wms.items.read`, `wms.inventory.read`. In Development the AI module also
+explicitly contributes `ai.assistant.invoke`, without WMS privileges. Neither identity gains privileges from
 its name, a demo flag or AI. Existing shared UoM/family/storage-attribute
 permissions and AI capability definitions are unchanged.
 
@@ -165,8 +166,8 @@ transaction spanning the whole seed. Use a fresh disposable scenario environment
 to retry a partial load; the loader never fabricates compensating movements.
 
 This phase adds no lots, expiry, costing, reservations, logistics workflows,
-analytics, frontend, AI tools or capability descriptors. READ composition for AI
-is a separate task. Full `bin/check` verifies v0.11.1 conformance, not shared
+analytics, frontend, AI tools or capability descriptors. AI READ composition is now implemented separately in the
+[AI-API-001 implementation](ai-read-primitives.md); no analytic capability is added. Full `bin/check` verifies v0.12.0 conformance, not shared
 conformance of these implementation-specific extensions.
 
 

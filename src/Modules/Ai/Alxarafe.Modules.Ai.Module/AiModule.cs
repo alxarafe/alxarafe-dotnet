@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Alxarafe.Modules.Ai;
 
@@ -25,6 +26,16 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
             policy.RequireAuthenticatedUser().RequireAssertion(context =>
                 context.User.HasClaim(CoreUserClaims.Admin, "true")
                 || context.User.HasClaim(PermissionClaim.Type, AiContract.AssistantPermission))));
+        services.AddSingleton(TimeProvider.System);
+        services.AddOptions<DevelopmentUsersOptions>().PostConfigure<IHostEnvironment>((options, environment) =>
+        {
+            if (!environment.IsDevelopment()) return;
+            for (int i = 0; i < options.Users.Count; i++)
+            {
+                var user = options.Users[i];
+                options.Users[i] = user with { Permissions = user.Permissions.Append(AiContract.AssistantPermission).Distinct(StringComparer.Ordinal).ToArray() };
+            }
+        });
         services.AddHttpClient(HttpClientName);
         services.AddScoped<IAiModelClient>(CreateModelClient);
         services.AddScoped<AiAssistant>();
@@ -45,6 +56,6 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
         var configuration = provider.GetRequiredService<IConfiguration>();
         var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientName);
         client.Timeout = TimeSpan.FromSeconds(configuration.GetValue(GroqAiModelClient.TimeoutConfiguration, GroqAiModelClient.DefaultTimeoutSeconds));
-        return new GroqAiModelClient(client, configuration);
+        return new GroqAiModelClient(client, configuration, provider.GetRequiredService<ILogger<GroqAiModelClient>>());
     }
 }
