@@ -86,11 +86,11 @@ this backend cannot change observable behavior unilaterally. `/health` is proces
 liveness only: HTTP 200 `application/json` with exactly `{"status":"ok"}`,
 independent of database, module or external-service checks.
 
-`contract.revision` declares the published release implemented, currently `v0.11.1`.
+`contract.revision` declares the published release implemented, currently `v0.12.0`.
 `./bin/check` requires `ERBAS_CONTRACT_DIR`; it checks repository root, expected
 GitHub origin, tracked/nonignored cleanliness, release tag object
-`5ea047b3375cf0362397ee1e21c95d4991f09c10`, its target commit
-`5517f0df5d3cacc57c35ef704131dcb30ad9dde2` and matching HEAD, preserves ignored
+`070990bef7bc0aa8ca8876c6b112d4edc6cf99d7`, its target commit
+`0d3d1c1cd81cc39b9d9eb8840381c415cb909363` and matching HEAD, preserves ignored
 files, and invokes public `bin/test` on the existing validation Docker network.
 Never assume a sibling path, fetch, pull, checkout or modify the supplied contract,
 or copy its OpenAPI/Bruno into this backend. Local and CI validation must use the

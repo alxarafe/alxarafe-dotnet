@@ -110,10 +110,10 @@ not paste it into logs, screenshots, issues or commits.
 
 ## Verify the capability catalogue
 
-The capability catalogue below remains capability-only. The AI-API-001 candidate
+The capability catalogue below remains capability-only. AI-API-001 under published v0.12.0
 also provides a separate internal registry of authorized READ primitives, with no
 new public catalogue endpoint. AI invoke grants no business permissions. See
-[primitives, candidate contract and differential evaluation](ai-read-primitives.md).
+[primitives, published contract and differential evaluation](ai-read-primitives.md).
 
 ```bash
 curl -sS -H "Authorization: Bearer $TOKEN" \

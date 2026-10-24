@@ -1,9 +1,9 @@
-# Authorized READ primitives (AI-API-001 candidate)
+# Authorized READ primitives (AI-API-001)
 
-This is experimental assistant functionality against the **unpublished shared
-v0.12.0 candidate**. It is not a published contract adoption or production-ready
-assistant. `contract.revision` retains the last published pin, `v0.11.1`; there
-is no v0.12.0 tag. Do not advertise the new tool semantics as v0.11.1 behavior.
+The backend adopts **published shared v0.12.0** through `contract.revision`, the
+immutable release checks in `bin/check` and the matching CI checkout. Deterministic
+conformance validates the controlled READ semantics and typed provenance. This
+does not establish production readiness or deterministic real-provider quality.
 
 ## Capabilities and primitives
 
@@ -134,23 +134,23 @@ model is instructed to return an internal unresolved signal. The application
 converts it to a localized functional limitation; the marker and tool details
 are not exposed. This remains general handling, not a question-specific rule.
 
-## Candidate development verification
+## Published release verification
 
-Run normal `bin/check` with an explicit clean published v0.11.1 checkout. This
-checks the last published baseline/regression and must not be labelled v0.12.0
-adoption. For candidate conformance, supply the independently prepared candidate
-checkout to its existing public command against a fresh backend-owned validation
-Host/database/network:
+Run normal `bin/check` with an explicit clean checkout of the published v0.12.0
+release. It verifies the expected origin, immutable tag object, target commit,
+matching HEAD and clean state before executing conformance. Local validation and
+CI use that same release. To run conformance separately, use the published
+checkout against a fresh backend-owned validation Host/database/network:
 
 ```sh
 ERBAS_TEST_EMAIL=... ERBAS_TEST_PASSWORD=... \
-  /absolute/path/to/candidate-contract/bin/test --network NETWORK http://HOST:8080
+  /absolute/path/to/published-v0.12.0-contract/bin/test --network NETWORK http://HOST:8080
 ```
 
 No copied OpenAPI/Bruno, invented tag or consumer revision override is needed.
 The backend owns readiness, disposable databases and cleanup; the contract runner
 only examines the supplied URL. WMS-004 HTTP endpoints remain implementation-
-specific; generic AI candidate conformance does not imply Java/WMS-004 parity.
+specific; generic AI conformance does not imply Java/WMS-004 parity.
 
 For real provider evaluation, load the independent dataset through its `seed.sh`
 with a supplied URL and normal administrator login, then query the assistant as

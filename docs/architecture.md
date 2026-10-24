@@ -124,8 +124,8 @@ CORE-CAP-002 execution; primitives use a controlled router with authoritative
 persisted identity resolution at discovery and before each execution. AI never
 references WMS/persistence or accepts arbitrary HTTP. Successful typed identities
 are returned in ordered `toolsUsed`; input is untrusted and budgets remain finite.
-See [AI-API-001 candidate design](ai-read-primitives.md), including the unpublished
-v0.12.0 response extension and separate published/candidate validation.
+See [AI-API-001 design](ai-read-primitives.md), including the published v0.12.0
+response extension and deterministic conformance validation.
 
 Infrastructure provides a production Groq HTTP adapter and a deterministic adapter
 selected only in the Testing environment. Application depends on its model port,
@@ -149,7 +149,7 @@ entry-only WMS/AI references, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses the pinned v0.11.1 checkout. Local Bruno
+Shared conformance uses the pinned v0.12.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 

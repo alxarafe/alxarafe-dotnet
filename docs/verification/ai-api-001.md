@@ -1,9 +1,9 @@
-# AI-API-001 candidate verification
+# AI-API-001 verification
 
-This report records the local verification of the authorized READ primitives
-candidate on 2026-10-24. The shared contract candidate is `v0.12.0` on its own
-unpublished branch; the .NET `contract.revision` remains the last published
-`v0.11.1` pin.
+This report preserves local candidate verification and real-provider observations
+from 2026-10-24. During those historical runs, v0.12.0 was unpublished and the
+backend retained its v0.11.1 pin. The final published v0.12.0 adoption is recorded
+separately below; historical results and provider limitations remain unchanged.
 
 ## Previously completed automated checks
 
@@ -315,3 +315,50 @@ not log prompts, arguments, outputs, reasoning or credentials.
 
 The contract repository remained clean at `fb43ce6` throughout this closure.
 No push, MR/PR, merge, tag, release or publication is part of this task.
+
+## Published v0.12.0 contractual adoption
+
+The final adoption uses the normal immutable-release mechanism, after the
+contract was merged and published. Remote references were fetched without
+rebasing, merging or dropping the existing .NET commits `24825db` and `dd579ba`.
+`contract.revision`, the release checks in `bin/check` and the CI checkout now
+select `v0.12.0`. Current usage/design documentation was updated; earlier
+verification results and provider observations above retain their historical
+versions, failures and limitations.
+
+The remote tag identity was checked with:
+
+```sh
+git ls-remote origin refs/tags/v0.12.0 'refs/tags/v0.12.0^{}'
+```
+
+- Published annotated tag object: `070990bef7bc0aa8ca8876c6b112d4edc6cf99d7`.
+- Target commit: `0d3d1c1cd81cc39b9d9eb8840381c415cb909363`.
+- Supplied checkout: `/home/rsanjose/Desarrollo/Alxarafe/erbas-contract`.
+- Checkout HEAD and `origin/main` matched that target, with no tracked/nonignored
+  changes. This is the normal contract repository, not a temporary candidate
+  copy. Its contents were not modified during adoption.
+
+| Adoption validation | Result |
+| --- | --- |
+| Published checkout `bin/test --network NETWORK http://validation-app:8080` against a fresh backend-owned deterministic Host/database | Passed |
+| `docker compose run --rm --no-deps app dotnet format Alxarafe.sln --no-restore --verify-no-changes` | Passed, no formatting changes needed |
+| `git diff --check` | Passed |
+| `AI_GROQ_API_KEY= AI__Groq__ApiKey= ERBAS_CONTRACT_DIR=/home/rsanjose/Desarrollo/Alxarafe/erbas-contract ./bin/check` | Passed |
+
+The full check validated the new immutable identities before invoking the
+published runner. Docker image build, restore and build passed without warnings
+or errors; all 130 architecture and 316 integration tests passed. These include
+the affected AI/primitive/security/transport regressions; no separate focused
+rerun was needed for a pin/CI/documentation-only adoption. Published shared
+conformance, local platform/module Bruno, persistence invariants, secret-log
+checks and validation-resource cleanup all passed. The independent conformance
+run also passed log secrecy and cleanup.
+
+No functional AI source, tests, prompt, model, eight-call/eight-turn budget or
+architecture changed. No provider call was made; Groq credentials were overridden
+with empty runtime values. Real-provider evidence remains observational and is
+not deterministic acceptance. Scope and documentation review found only the
+release pin, immutable identities, matching CI checkout and adoption documentation
+in the final diff. This task creates one local adoption commit only; it does not
+push, open an MR/PR, merge, tag, release or publish anything.

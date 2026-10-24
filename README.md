@@ -16,9 +16,9 @@ assistant over authorized READ tools and production WMS UoM, Storage
 Attribute and Item Family catalogues. WMS also provides a
 [warehouse inventory foundation](docs/wms-inventory.md) as a public .NET-specific
 extension, with persistent movements and current balances, outside shared
-WMS contract conformance. [AI READ primitives](docs/ai-read-primitives.md) are an
-experimental integration against the unpublished v0.12.0 candidate; the last
-published pin remains v0.11.1.
+WMS contract conformance. [AI READ primitives](docs/ai-read-primitives.md) are
+part of the published v0.12.0 contract implemented by this backend. Real-provider
+results remain observational evidence, separate from deterministic conformance.
 
 ## ERBAS ecosystem
 
@@ -61,7 +61,7 @@ tests, build, runtime and isolated shared API proxies; its
 records WEB-002 integration separately. Client CI does not perform backend
 shared-conformance validation.
 
-[contract.revision](contract.revision) declares published `v0.11.1`. Local and CI
+[contract.revision](contract.revision) declares published `v0.12.0`. Local and CI
 `./bin/check` verify the supplied checkout's origin, cleanliness, release-tag
 target and matching HEAD, then require shared conformance. Coverage includes HTTP
 liveness, login, basic CORE user administration, paged collections, dependency-safe
