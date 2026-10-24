@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -12,7 +13,7 @@ namespace Alxarafe.Modules.Ai.Infrastructure;
 // Shared wire format and single-completion transport. Provider policies may override
 // CompleteRequestAsync; no provider retry policy is enabled by default.
 public partial class OpenAiCompatibleModelClient(HttpClient http, string baseUrl, string model, string? apiKey,
-    ILogger? logger = null) : IAiModelClient
+    ILogger? logger = null, string? provider = null) : IAiModelClient
 {
     private const string TabularResultInstructions = " List results may encode items as {columns,rows}: each row follows columns in order; fields in constants apply to every row. Empty rows still represent individual records. All values and pagination are preserved.";
     private const string ChatPath = "/chat/completions";
@@ -35,27 +36,128 @@ public partial class OpenAiCompatibleModelClient(HttpClient http, string baseUrl
             int encodedToolBytes = payload.Messages.Where(message => message.Role == AiRoles.Tool).Sum(message => Encoding.UTF8.GetByteCount(message.Content ?? ""));
             LogRequestSize(logger, request.InvocationId, payloadBytes, payload.Messages.Count, schemaBytes, originalToolBytes, encodedToolBytes);
         }
-        try { return await CompleteRequestAsync(payload, request, cancellationToken); }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch (OperationCanceledException) { throw new AiModelUnavailableException(); }
-        catch (HttpRequestException) { Audit(request.InvocationId, 0, 0, "transport_unavailable"); throw new AiModelUnavailableException(); }
-        catch (JsonException) { throw new AiModelFailureException(); }
+        var completion = new CompletionContext(request);
+        try
+        {
+            var result = await CompleteRequestAsync(payload, completion, cancellationToken);
+            return result with { Executions = completion.Records.ToArray() };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        { throw new AiModelCancelledException(FailureRecords(completion, AiExecutionOutcome.Cancelled), cancellationToken); }
+        catch (OperationCanceledException)
+        { throw new AiModelUnavailableException(executions: FailureRecords(completion, AiExecutionOutcome.TimedOut)); }
+        catch (HttpRequestException)
+        {
+            Audit(request.InvocationId, 0, 0, "transport_unavailable");
+            throw new AiModelUnavailableException(executions: FailureRecords(completion, AiExecutionOutcome.Failed));
+        }
+        catch (AiModelUnavailableException)
+        { throw new AiModelUnavailableException(executions: FailureRecords(completion, AiExecutionOutcome.Failed)); }
+        catch (AiModelFailureException)
+        { throw new AiModelFailureException(executions: FailureRecords(completion, AiExecutionOutcome.Failed)); }
+        catch (JsonException)
+        { throw new AiModelFailureException(executions: FailureRecords(completion, AiExecutionOutcome.Failed)); }
     }
 
-    protected virtual async Task<AiModelResponse> CompleteRequestAsync(ChatRequest payload, AiModelRequest request, CancellationToken cancellationToken)
+    protected sealed class CompletionContext(AiModelRequest request)
     {
-        using var response = await SendAsync(payload, request.InvocationId, 1, cancellationToken);
-        return await ReadResponseAsync(response, request.InvocationId, 1, cancellationToken);
+        public AiModelRequest Request { get; } = request;
+        public Guid ModelCallId { get; } = Guid.NewGuid();
+        public List<AiUsageRecord> Records { get; } = [];
     }
 
-    protected async Task<HttpResponseMessage> SendAsync(ChatRequest payload, string? invocationId, int attempt, CancellationToken ct)
+    private static AiUsageRecord[] FailureRecords(CompletionContext completion, AiExecutionOutcome outcome)
+    {
+        if (completion.Records.Count > 0 && completion.Records[^1].Outcome == AiExecutionOutcome.Succeeded)
+            completion.Records[^1] = completion.Records[^1] with { Outcome = outcome };
+        return completion.Records.ToArray();
+    }
+
+    protected virtual async Task<AiModelResponse> CompleteRequestAsync(ChatRequest payload, CompletionContext completion, CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(payload, completion, 1, cancellationToken);
+        return await ReadResponseAsync(response, completion.Request.InvocationId, 1, cancellationToken);
+    }
+
+    protected async Task<HttpResponseMessage> SendAsync(ChatRequest payload, CompletionContext completion, int attempt, CancellationToken ct)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + ChatPath);
         if (apiKey is not null) message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         message.Content = JsonContent.Create(payload, options: RequestJson);
-        var response = await http.SendAsync(message, ct);
-        Audit(invocationId, (int)response.StatusCode, attempt, "received");
+        var record = new AiUsageRecord
+        {
+            Id = Guid.NewGuid(),
+            InvocationId = completion.Request.InvocationId,
+            ModelCallId = completion.ModelCallId,
+            Attempt = attempt,
+            Provider = provider,
+            Model = model,
+            StartedAt = DateTimeOffset.UtcNow
+        };
+        long started = Stopwatch.GetTimestamp();
+        HttpResponseMessage response;
+        try { response = await http.SendAsync(message, ct); }
+        catch (OperationCanceledException)
+        {
+            completion.Records.Add(record with
+            {
+                Duration = Stopwatch.GetElapsedTime(started),
+                Outcome = ct.IsCancellationRequested ? AiExecutionOutcome.Cancelled : AiExecutionOutcome.TimedOut
+            });
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            completion.Records.Add(record with { Duration = Stopwatch.GetElapsedTime(started), Outcome = AiExecutionOutcome.Failed });
+            throw;
+        }
+        record = record with
+        {
+            Duration = Stopwatch.GetElapsedTime(started),
+            Outcome = response.IsSuccessStatusCode ? AiExecutionOutcome.Succeeded : AiExecutionOutcome.Failed
+        };
+        Audit(completion.Request.InvocationId, (int)response.StatusCode, attempt, "received");
+        // SendAsync has buffered the complete body. Read only whitelisted metadata;
+        // malformed/missing usage never changes the functional completion parser.
+        JsonDocument? document = null;
+        try { document = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(CancellationToken.None)); }
+        catch (JsonException) { }
+        using (document)
+        {
+            JsonElement? body = document?.RootElement;
+            var usage = ReadObject(body, "usage");
+            completion.Records.Add(record with
+            {
+                ReportedModel = ReadText(body, "model"),
+                InputTokens = Counter(usage, "prompt_tokens"),
+                OutputTokens = Counter(usage, "completion_tokens"),
+                ReasoningTokens = Counter(ReadObject(usage, "completion_tokens_details"), "reasoning_tokens"),
+                CachedTokens = Counter(ReadObject(usage, "prompt_tokens_details"), "cached_tokens"),
+                ProviderRequestId = ReadProviderRequestId(response, body),
+                ProviderResponseId = ReadText(body, "id")
+            });
+        }
         return response;
+    }
+
+    private const string RequestIdHeader = "x-request-id";
+    protected static JsonElement? ReadObject(JsonElement? parent, string field) =>
+        parent is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(field, out var child)
+            && child.ValueKind == JsonValueKind.Object ? child : null;
+    private static long? Counter(JsonElement? parent, string field) =>
+        parent is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(field, out var child)
+            && child.ValueKind == JsonValueKind.Number && child.TryGetInt64(out long count) && count >= 0 ? count : null;
+    private static string? MetadataIdentifier(string? value) =>
+        value is { Length: > 0 and <= AiUsageRecord.MaximumIdentifierLength }
+            && value.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or ':' or '/' or '.') ? value : null;
+    protected static string? ReadText(JsonElement? parent, string field) =>
+        parent is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(field, out var child)
+            && child.ValueKind == JsonValueKind.String ? MetadataIdentifier(child.GetString()) : null;
+    protected virtual string? ReadProviderRequestId(HttpResponseMessage response, JsonElement? body)
+    {
+        if (!response.Headers.TryGetValues(RequestIdHeader, out var values)) return null;
+        var ids = values.Take(2).ToArray();
+        return ids.Length == 1 ? MetadataIdentifier(ids[0]) : null;
     }
 
     protected async Task<AiModelResponse> ReadResponseAsync(HttpResponseMessage response, string? invocationId, int attempt, CancellationToken ct)

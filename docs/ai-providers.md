@@ -208,21 +208,22 @@ coverage is in the linked [provider tests](../tests/Alxarafe.Host.IntegrationTes
 | Configurable completion timeout | `SUPPORTED`: 60 s default; configuration and synthetic timeout mapping tested, not a universal live deadline guarantee | `SUPPORTED`: 1800 s default; setter tested and used by O; expiry not exercised in that smoke |
 | Automatic provider-level retries | `VALIDATED`: G records generation and rate-limit recovery; internal bounds also have deterministic tests | `NOT_SUPPORTED`: no Ollama retry policy; argument correction above is a different mechanism |
 | Streaming public answers | `NOT_SUPPORTED`: current endpoint returns a complete JSON response | `NOT_SUPPORTED`: O was nonstreaming; no ERBAS streaming interface |
-| Normalized input-token metering | `NOT_SUPPORTED`: provider usage is not consumed | `NOT_SUPPORTED`: provider usage is not consumed |
-| Normalized output-token metering | `NOT_SUPPORTED`: no ERBAS output-token counter | `NOT_SUPPORTED`: no ERBAS output-token counter |
-| Normalized reasoning-token metering | `NOT_SUPPORTED`: no reasoning-token counter | `NOT_SUPPORTED`: no reasoning-token counter; content fields are ignored |
-| Normalized cached-token metering | `NOT_SUPPORTED`: no cache-token counter | `NOT_SUPPORTED`: no cache-token counter |
-| Request/provider ID capture | `NOT_SUPPORTED`: no normalized vendor request ID | `NOT_SUPPORTED`: no normalized vendor request ID |
+| Normalized input-token metering | `SUPPORTED`: optional chat usage, synthetic coverage | `SUPPORTED`: optional compatible chat usage, synthetic coverage |
+| Normalized output-token metering | `SUPPORTED`: optional completion counter | `SUPPORTED`: optional completion counter |
+| Normalized reasoning-token metering | `PARTIAL`: optional numeric details when supplied; no new live evidence | `PARTIAL`: common optional decoder only; actual availability unverified, reasoning content ignored |
+| Normalized cached-token metering | `SUPPORTED`: optional cached-token details | `PARTIAL`: optional details depend on service version/model; no live metering evidence |
+| Request/provider ID capture | `SUPPORTED`: optional safe x_groq/header request ID and body response ID | `SUPPORTED`: optional safe header request ID and body response ID |
 | Monetary cost metering | `NOT_SUPPORTED`: no pricing, billing or normalized cost calculation | `NOT_SUPPORTED`: no cost calculation; this local service is not billed per token |
 | End-to-end execution without Internet | `NOT_SUPPORTED`: the configured hosted Groq service requires network access; synthetic local fixtures are not offline Groq | `NOT_TESTED`: local inference succeeded, but no controlled Internet-disconnected ERBAS run was recorded |
 | Use from Docker | `VALIDATED`: G used backend-owned Docker validation hosts | `PARTIAL`: O validates temporary host networking; normal bridge-to-host deployment remains unresolved |
 | Real smoke evidence as a whole | `PARTIAL`: G preserves successes, quota/transport failures, changing outcomes and a final unobservable invocation | `VALIDATED`: O's two identified API cases passed; not provider-wide or all-model equivalence |
 
-Token rows concern accounting, not a claim about model context sizes. ERBAS
-currently exposes neither normalized usage counters nor input/output token-limit
-settings. Error categories mentioning token quotas and numeric JSON byte/page
-counts are not token metering. Likewise, ERBAS `invocationId`, correlation IDs and
-successful `toolsUsed` IDs are server-owned provenance, not provider request IDs.
+Token rows concern internal accounting, not model context sizes or public token-limit
+settings. AI-USAGE-001 adds nullable normalized counters and PostgreSQL records;
+new metrics have synthetic coverage, **not new real-provider validation**.
+See [usage metering](ai-usage.md) for exact fields, duration/tool semantics,
+aggregation, idempotency, failure behavior and unresolved billing attribution.
+ERBAS invocation/correlation IDs remain distinct from provider identifiers.
 Finish reason is present in a private wire DTO but is not a public normalized
 result field. Provider `reasoning` and unknown metadata are not public outputs,
 functional audit content or persisted conversation state.
@@ -233,9 +234,10 @@ functional audit content or persisted conversation state.
   response time is effectively the final answer time, not first-token latency.
 - Ollama `reasoning` was neither recorded nor exposed in O. Ignoring that field
   is not reasoning-token metering or a reasoning-content API.
-- Normalized input/output/reasoning/cached tokens, provider IDs and cost metering
-  remain unimplemented. Local Ollama is not an invoiced per-token service in this
-  installation; that does not make hardware, power or operations cost zero.
+- Normalized tokens/IDs are optional and not newly live-validated. Provider cost
+  remains null: no pricing or cost calculation exists. Local Ollama is not an
+  invoiced per-token service in this installation; hardware, power and operations
+  cost are not measured. Billing ownership/locality remains unresolved at runtime.
 - Local latency depends on model, hardware, load and model residency. O used CPU
   inference and was not a performance benchmark. No tuning or TTFT instrumentation
   was introduced.

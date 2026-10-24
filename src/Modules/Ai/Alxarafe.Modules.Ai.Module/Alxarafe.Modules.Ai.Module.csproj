@@ -3,6 +3,7 @@
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <ProjectReference Include="../Alxarafe.Modules.Ai.Infrastructure/Alxarafe.Modules.Ai.Infrastructure.csproj" />
+        <ProjectReference Include="../Alxarafe.Modules.Ai.Persistence/Alxarafe.Modules.Ai.Persistence.csproj" />
         <ProjectReference Include="../Alxarafe.Modules.Ai.Http/Alxarafe.Modules.Ai.Http.csproj" />
     </ItemGroup>
 </Project>

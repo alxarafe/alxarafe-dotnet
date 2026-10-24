@@ -99,7 +99,10 @@ docker compose up -d --wait --wait-timeout 120 validation-app
 echo "==> Verifying the pinned shared HTTP contract"
 docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
-    IF (SELECT count(*) FROM "__PlatformMigrationsHistory" WHERE "MigrationId" = '202610120001_ModuleStates') <> 1
+    IF (SELECT count(*) FROM "__AiMigrationsHistory" WHERE "MigrationId" = '202610250001_UsageMetering') <> 1
+       OR to_regclass('public.ai_usage_records') IS NULL
+       OR to_regclass('public.ai_usage_invocations') IS NULL
+       OR (SELECT count(*) FROM "__PlatformMigrationsHistory" WHERE "MigrationId" = '202610120001_ModuleStates') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610140001_Uoms') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610150001_StorageAttributes') <> 1
        OR (SELECT count(*) FROM "__WmsMigrationsHistory" WHERE "MigrationId" = '202610160001_ItemFamilies') <> 1

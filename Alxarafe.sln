@@ -40,12 +40,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.Ai.Http", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.Ai.Module", "src/Modules/Ai/Alxarafe.Modules.Ai.Module/Alxarafe.Modules.Ai.Module.csproj", "{10000000-0000-0000-0000-000000000034}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.Ai.Persistence", "src/Modules/Ai/Alxarafe.Modules.Ai.Persistence/Alxarafe.Modules.Ai.Persistence.csproj", "{10000000-0000-0000-0000-000000000035}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{10000000-0000-0000-0000-000000000035}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000035}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000035}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000035}.Release|Any CPU.Build.0 = Release|Any CPU
 		{10000000-0000-0000-0000-000000000031}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{10000000-0000-0000-0000-000000000031}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10000000-0000-0000-0000-000000000031}.Release|Any CPU.ActiveCfg = Release|Any CPU

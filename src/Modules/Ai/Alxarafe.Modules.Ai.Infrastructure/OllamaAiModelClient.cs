@@ -14,7 +14,7 @@ public sealed class OllamaAiModelClient : OpenAiCompatibleModelClient
 
     public OllamaAiModelClient(HttpClient http, IConfiguration configuration, ILogger<OllamaAiModelClient>? logger = null)
         : base(http, configuration[BaseUrlConfiguration] ?? DefaultBaseUrl,
-            configuration[AiProviderResolver.ModelConfiguration] ?? DefaultModel, apiKey: null, logger)
+            configuration[AiProviderResolver.ModelConfiguration] ?? DefaultModel, apiKey: null, logger, ProviderName)
     {
         http.Timeout = TimeSpan.FromSeconds(configuration.GetValue(TimeoutConfiguration, DefaultTimeoutSeconds));
     }
