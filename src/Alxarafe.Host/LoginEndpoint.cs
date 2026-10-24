@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using Alxarafe.AspNetCore;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Alxarafe.AspNetCore;
 using Alxarafe.Security;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;

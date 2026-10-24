@@ -203,7 +203,10 @@ public sealed class CapabilityInvocationApiTests(WebApplicationFactory<Program> 
         await AssertExecutionFailure(() => throw new InvalidOperationException("provider-secret"));
         await AssertExecutionFailure(() => new
         {
-            items = Array.Empty<object>(), offset = 0, limit = 0, total = 0,
+            items = Array.Empty<object>(),
+            offset = 0,
+            limit = 0,
+            total = 0,
             order = new[] { new { field = "code", direction = "asc" } }
         });
     }
