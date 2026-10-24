@@ -1,7 +1,7 @@
 # Local AI assistant testing
 
-This guide configures a real AI provider for local Development and verifies the
-AI-001 assistant end to end. It is intended for developers, evaluators and
+This guide verifies the AI assistant end to end after provider configuration
+for local Development. It is intended for developers, evaluators and
 technical users running the backend locally with Docker.
 
 Use synthetic, non-sensitive data. Real business data disclosure to an external
@@ -16,7 +16,7 @@ erbas-client
      v
 alxarafe-dotnet
      |
-     | backend-only provider credential
+     | backend-only provider connection
      v
   selected provider
   (Groq or local Ollama)
@@ -31,137 +31,31 @@ alxarafe-dotnet
 The browser must never call the provider directly. Provider credentials, when
 needed, belong only to the backend runtime. Local Ollama needs no API key.
 
-Groq and `qwen/qwen3.8-27b` are local backend choices. They are not fields in the
-public ERBAS contract, and clients must not select a provider or model.
+Provider/model selection and all provider-specific settings belong to the
+[canonical AI provider reference](ai-providers.md). It also defines the capability
+states, known limitations, retry policies and how to switch providers safely.
 
 ## Provider, model and protocol
 
-`AI_PROVIDER` selects the backend provider: **Groq (`groq`) or local Ollama
-(`ollama`)**. `AI_MODEL` selects a model independently of that provider
-name. The selected provider must actually serve that model. Neither setting is
-accepted in an ERBAS HTTP request or exposed to the client.
-
-```dotenv
-AI_PROVIDER=groq
-AI_MODEL=qwen/qwen3.8-27b
-AI_GROQ_BASE_URL=https://api.groq.com/openai/v1
-AI_GROQ_TIMEOUT_SECONDS=60
-```
-
-For local Ollama, explicitly select the model and the URL reachable from the
-backend container:
-
-```dotenv
-AI_PROVIDER=ollama
-AI_MODEL=gemma4:latest
-AI_OLLAMA_BASE_URL=http://127.0.0.1:11434/v1
-AI_OLLAMA_TIMEOUT_SECONDS=1800
-```
-
-That loopback URL requires the local smoke setup below; it cannot reach the host
-from an ordinary bridge container. Ollama sends no Authorization header and has
-no required API-key setting. Its configurable 1800-second completion timeout
-allows bounded waits for local CPU inference; it does not change the eight-call
-or eight-turn budget. No model/performance tuning is introduced.
-
-The backend-only Groq credential remains `AI_GROQ_API_KEY`; never put its value in
-client configuration or logs. Native .NET configuration uses `AI:Provider` and
-`AI:Model`, plus the existing `AI:Groq:ApiKey`, `BaseUrl` and `TimeoutSeconds`.
-Ollama uses `AI:Ollama:BaseUrl` and `AI:Ollama:TimeoutSeconds`. Docker Compose maps
-the environment variables above to those keys.
-
-Existing configurations continue to work: omitted provider means `groq`, and
-`AI_GROQ_MODEL` / native `AI:Groq:Model` remain legacy model aliases. The new
-`AI_MODEL` / `AI:Model` takes precedence; otherwise the existing default model
-is retained. `bin/configure-ai` writes `AI_PROVIDER` and `AI_MODEL`, migrating an
-existing legacy Groq model entry while preserving the key and unrelated settings.
-Set `AI_PROVIDER` in the local file before running the helper; it skips the key
-prompt for Ollama and preserves the other provider's settings. Ollama reads
-`AI:Model` directly; when switching an existing environment, explicitly set
-`AI_MODEL` rather than inheriting its former model/default.
-No automatic rewrite of local configuration occurs during backend startup.
-An unknown provider fails clearly when `IAiModelClient` is resolved. Testing
-retains the deterministic adapter and does not resolve a real provider.
-
-The internal flow is `AiAssistant -> IAiModelClient -> AiProviderResolver ->
-the selected GroqAiModelClient or OllamaAiModelClient ->
-OpenAiCompatibleModelClient -> provider`. The common client owns
-chat-completion serialization, messages, tools/results, response parsing,
-transport errors/timeouts and the existing lossless tabular encoding. It reads
-completion metadata such as finish reason without extending the public result.
-Unknown fields, including provider `reasoning`, are ignored; reasoning is never
-used as an answer, persisted or recorded in functional audit. Usage is not consumed.
-The common client permits explicit no-auth transport and has no retry policy.
-Groq still rejects missing/blank credentials and alone retains its bounded
-`tool_use_failed` and `Retry-After` recovery and quota-error classification.
-
-A future OpenAI-compatible provider needs its configuration and resolver entry;
-it can use the common client directly or specialize its completion method for
-provider-specific error/retry rules. This requires no change to `AiAssistant`,
-capabilities, primitives or authorization, as demonstrated by the Ollama adapter.
-A different wire protocol can implement `IAiModelClient` behind the same resolver.
-Only Groq and local Ollama are registered. No streaming,
-images, embeddings, Responses API, fallback, per-request/tenant selection,
-automatic routing, provider database or administration UI is implemented here.
+Choose provider and model separately as described in
+[provider selection](ai-providers.md#provider-and-model-are-separate).
+The common transport does not make Groq and Ollama functionally equivalent; use
+the [capability matrix](ai-providers.md#capability-matrix) for the evidence scope.
+This guide covers the subsequent authenticated testing workflow, not a second
+configuration reference.
 
 ## Loopback-only Ollama and the local smoke test
 
-The observed Linux installation listens only on `127.0.0.1:11434`. A container
-using bridge networking plus `host.docker.internal:host-gateway` received a
-connection refusal: the host gateway is not the host loopback interface. Adding
-a DNS alias alone does not solve that listener mismatch. Ollama was not rebound
-to `0.0.0.0`, and its service configuration was not changed.
-
-The smoke uses a disposable backend container with `docker run --network host`.
-Its configured Ollama URL is `http://127.0.0.1:11434/v1`; the ERBAS listener is
-explicitly `http://127.0.0.1:EPHEMERAL_PORT`. No published ports are used. Normal
-Identity login supplies a disposable administrator, and the existing dataset
-loader writes through WMS HTTP APIs into backend-owned disposable databases.
-PostgreSQL stays on its private Docker bridge: the temporary backend receives
-its current container IP in connection strings, with no PostgreSQL port published.
-The native validation image is built before the real smoke. See
-[AI-PROVIDER-001B evidence](verification/ai-provider-001b.md).
-
-This is a Linux local smoke arrangement, not a production deployment mechanism.
-Host networking shares the host network namespace, bypasses bridge isolation,
-discards port publishing rules and loses ordinary Compose service-name discovery.
-A future production integration must decide isolation, reachability, bind
-addresses, port conflicts, authentication and platform support separately; this
-phase does not implement that deployment design. See the official
-[Docker host networking documentation](https://docs.docker.com/engine/network/drivers/host/)
-and [Ollama local OpenAI-compatible API](https://github.com/ollama/ollama/blob/main/docs/api/openai-compatibility.mdx).
+See [Docker reachability and deployment limits](ai-providers.md#docker-reachability-and-deployment-boundary)
+and the [detailed Ollama smoke evidence](verification/ai-provider-001b.md).
+The successful host-network experiment is not the normal deployment design;
+`./bin/up` alone does not solve the host-loopback listener mismatch.
 
 ## Configure the backend
 
-The preferred workflow creates or updates the repository-root `.env`, which is
-local and ignored by Git:
-
-```bash
-./bin/configure-ai
-```
-
-The helper is safe to run from any directory. It:
-
-- asks for the Groq API key with hidden input only when Groq is selected;
-- shows only whether an existing key is already configured, never its value;
-- lets you keep an existing key or replace it intentionally;
-- uses existing model, base URL and timeout values as interactive defaults;
-- uses the selected supported provider and migrates the legacy Groq model name to `AI_MODEL`;
-- preserves unrelated `.env` variables and comments;
-- sets `.env` permissions to `600`;
-- refuses to write the key if `.env` is not ignored or is tracked by Git.
-
-It does not start Docker, call Groq, authenticate, create data or modify databases.
-
-A manual alternative is also available:
-
-```bash
-cp .env.example .env
-chmod 600 .env
-```
-
-Then edit `.env` locally. Never commit the populated file. `.env.example` is a
-non-secret template and is not loaded automatically by Docker Compose.
+Follow [configure or switch provider/model](ai-providers.md#configure-or-switch-providermodel),
+using the existing `./bin/configure-ai` helper. It saves local settings and makes
+no provider call. Keep provider secrets in the ignored backend configuration.
 
 The local administrator also needs a password:
 
@@ -295,18 +189,12 @@ numeric aliases that Qwen was observed to misspell. Capability IDs longer than
 the provider's 64-character function-name limit retain a short numeric alias.
 Core still resolves and authorizes the original capability ID.
 
-Groq can reject an invalid model-generated tool call with HTTP 400 and
-`tool_use_failed`, for example when the generated function name is not among the
-supplied tools. The backend retries that completion once with temperature zero.
-It preserves the messages, tool definitions and any completed Core results; it
-never executes rejected tool calls or repeats completed capabilities as part of
-this retry. This also applies to a completion after a tool result.
-
-Other provider errors are not retried by this mechanism. A repeated generation
-failure still returns the safe contractual `500 assistant_execution_failed`;
-provider error bodies and failed generations are never exposed to the client.
-This bounded recovery does not guarantee that an external model will always
-produce a valid tool call.
+For provider-specific retries, use the
+[canonical retry policy](ai-providers.md#groq-retry-policy).
+Invalid-argument recovery belongs to the shared assistant loop; it is not a
+promise that every provider/model will complete a business question. Compare
+[provider/model evidence and limits](ai-providers.md#capability-matrix) before
+interpreting a live test result.
 
 ## Security
 

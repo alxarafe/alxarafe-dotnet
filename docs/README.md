@@ -2,11 +2,12 @@
 
 | Document | Purpose |
 | --- | --- |
+| [AI providers](ai-providers.md) | Canonical provider/model configuration, capability states, evidence and known limitations |
 | [Ollama integration smoke](verification/ai-provider-001b.md) | AI-PROVIDER-001B: shared transport reuse, deterministic validation and real loopback-only Ollama evidence |
 | [Authorized READ primitives](ai-read-primitives.md) | AI-API-001: module ownership, persisted authority, routing and composition limits |
 | [AI-API-001 verification](verification/ai-api-001.md) | Published v0.12.0 adoption, historical candidate checks and observational Groq results |
 | [AI-001 verification](verification/ai-001-dotnet.md) | Provider-neutral assistant, effective READ tooling and published v0.11.1 adoption |
-| [Local AI assistant testing](ai-assistant-testing.md) | Backend-only provider setup, authentication, synthetic WMS data and live assistant verification |
+| [Local AI assistant testing](ai-assistant-testing.md) | Authentication, synthetic WMS data and live assistant verification; provider setup links to the canonical reference |
 | [WMS inventory foundation](wms-inventory.md) | Implementation-specific public warehouse, reference, movement and inventory APIs |
 | [WMS-003 verification](verification/wms-003-dotnet.md) | Item Families, atomic N:M associations and published v0.8.0 adoption |
 | [WMS-002 verification](verification/wms-002-dotnet.md) | Storage Attributes, published v0.7.0 adoption, migrations, architecture and live conformance |

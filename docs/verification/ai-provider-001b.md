@@ -1,5 +1,9 @@
 # AI-PROVIDER-001B — local Ollama integration smoke
 
+For current setup and the cross-provider capability matrix, see the
+[canonical AI provider reference](../ai-providers.md). This report remains the
+source of record for the detailed historical smoke results below.
+
 ## Scope and implementation
 
 The task branch was based directly on validated AI-PROVIDER-001A commit

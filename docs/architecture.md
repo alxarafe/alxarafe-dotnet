@@ -134,7 +134,15 @@ transport, with no provider-specific retry. Model selection uses `AI:Model` inde
 of the provider name, retaining the legacy Groq model alias. Testing selects the
 deterministic adapter. Application depends only on its model port; provider
 selection cannot change effective tools or authorization. See
-[provider configuration and extension](ai-assistant-testing.md#provider-model-and-protocol). The Http adapter owns closed request validation, the public
+[canonical provider configuration and capabilities](ai-providers.md).
+The common abstraction does not imply functional equivalence: every observable
+difference, limitation, configuration requirement or unvalidated capability must
+be documented by provider and, when relevant, by model. Adding a provider requires
+implementation, tests, configuration, a capability matrix, known limitations and
+smoke evidence when viable. No provider may expand the caller's effective tools
+or bypass authorization.
+
+The Http adapter owns closed request validation, the public
 response/error envelope, `no-store` behavior and AI audit linkage. The Module entry
 registers the AI permission policy, model selection, endpoint mapping and audit
 middleware. The Host still exposes only the entry assemblies; framework projects
