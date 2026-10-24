@@ -29,6 +29,8 @@ services:
       ConnectionStrings__Security: Host=postgres;Port=5432;Database=alxarafe_security;Username=alxarafe;Password=alxarafe_dev_only
       SecuritySeed__AdminEmail: ${ERBAS_CORE_ADMIN_EMAIL:-admin@example.test}
       SecuritySeed__AdminPassword: ${ERBAS_CORE_ADMIN_PASSWORD:-}
+      Wms__DevelopmentUser__Email: ${ERBAS_WMS_USER_EMAIL:-}
+      Wms__DevelopmentUser__Password: ${ERBAS_WMS_USER_PASSWORD:-}
       AI__Groq__ApiKey: ${AI_GROQ_API_KEY:-}
       AI__Groq__Model: ${AI_GROQ_MODEL:-qwen/qwen3.8-27b}
       AI__Groq__BaseUrl: ${AI_GROQ_BASE_URL:-https://api.groq.com/openai/v1}

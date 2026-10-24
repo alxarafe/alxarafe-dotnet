@@ -91,8 +91,9 @@ Migration `202610150001_StorageAttributes` follows the unchanged UoM migration
 code has C collation and a unique index. INSERT ON CONFLICT is race-safe; COUNT
 and page share RepeatableRead. OpenAPI includes the two new operations with closed
 HTTP DTO schemas, preserving pure Domain/Application and Host's entry-only reference.
-Storage Attributes have no individual GET or master PATCH/DELETE. There is no
-exclusive group, Item, location/zone association, storage rule or inventory API. See
+Storage Attributes have no individual GET, master PATCH/DELETE, exclusive group,
+item/location association or storage rule. Warehouse inventory is provided
+separately by the [WMS inventory foundation](wms-inventory.md). See
 [verification and scope](verification/wms-002-dotnet.md).
 
 ## Item Families and associations (WMS-003)
@@ -130,17 +131,28 @@ it deletes development storage. A fresh volume creates alxarafe and alxarafe_sec
 Identity uses its existing initialization and Platform applies official EF migrations.
 ConnectionStrings__Platform and ConnectionStrings__Security select the respective
 contexts. WMS owns ConnectionStrings__Wms, its EF context, wms_uoms, wms_storage_attributes, wms_item_families,
-wms_item_family_storage_attributes and
-__WmsMigrationsHistory. Development uses the same physical alxarafe database;
+wms_item_family_storage_attributes, the four
+[inventory foundation tables](wms-inventory.md#persistence-validation-and-external-loading)
+and __WmsMigrationsHistory. Development uses the same physical alxarafe database;
 Testing requires alxarafe_test and rejects every other WMS database. WMS applies
 its migrations through normal module initialization, without changing Platform or
 Security entities or migration histories. Existing obsolete experiment databases/tables are neither accessed nor
 purged by startup. Retiring their projects does not rewrite applied migration history.
 
-No module users or business permissions are seeded. A local CORE administrator
-requires explicit ERBAS_CORE_ADMIN_PASSWORD; ERBAS_CORE_ADMIN_EMAIL defaults to
-admin@example.test. Seed does not reset credentials or escalate an existing account.
+A local CORE administrator requires explicit `ERBAS_CORE_ADMIN_PASSWORD`;
+`ERBAS_CORE_ADMIN_EMAIL` defaults to `admin@example.test`. The administrator seed
+does not reset credentials or escalate an existing non-administrator account.
 Validation always supplies its own generated administrator password.
+
+An optional WMS development reader is enabled by explicit
+`ERBAS_WMS_USER_PASSWORD`; `ERBAS_WMS_USER_EMAIL` defaults to `user@example.test`.
+Compose maps these to `Wms:DevelopmentUser:Email`/`Password`. WMS contributes the
+four warehouse/location/item/inventory READ claims through the existing generic
+`DevelopmentUsersOptions` seed in Development only. No movements or WRITE claims
+are granted. Testing and Production do not contribute this development profile,
+even when configured. Without a password no reader is provisioned. Store local
+passwords only in the ignored `.env` or your secret environment mechanism.
+See the [effective access matrix](wms-inventory.md#development-identities).
 
 ## API and diagnostics
 

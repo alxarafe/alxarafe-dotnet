@@ -24,6 +24,8 @@ public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factor
         var document = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/openapi/v1.json");
         string[] corePaths = ["/health", "/api/auth/login", "/api/auth/register", "/api/auth/me",
             "/api/users", "/api/users/{id}", "/api/modules", "/api/modules/{id}", CapabilityEndpoints.Path, CapabilityEndpoints.Path + "/{capabilityId}", CapabilityEndpoints.Path + "/{capabilityId}/invocations", AiAssistantEndpoints.Path, UomEndpoints.Path, StorageAttributeEndpoints.Path,
+            InventoryEndpoints.Warehouses, InventoryEndpoints.Warehouses + "/{id}", InventoryEndpoints.Locations, InventoryEndpoints.Locations + "/{id}",
+            InventoryEndpoints.Items, InventoryEndpoints.Items + "/{id}", InventoryEndpoints.Movements, InventoryEndpoints.Movements + "/{id}", InventoryEndpoints.Inventory,
             ItemFamilyEndpoints.Path, ItemFamilyAssociationEndpoints.Path, ItemFamilyAssociationEndpoints.Path + "/{storageAttributeId}"];
         Assert.All(document.GetProperty("paths").EnumerateObject(), path => Assert.Contains(path.Name, corePaths));
         await using var context = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
@@ -33,7 +35,7 @@ public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factor
         await using var reader = await command.ExecuteReaderAsync();
         var tables = new List<string>();
         while (await reader.ReadAsync()) tables.Add(reader.GetString(0));
-        Assert.Equal([PlatformStorage.MigrationHistory, WmsStorage.MigrationHistory, PlatformStorage.ModuleStatesTable, WmsStorage.ItemFamilyTable, WmsStorage.AssociationTable, WmsStorage.StorageAttributeTable, WmsStorage.UomTable], tables);
+        Assert.Equal([PlatformStorage.MigrationHistory, WmsStorage.MigrationHistory, PlatformStorage.ModuleStatesTable, "wms_inventory_movements", WmsStorage.ItemFamilyTable, WmsStorage.AssociationTable, "wms_items", "wms_locations", WmsStorage.StorageAttributeTable, WmsStorage.UomTable, "wms_warehouses"], tables);
         Assert.Single(context.Model.GetEntityTypes());
         Assert.DoesNotContain(context.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow) || type.ClrType == typeof(StorageAttributeRow)
             || type.ClrType == typeof(ItemFamilyRow) || type.ClrType == typeof(ItemFamilyAssociationRow));

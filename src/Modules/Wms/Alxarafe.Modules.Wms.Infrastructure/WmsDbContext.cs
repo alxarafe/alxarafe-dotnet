@@ -82,6 +82,7 @@ public sealed class WmsDbContext(DbContextOptions<WmsDbContext> options) : DbCon
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        Migrations.InventoryFoundation.ConfigureInventoryModel(modelBuilder);
         var uoms = modelBuilder.Entity<UomRow>();
         uoms.ToTable(WmsStorage.UomTable);
         uoms.HasKey(uom => uom.Id).HasName(WmsStorage.UomPrimaryKey);
