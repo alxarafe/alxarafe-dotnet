@@ -2,6 +2,8 @@
 
 | Document | Purpose |
 | --- | --- |
+| [Authorized READ primitives](ai-read-primitives.md) | AI-API-001 candidate: module ownership, persisted authority, routing and composition limits |
+| [AI-API-001 verification](verification/ai-api-001.md) | Contract candidate, automated checks, dataset idempotency and measured Groq limitations |
 | [AI-001 verification](verification/ai-001-dotnet.md) | Provider-neutral assistant, effective READ tooling and published v0.11.1 adoption |
 | [Local AI assistant testing](ai-assistant-testing.md) | Backend-only provider setup, authentication, synthetic WMS data and live assistant verification |
 | [WMS inventory foundation](wms-inventory.md) | Implementation-specific public warehouse, reference, movement and inventory APIs |

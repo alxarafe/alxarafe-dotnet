@@ -152,6 +152,8 @@ four warehouse/location/item/inventory READ claims through the existing generic
 are granted. Testing and Production do not contribute this development profile,
 even when configured. Without a password no reader is provisioned. Store local
 passwords only in the ignored `.env` or your secret environment mechanism.
+The AI module explicitly contributes `ai.assistant.invoke` to configured
+Development users through the same generic options, without additional WMS rights.
 See the [effective access matrix](wms-inventory.md#development-identities).
 
 ## API and diagnostics
@@ -203,8 +205,11 @@ supply history, prompts, tools, model/provider settings, permissions or invocati
 IDs. Responses are closed JSON with `Cache-Control: no-store`; only 401 carries a
 Bearer challenge.
 
-The server exposes only the caller's effective READ capabilities as tools and
-invokes each accepted call through CORE-CAP-002. It re-evaluates module state and
+The AI-API-001 development branch also exposes effective module READ primitives
+through a neutral controlled router. This is unpublished v0.12.0 candidate behavior,
+not v0.11.1 adoption. Existing capabilities retain CORE-CAP-002 execution; primitives
+have distinct typed provenance. See [candidate design and validation](ai-read-primitives.md).
+The server exposes only authorized READ tools. It re-evaluates module state and
 permissions before every call, enforces finite turn/tool budgets and fails safely
 without leaking provider or capability metadata. Successful CORE invocation IDs
 appear in execution order in `toolsUsed`; the AI invocation ID is distinct from

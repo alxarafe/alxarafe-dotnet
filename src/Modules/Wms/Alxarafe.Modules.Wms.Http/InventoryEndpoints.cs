@@ -149,11 +149,17 @@ public static class InventoryEndpoints
             value = null;
             if (!query.ContainsKey(key)) return true;
             string raw = query[key].ToString();
-            if (!TimestampOffset.IsMatch(raw) || !DateTimeOffset.TryParseExact(raw, TimestampFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var timestamp)
-                || timestamp.Ticks % TimeSpan.TicksPerMicrosecond != 0) return false;
+            if (!TryTimestamp(raw, out var timestamp)) return false;
             value = timestamp.ToUniversalTime();
             return true;
         }
+    }
+    public static bool TryTimestamp(string raw, out DateTimeOffset timestamp)
+    {
+        timestamp = default;
+        return TimestampOffset.IsMatch(raw)
+            && DateTimeOffset.TryParseExact(raw, TimestampFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out timestamp)
+            && timestamp.Ticks % TimeSpan.TicksPerMicrosecond == 0;
     }
     private static IResult Error(int status, string code) => Results.Json(new ContractError(code), statusCode: status);
 }

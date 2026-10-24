@@ -10,6 +10,7 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class GroqAiModelClientTests
 {
+    private static readonly string[] FixtureTags = ["one", "two"];
     private const string ToolName = "capability_2";
     private const string CapabilityId = "wms.uoms.list";
     private const string ToolCallId = "call-uoms";
@@ -107,6 +108,118 @@ public sealed class GroqAiModelClientTests
         Assert.Single(handler.Requests);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExplicitRetryAfterRetriesOnlyTheCurrentCompletionOnce(bool repeatedFailure)
+    {
+        using var handler = new ProviderHandler((HttpStatusCode.TooManyRequests, "{}"),
+            repeatedFailure ? (HttpStatusCode.TooManyRequests, "{}") : (HttpStatusCode.OK, FinalCompletion))
+        { RetryAfter = TimeSpan.Zero };
+        using var http = new HttpClient(handler);
+        if (repeatedFailure) await Assert.ThrowsAsync<AiModelUnavailableException>(() => Client(http).CompleteAsync(Request(true)));
+        else Assert.Equal(FinalAnswer, (await Client(http).CompleteAsync(Request(true))).Answer);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(handler.Requests[0].GetRawText(), handler.Requests[1].GetRawText());
+    }
+
+    [Fact]
+    public async Task TabularToolEncodingPreservesEveryRecordValueAndPageMetadata()
+    {
+        var page = JsonSerializer.SerializeToElement(new
+        {
+            items = Enumerable.Range(0, 40).Select(index => new
+            {
+                warehouseCode = "REGISTERED-WAREHOUSE",
+                sku = "ITEM-" + index,
+                locationCode = "A.01.01",
+                quantity = 1.25m + index,
+                uom = "UN",
+                occurredAt = "2026-06-20T10:00:00+00:00",
+                description = "Descripción con acentos",
+                optional = (string?)null,
+                extra = new { tags = FixtureTags }
+            }).ToArray(),
+            offset = 0,
+            limit = 100,
+            total = 40,
+            order = new[] { new { field = "sku", direction = "asc" } }
+        });
+        using var handler = new ProviderHandler((HttpStatusCode.OK, FinalCompletion));
+        using var http = new HttpClient(handler);
+        var request = Request(true);
+        request = request with
+        {
+            Messages = request.Messages.Take(request.Messages.Count - 1)
+            .Append(new AiModelMessage(AiRoles.Tool, page.GetRawText(), ToolCallId: ToolCallId)).ToArray()
+        };
+        await Client(http).CompleteAsync(request);
+        var messages = handler.Requests.Single().GetProperty("messages");
+        Assert.Equal(request.Messages.Count + 1, messages.GetArrayLength());
+        string encoded = messages[messages.GetArrayLength() - 1].GetProperty("content").GetString()!;
+        var compact = JsonSerializer.Deserialize<JsonElement>(encoded);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(encoded) < System.Text.Encoding.UTF8.GetByteCount(page.GetRawText()));
+        var columns = compact.GetProperty("items").GetProperty("columns").EnumerateArray().Select(column => column.GetString()!).ToArray();
+        var rows = compact.GetProperty("items").GetProperty("rows");
+        Assert.Equal(page.GetProperty("items").GetArrayLength(), rows.GetArrayLength());
+        var constants = compact.GetProperty("items").GetProperty("constants");
+        Assert.Equal(page.GetProperty("items")[0].EnumerateObject().Count(), columns.Length + constants.EnumerateObject().Count());
+        for (int index = 0; index < rows.GetArrayLength(); index++)
+            foreach (var property in page.GetProperty("items")[index].EnumerateObject())
+            {
+                int column = Array.IndexOf(columns, property.Name);
+                var value = column >= 0 ? rows[index][column] : constants.GetProperty(property.Name);
+                Assert.Equal(property.Value.GetRawText(), value.GetRawText());
+            }
+        foreach (var property in page.EnumerateObject().Where(property => property.Name != "items"))
+            Assert.Equal(property.Value.GetRawText(), compact.GetProperty(property.Name).GetRawText());
+    }
+
+    [Fact]
+    public async Task ConstantColumnsDoNotDeduplicateIdenticalRecords()
+    {
+        var page = JsonSerializer.SerializeToElement(new
+        {
+            items = Enumerable.Repeat(new { sku = "REGISTERED-REFERENCE", quantity = 1.25m }, 3).ToArray(),
+            total = 3
+        });
+        using var handler = new ProviderHandler((HttpStatusCode.OK, FinalCompletion));
+        using var http = new HttpClient(handler);
+        var request = Request(true);
+        request = request with
+        {
+            Messages = request.Messages.Take(request.Messages.Count - 1)
+            .Append(new AiModelMessage(AiRoles.Tool, page.GetRawText(), ToolCallId: ToolCallId)).ToArray()
+        };
+        await Client(http).CompleteAsync(request);
+        var messages = handler.Requests.Single().GetProperty("messages");
+        var compact = JsonSerializer.Deserialize<JsonElement>(messages[messages.GetArrayLength() - 1].GetProperty("content").GetString()!);
+        Assert.Equal(3, compact.GetProperty("items").GetProperty("rows").GetArrayLength());
+        Assert.Empty(compact.GetProperty("items").GetProperty("columns").EnumerateArray());
+        Assert.Equal(1.25m, compact.GetProperty("items").GetProperty("constants").GetProperty("quantity").GetDecimal());
+    }
+
+    [Theory]
+    [InlineData("{\"items\":[{\"a\":1},{\"b\":2}],\"total\":2}")]
+    [InlineData("{\"items\":[]}")]
+    [InlineData("{\"items\":[{\"a\":1}]}")]
+    [InlineData("{\"items\":[{\"a\":1},{\"a\":2,\"a\":3}]}")]
+    [InlineData("not-json")]
+    public async Task NonUniformOrNonTabularToolResultsArePreservedVerbatim(string content)
+    {
+        using var handler = new ProviderHandler((HttpStatusCode.OK, FinalCompletion));
+        using var http = new HttpClient(handler);
+        var request = Request(true);
+        request = request with
+        {
+            Messages = request.Messages.Take(request.Messages.Count - 1)
+            .Append(new AiModelMessage(AiRoles.Tool, content, ToolCallId: ToolCallId)).ToArray()
+        };
+        await Client(http).CompleteAsync(request);
+        var messages = handler.Requests.Single().GetProperty("messages");
+        Assert.Equal(content, messages[messages.GetArrayLength() - 1].GetProperty("content").GetString());
+    }
+
     private static GroqAiModelClient Client(HttpClient http) => new(http,
         new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -127,6 +240,7 @@ public sealed class GroqAiModelClientTests
     private sealed class ProviderHandler(params (HttpStatusCode Status, string Body)[] responses) : HttpMessageHandler
     {
         public List<JsonElement> Requests { get; } = [];
+        public TimeSpan? RetryAfter { get; init; }
         public Action? AfterResponse { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -134,10 +248,12 @@ public sealed class GroqAiModelClientTests
             Requests.Add(await request.Content!.ReadFromJsonAsync<JsonElement>(cancellationToken));
             var response = responses[Requests.Count - 1];
             AfterResponse?.Invoke();
-            return new HttpResponseMessage(response.Status)
+            var message = new HttpResponseMessage(response.Status)
             {
                 Content = new StringContent(response.Body, System.Text.Encoding.UTF8, "application/json")
             };
+            if (RetryAfter is { } delay) message.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(delay);
+            return message;
         }
     }
 }

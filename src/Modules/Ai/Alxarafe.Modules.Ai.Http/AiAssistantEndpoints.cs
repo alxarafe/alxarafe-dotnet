@@ -9,6 +9,8 @@ using Alxarafe.Security.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 
 namespace Alxarafe.Modules.Ai.Http;
 
@@ -40,17 +42,24 @@ public static class AiAssistantEndpoints
         try
         {
             var result = await assistant.InvokeAsync(message, context.User, Subject(context),
-                context.TraceIdentifier, context.RequestAborted);
-            AiToolUsage[] tools = result.ToolsUsed.Select(usage => new AiToolUsage(usage.CapabilityId, usage.InvocationId)).ToArray();
+                context.TraceIdentifier, aiInvocationId: invocationId, cancellationToken: context.RequestAborted);
+            AiToolUsage[] tools = result.ToolsUsed.Select(usage => new AiToolUsage(usage.CapabilityId, usage.InvocationId, usage.PrimitiveId)).ToArray();
             context.Items[AiInvocationAuditMiddleware.AuditContextItemKey] = new AiInvocationAuditContext(tools, null);
-            return Results.Json(new AiAssistantInvocationResponse(invocationId, result.Answer, tools));
+            string answer = result.Limitation == AiAnswerLimitation.None ? result.Answer
+                : context.RequestServices.GetRequiredService<IStringLocalizer<AiMessages>>()[result.Limitation == AiAnswerLimitation.Access ? AiMessages.Access : AiMessages.Information].Value;
+            return Results.Json(new AiAssistantInvocationResponse(invocationId, answer, tools));
         }
-        catch (AiModelUnavailableException) { return Failure(context, StatusCodes.Status503ServiceUnavailable, AiContract.AssistantUnavailable); }
+        catch (AiModelUnavailableException failure)
+        {
+            context.Items[AiInvocationAuditMiddleware.AuditContextItemKey] = new AiInvocationAuditContext(
+                failure.ToolsUsed.Select(usage => new AiToolUsage(usage.CapabilityId, usage.InvocationId, usage.PrimitiveId)).ToArray(), AiContract.AssistantUnavailable);
+            return Failure(context, StatusCodes.Status503ServiceUnavailable, AiContract.AssistantUnavailable);
+        }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested) { throw; }
         catch (AiAssistantFailureException failure)
         {
             context.Items[AiInvocationAuditMiddleware.AuditContextItemKey] = new AiInvocationAuditContext(
-                failure.ToolsUsed.Select(usage => new AiToolUsage(usage.CapabilityId, usage.InvocationId)).ToArray(),
+                failure.ToolsUsed.Select(usage => new AiToolUsage(usage.CapabilityId, usage.InvocationId, usage.PrimitiveId)).ToArray(),
                 AiContract.AssistantExecutionFailed);
             return Failure(context, StatusCodes.Status500InternalServerError, AiContract.AssistantExecutionFailed);
         }
@@ -118,7 +127,9 @@ public sealed record AiAssistantInvocationResponse([property: Required] string I
     [property: Required] string Answer, [property: Required] IReadOnlyList<AiToolUsage> ToolsUsed);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record AiToolUsage([property: Required] string CapabilityId, [property: Required] string InvocationId);
+public sealed record AiToolUsage([property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CapabilityId,
+    [property: Required] string InvocationId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PrimitiveId = null);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record AiAssistantError(string Code) : ContractError(Code);

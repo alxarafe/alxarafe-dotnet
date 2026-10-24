@@ -53,7 +53,7 @@ public sealed partial class AiInvocationAuditMiddleware(RequestDelegate next, IL
             };
             string? subject = context.Items[typeof(CoreUserState)] is CoreUserState state ? state.Id.ToString() : null;
             string tools = audit?.ToolsUsed is { Count: > 0 }
-                ? string.Join(",", audit.ToolsUsed.Select(tool => tool.CapabilityId + ":" + tool.InvocationId))
+                ? string.Join(",", audit.ToolsUsed.Select(tool => (tool.PrimitiveId is { } primitive ? "primitive:" + primitive : tool.CapabilityId) + ":" + tool.InvocationId))
                 : NoTools;
             double durationMilliseconds = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
             LogAttempt(logger, invocationId, subject, timestamp, outcome, durationMilliseconds, errorCode,

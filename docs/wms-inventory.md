@@ -141,7 +141,8 @@ account's effective permissions and current administrator/enabled state.
 
 The administrator's access comes from the existing CORE administrator claim.
 The reader receives exactly `wms.warehouses.read`, `wms.locations.read`,
-`wms.items.read`, `wms.inventory.read`. Neither identity gains privileges from
+`wms.items.read`, `wms.inventory.read`. In Development the AI module also
+explicitly contributes `ai.assistant.invoke`, without WMS privileges. Neither identity gains privileges from
 its name, a demo flag or AI. Existing shared UoM/family/storage-attribute
 permissions and AI capability definitions are unchanged.
 
@@ -165,8 +166,8 @@ transaction spanning the whole seed. Use a fresh disposable scenario environment
 to retry a partial load; the loader never fabricates compensating movements.
 
 This phase adds no lots, expiry, costing, reservations, logistics workflows,
-analytics, frontend, AI tools or capability descriptors. READ composition for AI
-is a separate task. Full `bin/check` verifies v0.11.1 conformance, not shared
+analytics, frontend, AI tools or capability descriptors. AI READ composition is now implemented separately in the
+[AI-API-001 candidate](ai-read-primitives.md); no analytic capability is added. Full `bin/check` verifies v0.11.1 conformance, not shared
 conformance of these implementation-specific extensions.
 
 

@@ -9,6 +9,20 @@ namespace Alxarafe.Modules.Wms.Infrastructure;
 
 public sealed class EfInventoryStore(IDbContextFactory<WmsDbContext> factory) : IInventoryStore
 {
+    public async Task<InventoryReadLabels> ReadLabelsAsync(IReadOnlyCollection<Guid> warehouseIds, IReadOnlyCollection<Guid> locationIds,
+        IReadOnlyCollection<Guid> itemIds, IReadOnlyCollection<Guid> unitIds, CancellationToken ct)
+    {
+        await using var db = await factory.CreateDbContextAsync(ct);
+        return new(await db.Set<Alxarafe.Modules.Wms.Domain.Warehouse>().AsNoTracking().Where(row => warehouseIds.Contains(row.Id)).ToDictionaryAsync(row => row.Id, row => row.Code, ct),
+            await db.Set<Alxarafe.Modules.Wms.Domain.Location>().AsNoTracking().Where(row => locationIds.Contains(row.Id)).ToDictionaryAsync(row => row.Id, row => row.Code, ct),
+            await db.Set<Alxarafe.Modules.Wms.Domain.StockItem>().AsNoTracking().Where(row => itemIds.Contains(row.Id)).ToDictionaryAsync(row => row.Id, row => row.Sku, ct),
+            await db.Uoms.AsNoTracking().Where(row => unitIds.Contains(row.Id)).ToDictionaryAsync(row => row.Id, row => row.Code, ct));
+    }
+    public async Task<IReadOnlyDictionary<Guid, string>> UnitCodesAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        await using var db = await factory.CreateDbContextAsync(ct);
+        return await db.Uoms.AsNoTracking().Where(row => ids.Contains(row.Id)).ToDictionaryAsync(row => row.Id, row => row.Code, ct);
+    }
     private const string InsertMovementSql = "INSERT INTO " + Migrations.InventoryFoundation.MovementTable + " ("
         + Migrations.InventoryFoundation.MovementColumns + ") VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})"
         + " ON CONFLICT (warehouse_id, external_key) DO NOTHING";

@@ -36,7 +36,7 @@ public sealed class DeterministicAiModelClient : IAiModelClient
     private static int EarliestMatch(string message, AiToolDefinition tool)
     {
         int best = -1;
-        foreach (string phrase in new[] { tool.CapabilityId, Subject(tool.DisplayName) })
+        foreach (string phrase in new[] { tool.PrimitiveId ?? tool.CapabilityId, Subject(tool.DisplayName) })
         {
             if (string.IsNullOrWhiteSpace(phrase)) continue;
             int index = message.IndexOf(phrase, StringComparison.OrdinalIgnoreCase);

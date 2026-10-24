@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Alxarafe.Host;
 
 internal sealed class CapabilityInvocationService(CapabilityRegistry registry, ModuleStateService states,
-    IAuthorizationService authorization, IEnumerable<ICapabilityExecutor> executors, ILoggerFactory loggerFactory)
+    IAuthorizationService authorization, ICurrentSecurityContext security, IEnumerable<ICapabilityExecutor> executors, ILoggerFactory loggerFactory)
     : ICapabilityInvocationService
 {
     private const string ReadEffect = "read";
@@ -20,13 +20,19 @@ internal sealed class CapabilityInvocationService(CapabilityRegistry registry, M
     public async Task<IReadOnlyList<CapabilityDescriptor>> EffectiveAsync(ClaimsPrincipal principal,
         CancellationToken cancellationToken = default)
     {
+        var current = await security.ResolveAsync(principal, cancellationToken);
+        return current is null ? [] : await EffectiveCurrentAsync(current, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<CapabilityDescriptor>> EffectiveCurrentAsync(ClaimsPrincipal current, CancellationToken cancellationToken)
+    {
         var result = new List<CapabilityDescriptor>();
         foreach (var capability in registry.Capabilities)
         {
             if (!await states.IsEnabledAsync(capability.Module, cancellationToken)) continue;
             bool allowed = true;
             foreach (var permission in capability.RequiredPermissions)
-                if (!(await authorization.AuthorizeAsync(principal, permission)).Succeeded) { allowed = false; break; }
+                if (!(await authorization.AuthorizeAsync(current, permission)).Succeeded) { allowed = false; break; }
             if (allowed) result.Add(capability);
         }
         return result;
@@ -40,7 +46,9 @@ internal sealed class CapabilityInvocationService(CapabilityRegistry registry, M
         long started = Stopwatch.GetTimestamp();
         if (!CapabilityRegistry.IsValidId(command.CapabilityId))
             return Finish(command, invocationId, timestamp, started, CapabilityInvocationOutcome.InvalidRequest);
-        var effective = await EffectiveAsync(command.Principal, cancellationToken);
+        var current = await security.ResolveAsync(command.Principal, cancellationToken);
+        if (current is null) return Finish(command, invocationId, timestamp, started, CapabilityInvocationOutcome.NotFound);
+        var effective = await EffectiveCurrentAsync(current, cancellationToken);
         var capability = effective.FirstOrDefault(item => string.Equals(item.Id, command.CapabilityId, StringComparison.Ordinal));
         if (capability is null || capability.Effect != ReadEffect)
             return Finish(command, invocationId, timestamp, started, CapabilityInvocationOutcome.NotFound);
@@ -57,7 +65,7 @@ internal sealed class CapabilityInvocationService(CapabilityRegistry registry, M
             return Finish(command, invocationId, timestamp, started, CapabilityInvocationOutcome.InvalidRequest, capability);
 
         var execution = new CapabilityExecutionContext(invocationId, command.CorrelationId, command.Subject,
-            capability.Id, capability.Module, EffectivePermissions(command.Principal));
+            capability.Id, capability.Module, EffectivePermissions(current));
         try
         {
             var output = await executor.ExecuteAsync(capability, input, execution, cancellationToken);

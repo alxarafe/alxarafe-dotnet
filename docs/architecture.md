@@ -118,13 +118,14 @@ no module permissions and never silently escalates an existing account.
 ## AI assistant
 
 The AI module owns Application, Infrastructure, Http and Module projects. Its
-Application orchestrator asks the shared CORE invocation service for the current
-effective catalogue, exposes only `effect: read` descriptors as provider tools and
-invokes every accepted tool through CORE-CAP-002. It re-evaluates availability and
-permissions before each call, never accepts caller-supplied prompts, tools, models
-or security context, and enforces finite server-owned turn/tool budgets. Tool
-input is untrusted and output is normalized by the same CORE path. Only successful
-CORE identities are returned in ordered `toolsUsed`.
+Application orchestrator combines effective capabilities and independently
+registered module READ primitives through neutral shared ports. Capabilities retain
+CORE-CAP-002 execution; primitives use a controlled router with authoritative
+persisted identity resolution at discovery and before each execution. AI never
+references WMS/persistence or accepts arbitrary HTTP. Successful typed identities
+are returned in ordered `toolsUsed`; input is untrusted and budgets remain finite.
+See [AI-API-001 candidate design](ai-read-primitives.md), including the unpublished
+v0.12.0 response extension and separate published/candidate validation.
 
 Infrastructure provides a production Groq HTTP adapter and a deterministic adapter
 selected only in the Testing environment. Application depends on its model port,
@@ -138,6 +139,8 @@ AI audit records the AI invocation ID, subject, timestamp, outcome, duration,
 correlation ID, safe failure code and successful capability/CORE invocation IDs.
 It does not log messages, prompts, provider bodies, credentials or capability
 payloads. CORE audit remains authoritative for each capability invocation.
+Primitive audit separately links AI correlation, sequence, duration, logical
+outcome and bounded paging counts, without arguments/results.
 
 ## Verification and deliberate limits
 

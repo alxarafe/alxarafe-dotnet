@@ -12,11 +12,13 @@ Alxarafe.NET is an experimental modular framework built with .NET 10, ASP.NET
 Core, EF Core and PostgreSQL. It includes authentication, authorization,
 localization, CORE user/module administration, a persistent modular runtime,
 authenticated CORE capability discovery/read invocation, a provider-neutral AI
-assistant over effective READ capabilities and production WMS UoM, Storage
+assistant over authorized READ tools and production WMS UoM, Storage
 Attribute and Item Family catalogues. WMS also provides a
 [warehouse inventory foundation](docs/wms-inventory.md) as a public .NET-specific
 extension, with persistent movements and current balances, outside shared
-contract conformance and AI tooling.
+WMS contract conformance. [AI READ primitives](docs/ai-read-primitives.md) are an
+experimental integration against the unpublished v0.12.0 candidate; the last
+published pin remains v0.11.1.
 
 ## ERBAS ecosystem
 
@@ -74,7 +76,8 @@ interoperate with Java. Release checkout requirements are in [usage](docs/usage.
 Normal composition includes erbas.wms with administrator-only UoM, Storage Attribute and Item Family
 creation and paged listing, plus atomic family/attribute associations, and the
 independently disableable erbas.ai assistant. AI invokes only the caller's effective
-READ capabilities through CORE and never exposes WRITE or external tools. Testing
+READ capabilities and module primitives through controlled routing, and never
+exposes WRITE or arbitrary external tools. Testing
 uses a deterministic assistant adapter, so CI and shared conformance require no
 provider key or external model call; production Groq configuration is opt-in.
 Explicit disposable validation additionally registers canonical Math/Statistics

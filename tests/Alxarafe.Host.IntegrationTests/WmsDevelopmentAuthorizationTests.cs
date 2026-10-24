@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
+using Alxarafe.Modules.Ai.Application;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Modules.Wms.Domain;
 using Alxarafe.Modules.Wms.Http;
@@ -30,7 +31,7 @@ public sealed class WmsDevelopmentAuthorizationTests(WebApplicationFactory<Progr
     private const string AdminPasswordConfiguration = "SecuritySeed:AdminPassword";
     private const string AdminEmailConfiguration = "SecuritySeed:AdminEmail";
     private const string LoginPath = "/api/auth/login";
-    private static readonly string[] ReaderPermissions = [InventoryPermissions.WarehousesRead, InventoryPermissions.LocationsRead,
+    private static readonly string[] ReaderPermissions = [AiContract.AssistantPermission, InventoryPermissions.WarehousesRead, InventoryPermissions.LocationsRead,
         InventoryPermissions.ItemsRead, InventoryPermissions.InventoryRead];
 
     [Fact]
