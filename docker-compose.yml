@@ -32,7 +32,8 @@ services:
       Wms__DevelopmentUser__Email: ${ERBAS_WMS_USER_EMAIL:-}
       Wms__DevelopmentUser__Password: ${ERBAS_WMS_USER_PASSWORD:-}
       AI__Groq__ApiKey: ${AI_GROQ_API_KEY:-}
-      AI__Groq__Model: ${AI_GROQ_MODEL:-qwen/qwen3.8-27b}
+      AI__Provider: ${AI_PROVIDER:-groq}
+      AI__Model: ${AI_MODEL:-${AI_GROQ_MODEL:-qwen/qwen3.8-27b}}
       AI__Groq__BaseUrl: ${AI_GROQ_BASE_URL:-https://api.groq.com/openai/v1}
       AI__Groq__TimeoutSeconds: ${AI_GROQ_TIMEOUT_SECONDS:-60}
     ports:

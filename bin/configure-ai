@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 ENV_FILE="$ROOT_DIR/.env"
 EXAMPLE_FILE="$ROOT_DIR/.env.example"
+DEFAULT_PROVIDER="groq"
 DEFAULT_MODEL="qwen/qwen3.8-27b"
 DEFAULT_BASE_URL="https://api.groq.com/openai/v1"
 DEFAULT_TIMEOUT_SECONDS="60"
@@ -75,7 +76,7 @@ ensure_env_file() {
 }
 
 write_env() {
-    local line key seen_key=0 seen_model=0 seen_base=0 seen_timeout=0
+    local line key seen_key=0 seen_provider=0 seen_model=0 seen_base=0 seen_timeout=0
     TEMP_FILE="$(umask 077; mktemp "${TMPDIR:-/tmp}/erbas-env.XXXXXX")"
     case "$TEMP_FILE" in
         "$ROOT_DIR"/*)
@@ -99,8 +100,17 @@ write_env() {
                     fi
                     continue
                     ;;
+                AI_PROVIDER)
+                    printf 'AI_PROVIDER=%s\n' "$provider" >>"$TEMP_FILE"
+                    seen_provider=1
+                    continue
+                    ;;
                 AI_GROQ_MODEL)
-                    printf 'AI_GROQ_MODEL=%s\n' "$model" >>"$TEMP_FILE"
+                    # Migrated to the provider-independent AI_MODEL below.
+                    continue
+                    ;;
+                AI_MODEL)
+                    printf 'AI_MODEL=%s\n' "$model" >>"$TEMP_FILE"
                     seen_model=1
                     continue
                     ;;
@@ -122,7 +132,8 @@ write_env() {
     if (( update_key )) && (( ! seen_key )); then
         printf 'AI_GROQ_API_KEY=%s\n' "$api_key" >>"$TEMP_FILE"
     fi
-    (( seen_model )) || printf 'AI_GROQ_MODEL=%s\n' "$model" >>"$TEMP_FILE"
+    (( seen_provider )) || printf 'AI_PROVIDER=%s\n' "$provider" >>"$TEMP_FILE"
+    (( seen_model )) || printf 'AI_MODEL=%s\n' "$model" >>"$TEMP_FILE"
     (( seen_base )) || printf 'AI_GROQ_BASE_URL=%s\n' "$base_url" >>"$TEMP_FILE"
     (( seen_timeout )) || printf 'AI_GROQ_TIMEOUT_SECONDS=%s\n' "$timeout_seconds" >>"$TEMP_FILE"
 
@@ -141,6 +152,10 @@ if [[ ! -e "$ENV_FILE" && -f "$EXAMPLE_FILE" ]]; then
 fi
 
 printf '\nERBAS local AI configuration\n\n' >&2
+
+provider="$(env_value AI_PROVIDER || true)"
+provider="${provider:-$DEFAULT_PROVIDER}"
+[[ "$provider" == "$DEFAULT_PROVIDER" ]] || die "Unsupported AI_PROVIDER; supported provider: $DEFAULT_PROVIDER."
 
 update_key=1
 if env_has_nonempty AI_GROQ_API_KEY; then
@@ -162,7 +177,10 @@ else
     api_key=""
 fi
 
-current_model="$(env_value AI_GROQ_MODEL || true)"
+current_model="$(env_value AI_MODEL || true)"
+if [[ -z "$current_model" ]]; then
+    current_model="$(env_value AI_GROQ_MODEL || true)"
+fi
 prompt_with_default "Model" "${current_model:-$DEFAULT_MODEL}"
 model="$PROMPT_RESULT"
 [[ -n "$model" ]] || die "Model must not be empty."

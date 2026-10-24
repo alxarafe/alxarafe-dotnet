@@ -33,6 +33,52 @@ runtime, normally as a local `.env` value consumed by Docker Compose.
 Groq and `qwen/qwen3.8-27b` are local backend choices. They are not fields in the
 public ERBAS contract, and clients must not select a provider or model.
 
+## Provider, model and protocol
+
+`AI_PROVIDER` selects the backend provider; **Groq (`groq`) is the only supported
+provider in this phase**. `AI_MODEL` selects a model independently of that provider
+name. The selected provider must actually serve that model. Neither setting is
+accepted in an ERBAS HTTP request or exposed to the client.
+
+```dotenv
+AI_PROVIDER=groq
+AI_MODEL=qwen/qwen3.8-27b
+AI_GROQ_BASE_URL=https://api.groq.com/openai/v1
+AI_GROQ_TIMEOUT_SECONDS=60
+```
+
+The backend-only credential remains `AI_GROQ_API_KEY`; never put its value in
+client configuration or logs. Native .NET configuration uses `AI:Provider` and
+`AI:Model`, plus the existing `AI:Groq:ApiKey`, `BaseUrl` and `TimeoutSeconds`.
+Docker Compose maps the environment variables above to those keys.
+
+Existing configurations continue to work: omitted provider means `groq`, and
+`AI_GROQ_MODEL` / native `AI:Groq:Model` remain legacy model aliases. The new
+`AI_MODEL` / `AI:Model` takes precedence; otherwise the existing default model
+is retained. `bin/configure-ai` writes `AI_PROVIDER` and `AI_MODEL`, migrating an
+existing legacy model entry while preserving the key and unrelated settings.
+No automatic rewrite of local configuration occurs during backend startup.
+An unknown provider fails clearly when `IAiModelClient` is resolved. Testing
+retains the deterministic adapter and does not resolve a real provider.
+
+The internal flow is `AiAssistant -> IAiModelClient -> AiProviderResolver ->
+GroqAiModelClient : OpenAiCompatibleModelClient -> Groq`. The common client owns
+chat-completion serialization, messages, tools/results, response parsing,
+transport errors/timeouts and the existing lossless tabular encoding. It reads
+completion metadata such as finish reason without extending the public result.
+Unknown fields, including provider `reasoning`, are ignored; reasoning is never
+used as an answer, persisted or recorded in functional audit. Usage is not consumed.
+The common client has no retry policy. Groq alone retains its bounded
+`tool_use_failed` and `Retry-After` recovery and quota-error classification.
+
+A future OpenAI-compatible provider needs its configuration and resolver entry;
+it can use the common client directly or specialize its completion method for
+provider-specific error/retry rules. This requires no change to `AiAssistant`,
+capabilities, primitives or authorization. A different wire protocol can implement
+`IAiModelClient` behind the same resolver. No second real provider, streaming,
+images, embeddings, Responses API, fallback, per-request/tenant selection,
+automatic routing, provider database or administration UI is implemented here.
+
 ## Configure the backend
 
 The preferred workflow creates or updates the repository-root `.env`, which is
@@ -48,6 +94,7 @@ The helper is safe to run from any directory. It:
 - shows only whether an existing key is already configured, never its value;
 - lets you keep an existing key or replace it intentionally;
 - uses existing model, base URL and timeout values as interactive defaults;
+- selects the supported provider and migrates the legacy model name to `AI_MODEL`;
 - preserves unrelated `.env` variables and comments;
 - sets `.env` permissions to `600`;
 - refuses to write the key if `.env` is not ignored or is tracked by Git.
