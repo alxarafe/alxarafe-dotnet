@@ -7,6 +7,7 @@ using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Resources;
+using Alxarafe.Resources.AspNetCore;
 using Alxarafe.Resources.Runtime;
 using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
@@ -96,6 +97,7 @@ builder.Services.AddSingleton<ResourceRepositoryCatalog>();
 builder.Services.AddScoped<ResourceRepositoryRegistry>();
 builder.Services.AddScoped<IResourceAuthorization, CurrentResourceAuthorization>();
 builder.Services.AddScoped<ResourceRuntime>();
+builder.Services.AddScoped<ResourceMetadataProjection>();
 // Module handlers run first; this handler only handles transversal validation.
 builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddAlxarafePermissionAuthorization();
@@ -113,6 +115,7 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecurityTransformer>();
+    options.AddDocumentTransformer<ResourceOpenApiTransformer>();
     options.AddOperationTransformer<BearerSecurityTransformer>();
     options.AddSchemaTransformer((schema, context, _) =>
     {
@@ -173,6 +176,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     ResponseWriter = (context, _) => context.Response.WriteAsJsonAsync(new { status = "ok" })
 }).AllowAnonymous();
 app.MapAlxarafeModuleEndpoints();
+ResourceEndpoints.Map(app);
 app.Run();
 
 public partial class Program { }

@@ -1,10 +1,11 @@
-# Semantic Resource Metadata
+# Resource Platform
 
 RESOURCE-METADATA-001 implements the first Resource Platform foundation in
 `Alxarafe.Resources`. Backend metadata is the semantic authority; framework-specific
-representations must be derived later. This is a metadata model, validator and
+representations are derived from it. This is a metadata model, validator and
 read-only registry. RESOURCE-RUNTIME-001 adds generic backend execution in the separate
-`Alxarafe.Resources.Runtime` boundary; it is not a low-code/business-rule engine.
+`Alxarafe.Resources.Runtime` boundary. RESOURCE-API-001 projects HTTP/metadata/OpenAPI through
+`Alxarafe.Resources.AspNetCore`; this is not a low-code/business-rule engine.
 
 ## Boundary and composition
 
@@ -26,7 +27,8 @@ Register providers through ordinary typed DI during composition. The Host eagerl
 constructs `ResourceRegistry` immediately after building services, before database
 initialization and HTTP. Invalid definitions prevent startup, including when a
 provider is supplied only in validation composition. The normal application currently
-has an empty resource catalog. There is no metadata or administration endpoint.
+has an empty resource catalog. Metadata endpoints project this catalog; there is no
+resource administration endpoint.
 
 The registry validates local definitions, collects all resources, validates relation
 references, computes hashes and freezes. Providers are called only during construction;
@@ -86,7 +88,8 @@ lookarounds/backreferences and malformed patterns are rejected. Default matching
 a bounded timeout. This is a documented metadata dialect, not an OpenAPI-derived
 schema; future adapters must preserve its semantics or reject unsupported mappings.
 Text defaults/annotations must be valid Unicode. Searchable currently applies only
-to STRING/TEXT; filterable/sortable are declarations with no execution in this phase.
+to STRING/TEXT. Metadata alone declares capabilities; Runtime validates and executes
+queries through adapters.
 
 Required means required client input: required+nullable and required+readOnly are
 contradictory. Immutable prevents changing the business value after creation; readOnly
@@ -372,12 +375,197 @@ WMS remains the acceptance domain, with typed tenant persistence, actual permiss
 append-only movements and read-only inventory views preserved. Runtime contracts
 contain no WMS knowledge. In-memory test adapters prove generic execution; Host tests
 reuse real Identity/membership/module state and the two existing PostgreSQL validation
-databases to prove isolation without new HTTP endpoints or a second tenant selector.
+databases to prove isolation without a second tenant selector. Resource API tests reuse the same real infrastructure
+with test-only definitions and in-memory persistence adapters.
+
+## HTTP Resource API and metadata projection
+
+RESOURCE-API-001 adds `Alxarafe.Resources.AspNetCore`. This adapter references inward
+into Resources/Runtime and existing ASP.NET security/error infrastructure. Neither
+the semantic model nor Runtime acquires ASP.NET or OpenAPI dependencies. The Host
+composes the adapter; Core, WMS and AI contain no Resource API knowledge.
+
+### Routes and transport
+
+All resource and metadata routes require the existing Bearer authentication and
+persisted enabled-user checks. Generic CRUD delegates to the existing scoped Runtime:
+
+| Method | Route | Result |
+| --- | --- | --- |
+| GET | `/api/resources/{resource}` | Page: `items`, `offset`, `limit`, optional `total` |
+| GET | `/api/resources/{resource}/{id}` | Record, or not found |
+| POST | `/api/resources/{resource}` | 201 record and `Location` |
+| PATCH | `/api/resources/{resource}/{id}` | 200 complete record after partial update |
+| DELETE | `/api/resources/{resource}/{id}` | 204, no body |
+
+Resource IDs resolve exclusively through the frozen registry. There are no natural
+aliases or per-resource controllers. Identifiers are parsed using the declared ID
+field: UUID in D format, semantic integer JSON number syntax, or a string identifier.
+The Runtime validates the parsed ID's domain and constraints before repository use.
+
+Mutation bodies are JSON objects of field names to scalar values, not serialized
+Runtime objects. Maximum body size is 65,536 bytes; duplicate keys, nested values for
+scalar fields and malformed values are rejected. Explicit DTO projections prevent
+internal implementation properties from leaking. No transport coercion is performed:
+
+| Semantic type | JSON transport |
+| --- | --- |
+| BOOLEAN | Boolean token |
+| STRING, TEXT, ENUM | String; Runtime validates enum membership |
+| Integer types, DECIMAL | Number token, parsed exactly including bounded exponent syntax |
+| UUID | String, hyphenated UUID D format |
+| DATE | String `yyyy-MM-dd` |
+| TIME | String `HH:mm:ss`, optionally up to seven fractional digits |
+| DATETIME | ISO string with explicit `Z` or numeric offset; output normalized to UTC |
+| BINARY | Base64 string; output normalized base64 |
+| Explicit null | JSON null, independently checked against field nullability |
+
+Numeric transport uses ResourceNumber, not floating point or CLR decimal. Numeric
+mantissas/exponents are bounded to 4,096 digits/places for parsing. Clients must use
+an exact-number JSON parser when needed, especially for INT64 and DECIMAL; JavaScript
+Number cannot represent every valid value. Quoted numeric strings are rejected.
+
+POST leaves defaults and complete create validation to Runtime. PATCH maps only
+supplied properties: omission leaves a field untouched; explicit null requests null.
+It applies no create defaults and rejects ID/read-only/immutable mutations through
+Runtime. PUT, actions and relation expansion are not exposed. CRUD responses/errors
+are `Cache-Control: no-store`.
+
+LIST accepts only the following query parameters (names are case-sensitive):
+
+- `offset`: one nonnegative Int64, default 0.
+- `limit`: one integer, default 50, maximum 100; zero is rejected.
+- `search`: one search string, bounded by Runtime to 512 UTF-16 code units and
+  requiring Searchable fields.
+- Repeated `sort`: field name ascending, or `-field` descending. Term order matters.
+- Repeated `filter`: URL-encoded JSON object with exactly `field`, `operator`, `value`.
+  Operators are `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `contains`, `startsWith`. Values
+  use the field's JSON semantic type. Multiple filters combine as AND.
+
+For example, before URL encoding, a filter is
+`{"field":"active","operator":"eq","value":true}`. Runtime remains the whitelist
+for fields/capabilities, operators, constraints, sorting and search. Unknown query
+keys and repeated singleton keys fail; non-LIST CRUD accepts no query parameters.
+There is no OData, executable expression syntax, SQL fragment or tenant selector.
+
+### Errors and execution authority
+
+The HTTP adapter parses transport, delegates, projects results and maps errors. The
+Runtime pipeline described above still owns operation support, module/tenant/auth
+guards, value validation, business validation and persistence dispatch. Parsing can
+fail before Runtime guards, but never accesses persistence. Guard failures do not
+invoke repositories. Existing `ContractError` remains the sole error envelope:
+`code` plus `errors` containing stable issue `code`, `resource` and escaped field
+`path` where applicable. The closed shared envelope has no message property, so
+Runtime diagnostic message text is deliberately not added to the HTTP contract.
+
+| Runtime failure | HTTP mapping |
+| --- | --- |
+| ResourceNotFound | 404 `resource_not_found` |
+| OperationNotSupported | 405 `resource_operation_not_supported`, with `Allow` |
+| ValidationFailed / invalid transport | 400 `invalid_request` with issue codes/paths |
+| Forbidden | 403 `forbidden` |
+| TenantRequired | Existing authoritative tenant denial code, normally 403 |
+| ModuleDisabled | Existing 503 `module_disabled` |
+| RepositoryNotRegistered | 503 `resource_repository_not_registered` |
+| ExecutionFailed / InvalidRepositoryResult | 500 `resource_execution_failed` |
+
+Authentication uses the existing 401 `unauthorized` envelope/challenge. Adapter
+exception text, SQL, credentials and connection references are never projected.
+For TenantRequired, the adapter consults the same scoped `IRequestTenantContext`
+again only to retain its existing denial reason (including selection required or
+configuration failure); it does not retry execution or choose a tenant.
+
+Authoritative tenancy still requires exactly one active persisted membership in an
+active tenant. Zero memberships deny; multiple active memberships return
+`tenant_selection_required`. Membership revocation is re-evaluated on later requests.
+User IDs, roles, permissions, arbitrary headers, resource fields, hostnames and query
+strings cannot establish authority. No `X-Tenant-Id` selector is implemented.
+
+> A tenant identifier may later be supplied by the client as a requested tenant
+> selection, but it must never become authoritative by itself.
+
+A future selector must authenticate the user, receive the requested tenant, validate
+active persisted membership and active tenant, establish authoritative TenantContext,
+then execute Runtime. Runtime continues receiving only validated infrastructure
+context. Platform-scoped execution retains its existing independent scope.
+
+### Metadata API and effective capabilities
+
+`GET /api/meta/resources` returns deterministic compact discovery entries: id,
+version, moduleId, exact structural definitionHash, effective operation information
+and metadataPath. Disabled modules are omitted from normal discovery.
+
+`GET /api/meta/resources/{resource}` returns explicit DTOs for identity/version/owner,
+definitionHash, ID field, moduleEnabled, fields, effective constraints, defaults,
+capabilities, enum values, typed annotations, relations, operation declarations and
+actions. Known definitions remain structurally accessible to authenticated users,
+including disabled modules; `moduleEnabled: false` indicates unavailability. Unknown
+resources return the safe 404 envelope. Metadata access requires authentication but
+not resource CRUD permission. Seeing a definition never grants execution rights.
+
+Operations expose `declared` and `authorized` separately. Authorization is evaluated
+against persisted permissions using the same scoped `IResourceAuthorization` adapter
+as Runtime. It does not imply an active tenant, an enabled module, an executable
+repository or passing business checks. Core FE must also consider moduleEnabled;
+Runtime checks all guards again on execution. Required permission IDs, identity claims,
+repository types, CLR names and database references are deliberately not exposed.
+
+Actions expose name, scope, requiresSelection, authorized and annotations. Their
+permission IDs are not exposed. There is no fabricated `available: true` value and
+no action endpoint.
+
+> Authorization controls visibility. Availability controls enabled state.
+
+Core FE should normally hide unauthorized actions, render authorized but unavailable
+actions disabled with a reason, and enable authorized/available actions. Record-specific
+`available`/`unavailableReason` evaluation and execution are deferred to
+RESOURCE-ACTIONS-001. Future execution must re-check both authorization and
+availability. Current metadata exposes authorization only.
+
+Individual definitions support ETag and If-None-Match (including weak validators and
+`*`): a matching representation returns 304 without a body. The quoted ETag contains
+the structural DefinitionHash plus a SHA-256 of the explicit response representation,
+so permission or module-state changes invalidate a previously cached effective
+response even when the structural hash is unchanged. Metadata uses
+`Cache-Control: private, no-cache` and `Vary: Authorization`; authorization/state is
+re-evaluated before returning 304. Discovery is also private/revalidated. This is
+metadata coherence, not Angular source regeneration or a new cache store.
+
+### OpenAPI and shared contract boundary
+
+The existing native `/openapi/v1.json` document is extended from the frozen resource
+registry. Generic dispatcher templates are omitted; concrete resource paths and only
+declared operations are projected. No repository/entity reflection or handwritten
+per-resource schemas are used. Metadata endpoints are also described with explicit
+DTO shapes. Production currently has no ResourceDefinitions, so there are no concrete
+Resource CRUD paths in production OpenAPI until a module contributes definitions.
+
+Semantic types map to boolean, string, integer or exact JSON number with UUID/date/
+time/date-time/base64 formats. Intrinsic and declared bounds, enum values, lengths,
+patterns, required fields and nullability come from metadata. CREATE excludes read-only
+inputs and does not require fields with defaults; PATCH excludes ID/read-only/immutable
+inputs and has no required properties. Response records and pages have separate
+schemas. Static OpenAPI declares structural support, not per-user authorization or
+current module/tenant availability.
+
+The native OpenAPI library represents `multipleOf` using CLR decimal. Exact steps
+representable there use standard multipleOf; larger/finer steps are preserved as the
+canonical string extension `x-erbas-exact-multiple-of` instead of being rounded.
+The Metadata API remains the complete exact semantic authority, including decimal
+precision/scale. Neither OpenAPI nor JSON storage choices redefine semantic types.
+
+This Resource API is an implementation-specific .NET extension, outside the published
+shared `erbas-contract v0.12.0`. Existing shared routes, envelopes and Bruno assertions
+remain unchanged. Portable clients must not assume these endpoints exist on other
+stacks. Promotion to the shared contract requires the cross-stack review and explicit
+contract revision described by that repository's implementation-extension policy;
+this task neither revises nor republishes it.
 
 ## Authority and business rules
 
 Backend metadata will remain authoritative. Frontend validation is convenience only;
-direct REST calls must eventually receive the same backend validation. Declarative
+direct Resource REST calls receive the same Runtime backend validation. Declarative
 constraints do not replace contextual domain rules: discount UINT8 0..100 is metadata,
 but salesperson/director discount limits belong to domain services, business validators,
 action handlers or module-specific code. There is no business-rule scripting language.
@@ -594,8 +782,11 @@ RESOURCE-METADATA-001 [implemented]
 RESOURCE-RUNTIME-001 [implemented]
     generic backend execution
     ↓
-RESOURCE-API-001
+RESOURCE-API-001 [implemented]
     REST + Metadata API + OpenAPI
+    ↓
+RESOURCE-ACTIONS-001
+    action availability and execution
     ↓
 ANGULAR-RESOURCE-RUNTIME-001
     universal Core FE renderer
@@ -606,6 +797,9 @@ RESOURCE-OVERRIDES-001
 THEME-RUNTIME-001
     presentation/theme resolution
 
+Parallel/later Core FE work:
+    CORE-FE-EXTENSIONS-001 → AI-FE-ASSISTANT-001
+
 Later, optionally:
     Angular code generation
     AI/tool schema derivation
@@ -613,9 +807,10 @@ Later, optionally:
 
 RESOURCE-METADATA-001 implements semantic metadata, definition validation, the registry
 and DefinitionHash. RESOURCE-RUNTIME-001 implements generic backend CRUD through ports,
-authoritative guards, runtime validation and business hooks. Resource-API, frontend
-runtime, composable layout execution, metadata cache coherence, overrides and theme
-resolution remain future phases. No generic EF/SQL repository, schema generation,
-automatic migrations, CRUD/metadata/action HTTP API, OpenAPI generation, Angular/client
-code, action execution, relation expansion, reseller/branding or AI/tool schemas are
-added. Existing WMS APIs/persistence are not migrated or redesigned.
+authoritative guards, runtime validation and business hooks. RESOURCE-API-001 implements
+HTTP CRUD, explicit metadata projections/coherence and derived OpenAPI. Action availability/
+execution, frontend runtime, composable layout execution, overrides and theme resolution
+remain future phases. No generic EF/SQL repository, schema generation, automatic migrations,
+Angular/client code, relation expansion, reseller/branding or AI/tool schemas are added.
+Existing WMS APIs/persistence are not migrated or redesigned. Core FE shell extensions and
+the AI floating assistant remain separate work, not Resource Metadata functionality.
