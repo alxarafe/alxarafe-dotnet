@@ -10,6 +10,7 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class ModuleStateTests
 {
+    private const string FixtureVersion = "1.0.0";
     private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(10);
 
@@ -115,7 +116,7 @@ public sealed class ModuleStateTests
         });
         await fixture.Service(modules).SynchronizeAsync();
         using var services = new ServiceCollection().BuildServiceProvider();
-        await new ModuleRuntime(ModuleGraph.Order(modules)).InitializeAsync(services);
+        await new ModuleRuntime(new ModuleRegistry([new Source(modules)])).InitializeAsync(services);
         Assert.Equal([fixture.A, fixture.B, fixture.C], calls);
         Assert.False(await fixture.Service(modules).IsEnabledAsync(fixture.C));
     }
@@ -259,12 +260,12 @@ public sealed class ModuleStateTests
             return new ModuleStateService(new ModuleRegistry([new Source(modules)]), store);
         }
 
-        public static FakeModule Module(string id, params string[] dependencies) => new(new ModuleDescriptor(id, ModuleApi.CurrentVersion, dependencies));
+        public static FakeModule Module(string id, params string[] dependencies) => new(new ModuleDescriptor(id, FixtureVersion, ModuleApi.CurrentVersion, dependencies));
         public IReadOnlyList<IAlxarafeModule> Chain(List<string>? calls = null) =>
         [
-            new FakeModule(new ModuleDescriptor(C, ModuleApi.CurrentVersion, [B]), calls),
-            new FakeModule(new ModuleDescriptor(B, ModuleApi.CurrentVersion, [A]), calls),
-            new FakeModule(new ModuleDescriptor(A, ModuleApi.CurrentVersion, []), calls)
+            new FakeModule(new ModuleDescriptor(C, FixtureVersion, ModuleApi.CurrentVersion, [B]), calls),
+            new FakeModule(new ModuleDescriptor(B, FixtureVersion, ModuleApi.CurrentVersion, [A]), calls),
+            new FakeModule(new ModuleDescriptor(A, FixtureVersion, ModuleApi.CurrentVersion, []), calls)
         ];
 
         public async ValueTask DisposeAsync()
@@ -279,10 +280,9 @@ public sealed class ModuleStateTests
         public IEnumerable<IAlxarafeModule> GetModules() => Modules;
     }
 
-    private sealed class FakeModule(ModuleDescriptor descriptor, List<string>? calls = null) : IAlxarafeModule
+    private sealed class FakeModule(ModuleDescriptor descriptor, List<string>? calls = null) : IAlxarafeModule, IModuleInitializer
     {
         public ModuleDescriptor Descriptor { get; } = descriptor;
-        public void ConfigureServices(IServiceCollection services) { }
         public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
         {
             calls?.Add(Descriptor.Id);

@@ -49,10 +49,10 @@ public static class ModuleEndpoints
     {
         var pagination = CollectionPagination.Read(context.Request.Query);
         if (pagination is null) return UserEndpoints.Error(StatusCodes.Status400BadRequest, InvalidRequest);
-        var available = registry.Modules; // Registry supplies ordinal ID order before slicing.
-        IEnumerable<IAlxarafeModule> selected = pagination.Offset >= available.Count ? [] : available.Skip((int)pagination.Offset).Take(pagination.Limit);
+        var available = registry.Descriptors; // Registry supplies ordinal ID order before slicing.
+        IEnumerable<ModuleDescriptor> selected = pagination.Offset >= available.Count ? [] : available.Skip((int)pagination.Offset).Take(pagination.Limit);
         var items = new List<ModuleResponse>();
-        foreach (var module in selected) items.Add(await RepresentationAsync(module.Descriptor, states, context.RequestAborted));
+        foreach (var module in selected) items.Add(await RepresentationAsync(module, states, context.RequestAborted));
         return Results.Json(new ModulePage(items.ToArray(), pagination.Offset, pagination.Limit, available.Count, CollectionPagination.IdAscending));
     }
 
@@ -71,7 +71,7 @@ public static class ModuleEndpoints
         catch (JsonException) { return UserEndpoints.Error(StatusCodes.Status400BadRequest, InvalidRequest); }
         catch (BadHttpRequestException) { return UserEndpoints.Error(StatusCodes.Status400BadRequest, InvalidRequest); }
 
-        var descriptor = registry.Modules.Select(module => module.Descriptor)
+        var descriptor = registry.Descriptors
             .SingleOrDefault(module => string.Equals(module.Id, id, StringComparison.Ordinal));
         if (descriptor is null) return UserEndpoints.Error(StatusCodes.Status404NotFound, NotFound);
         try

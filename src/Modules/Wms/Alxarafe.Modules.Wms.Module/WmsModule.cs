@@ -14,13 +14,15 @@ using Microsoft.Extensions.Hosting;
 
 namespace Alxarafe.Modules.Wms;
 
-public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvider, IReadPrimitiveProvider
+public sealed class WmsModule : IAlxarafeModule, IModuleServiceContributor, IModuleInitializer, IHttpModule, ICapabilityProvider, IReadPrimitiveProvider
 {
+    public const string Version = "1.0.0";
     public const string Id = "erbas.wms";
     public const string DevelopmentUserEmailConfiguration = "Wms:DevelopmentUser:Email";
     public const string DevelopmentUserPasswordConfiguration = "Wms:DevelopmentUser:Password";
     public const string DefaultDevelopmentUserEmail = "user@example.test";
-    public ModuleDescriptor Descriptor { get; } = new(Id, ModuleApi.CurrentVersion, []);
+    public ModuleDescriptor Descriptor { get; } = new(Id, Version, ModuleApi.CurrentVersion, [],
+        ModulePersistence.Tenant, hasConfiguration: true);
 
     public IEnumerable<ReadPrimitiveDescriptor> GetReadPrimitives() => WmsReadPrimitives.All;
     public IEnumerable<CapabilityDescriptor> GetCapabilities() => WmsCapabilities.All;

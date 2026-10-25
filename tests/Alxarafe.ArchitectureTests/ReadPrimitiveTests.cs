@@ -10,6 +10,7 @@ namespace Alxarafe.ArchitectureTests;
 
 public sealed class ReadPrimitiveTests
 {
+    private const string FixtureVersion = "1.0.0";
     [Fact]
     public void AiAdaptersHaveNoWmsOrPersistenceReferencesAndWmsOwnsFiveExplicitReadOperations()
     {
@@ -57,9 +58,7 @@ public sealed class ReadPrimitiveTests
     }
     private sealed class Provider(ReadPrimitiveDescriptor[] descriptors) : IAlxarafeModule, IReadPrimitiveProvider
     {
-        public ModuleDescriptor Descriptor { get; } = new(WmsModule.Id, ModuleApi.CurrentVersion, []);
-        public void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-        public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public ModuleDescriptor Descriptor { get; } = new(WmsModule.Id, FixtureVersion, ModuleApi.CurrentVersion, []);
         public IEnumerable<ReadPrimitiveDescriptor> GetReadPrimitives() => descriptors;
     }
 }

@@ -63,6 +63,9 @@ public sealed class ModuleCompositionTests(TenantApplicationFactory factory) : I
             : [AiModule.Id, WmsModule.Id];
         Assert.Equal(expected, registry.Modules.Select(module => module.Descriptor.Id));
         Assert.Equal(ModuleGraph.Order(registry.Modules), runtime.Modules);
+        Assert.Same(registry, runtime.Registry);
+        Assert.Same(registry.InitializationOrder, runtime.Modules);
+        Assert.Equal(expected, registry.Descriptors.Select(descriptor => descriptor.Id));
         var wms = registry.Modules.Single(module => module.Descriptor.Id == WmsModule.Id);
         Assert.IsType<WmsModule>(wms);
         Assert.Empty(wms.Descriptor.Dependencies);
@@ -78,6 +81,10 @@ public sealed class ModuleCompositionTests(TenantApplicationFactory factory) : I
             {
                 Assert.Equal(ModuleApi.CurrentVersion, module.Descriptor.ModuleApiVersion);
                 Assert.False(module is IHttpModule);
+                Assert.False(module is IModuleInitializer);
+                Assert.False(module is IModuleServiceContributor);
+                Assert.Equal(ModulePersistence.None, module.Descriptor.Persistence);
+                Assert.False(module.Descriptor.HasConfiguration);
                 Assert.Equal(ModuleStateService.InitialEnabled, await application.Services.GetRequiredService<IModuleStateStore>().FindAsync(module.Descriptor.Id));
             }
         }

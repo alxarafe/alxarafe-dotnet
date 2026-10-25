@@ -44,7 +44,7 @@ public sealed class ReadPrimitiveRegistry
         var all = new SortedDictionary<string, ReadPrimitiveDescriptor>(StringComparer.Ordinal);
         foreach (var module in modules.Modules.OfType<IReadPrimitiveProvider>())
         {
-            string owner = ((IAlxarafeModule)module).Descriptor.Id;
+            string owner = modules.GetDescriptor((IAlxarafeModule)module).Id;
             foreach (var primitive in module.GetReadPrimitives())
             {
                 if (primitive is null || !CapabilityRegistry.IsValidId(primitive.Id) || primitive.Module != owner

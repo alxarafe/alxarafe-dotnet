@@ -7,11 +7,12 @@ namespace Alxarafe.ArchitectureTests;
 
 public sealed class ModularityTests
 {
+    private const string FixtureVersion = "1.0.0";
     [Fact]
     public void DescriptorCopiesDependenciesAndExposesSupportedVersion()
     {
         var dependencies = new List<string> { "owner" };
-        var descriptor = new ModuleDescriptor("extension", ModuleApi.CurrentVersion, dependencies);
+        var descriptor = new ModuleDescriptor("extension", FixtureVersion, ModuleApi.CurrentVersion, dependencies);
         dependencies.Clear();
         Assert.Equal("extension", descriptor.Id);
         Assert.Equal(ModuleApi.CurrentVersion, descriptor.ModuleApiVersion);
@@ -39,7 +40,7 @@ public sealed class ModularityTests
     public void IncompatibleVersionFailsBeforeServiceRegistration()
     {
         var incompatibleVersion = ModuleApi.CurrentVersion + 1;
-        var module = new FakeModule(new ModuleDescriptor("extension", incompatibleVersion, []));
+        var module = new FakeModule(new ModuleDescriptor("extension", FixtureVersion, incompatibleVersion, []));
         var error = Assert.Throws<InvalidOperationException>(() => new ModuleRegistry([new FakeSource([module])]));
         Assert.Contains(module.Descriptor.Id, error.Message);
         Assert.Contains(incompatibleVersion.ToString(CultureInfo.InvariantCulture), error.Message);
@@ -171,7 +172,7 @@ public sealed class ModularityTests
         var ordered = ModuleGraph.Order([module]);
         Assert.Throws<NotSupportedException>(() => ((IList<IAlxarafeModule>)ordered).Clear());
         var input = new List<IAlxarafeModule> { module };
-        var runtime = new ModuleRuntime(input);
+        var runtime = new ModuleRuntime(new ModuleRegistry([new FakeSource(input)]));
         input.Clear();
         Assert.Same(module, Assert.Single(runtime.Modules));
         Assert.Throws<NotSupportedException>(() => ((IList<IAlxarafeModule>)runtime.Modules).Clear());
@@ -182,8 +183,8 @@ public sealed class ModularityTests
     {
         var configured = new List<string>();
         var initialized = new List<string>();
-        var owner = new FakeModule(new ModuleDescriptor("z-owner", ModuleApi.CurrentVersion, []), configured, initialized);
-        var consumer = new FakeModule(new ModuleDescriptor("a-consumer", ModuleApi.CurrentVersion, [owner.Descriptor.Id]), configured, initialized);
+        var owner = new FakeModule(new ModuleDescriptor("z-owner", FixtureVersion, ModuleApi.CurrentVersion, []), configured, initialized);
+        var consumer = new FakeModule(new ModuleDescriptor("a-consumer", FixtureVersion, ModuleApi.CurrentVersion, [owner.Descriptor.Id]), configured, initialized);
         var services = new ServiceCollection();
         new ModuleBuilder(services).AddSource(new FakeSource([consumer])).AddSource(new FakeSource([owner])).Build();
         using var provider = services.BuildServiceProvider();
@@ -200,11 +201,11 @@ public sealed class ModularityTests
     {
         var calls = new List<string>();
         var failure = new InvalidOperationException("fixture failure");
-        var a = new FakeModule(new ModuleDescriptor("a", ModuleApi.CurrentVersion, []), initialized: calls);
-        var b = new FakeModule(new ModuleDescriptor("b", ModuleApi.CurrentVersion, [a.Descriptor.Id]), initialized: calls, failure: failure);
-        var c = new FakeModule(new ModuleDescriptor("c", ModuleApi.CurrentVersion, [b.Descriptor.Id]), initialized: calls);
+        var a = new FakeModule(new ModuleDescriptor("a", FixtureVersion, ModuleApi.CurrentVersion, []), initialized: calls);
+        var b = new FakeModule(new ModuleDescriptor("b", FixtureVersion, ModuleApi.CurrentVersion, [a.Descriptor.Id]), initialized: calls, failure: failure);
+        var c = new FakeModule(new ModuleDescriptor("c", FixtureVersion, ModuleApi.CurrentVersion, [b.Descriptor.Id]), initialized: calls);
         using var provider = new ServiceCollection().BuildServiceProvider();
-        var runtime = new ModuleRuntime(ModuleGraph.Order([c, b, a]));
+        var runtime = new ModuleRuntime(new ModuleRegistry([new FakeSource([c, b, a])]));
         Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => runtime.InitializeAsync(provider)));
         Assert.Equal([a.Descriptor.Id, b.Descriptor.Id], calls);
     }
@@ -220,8 +221,166 @@ public sealed class ModularityTests
         Assert.Empty(runtime.Modules);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(" leading")]
+    [InlineData("embedded space")]
+    [InlineData("control\n")]
+    public void MalformedModuleAndDependencyIdsFailExplicitly(string? id)
+    {
+        Assert.Throws<ArgumentException>(() => new ModuleDescriptor(id!, FixtureVersion, ModuleApi.CurrentVersion, []));
+        Assert.Throws<ArgumentException>(() => new ModuleDescriptor("valid", FixtureVersion, ModuleApi.CurrentVersion, [id!]));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("1.0")]
+    [InlineData("01.0.0")]
+    [InlineData("1.0.0.0")]
+    [InlineData("invalid")]
+    public void MalformedModuleReleaseVersionFailsExplicitly(string? version) =>
+        Assert.Throws<ArgumentException>(() => new ModuleDescriptor("fixture", version!, ModuleApi.CurrentVersion, []));
+
+    [Fact]
+    public void InvalidPersistenceAndDuplicateDependenciesFailExplicitly()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ModuleDescriptor("fixture", FixtureVersion,
+            ModuleApi.CurrentVersion, [], (ModulePersistence)int.MaxValue));
+        Assert.Throws<ArgumentException>(() => new ModuleDescriptor("fixture", FixtureVersion,
+            ModuleApi.CurrentVersion, ["owner", "owner"]));
+    }
+
+    [Theory]
+    [InlineData(ModulePersistence.None)]
+    [InlineData(ModulePersistence.Platform)]
+    [InlineData(ModulePersistence.Tenant)]
+    [InlineData(ModulePersistence.Both)]
+    public void DescriptorDeclaresPersistenceAndModuleOwnedConfigurationWithoutRouting(ModulePersistence persistence)
+    {
+        var descriptor = new ModuleDescriptor("fixture", FixtureVersion, ModuleApi.CurrentVersion, [], persistence, hasConfiguration: true);
+        Assert.Equal(FixtureVersion, descriptor.Version);
+        Assert.Equal(persistence, descriptor.Persistence);
+        Assert.True(descriptor.HasConfiguration);
+    }
+
+    [Fact]
+    public async Task DescriptorOnlyModulesNeedNoEmptyCompositionOrInitializationHooks()
+    {
+        var first = new DescriptorOnlyModule(new ModuleDescriptor("a", FixtureVersion, ModuleApi.CurrentVersion, []));
+        var second = new DescriptorOnlyModule(new ModuleDescriptor("b", FixtureVersion, ModuleApi.CurrentVersion, [first.Descriptor.Id]));
+        var services = new ServiceCollection();
+        new ModuleBuilder(services).AddSource(new FakeSource([second, first])).Build();
+        using var provider = services.BuildServiceProvider();
+        var registry = provider.GetRequiredService<ModuleRegistry>();
+        Assert.Equal([first.Descriptor, second.Descriptor], registry.Descriptors);
+        Assert.Equal([first, second], registry.InitializationOrder);
+        Assert.All(registry.Descriptors, descriptor =>
+        {
+            Assert.Equal(ModulePersistence.None, descriptor.Persistence);
+            Assert.False(descriptor.HasConfiguration);
+        });
+        var runtime = provider.GetRequiredService<ModuleRuntime>();
+        Assert.Same(registry, runtime.Registry);
+        Assert.Same(registry.InitializationOrder, runtime.Modules);
+        await runtime.InitializeAsync(provider);
+        Assert.Throws<NotSupportedException>(() => ((IList<ModuleDescriptor>)registry.Descriptors).Clear());
+        Assert.Throws<NotSupportedException>(() => ((IList<IAlxarafeModule>)registry.InitializationOrder).Clear());
+    }
+
+    [Fact]
+    public async Task RegistryOwnsThreeStageDependencyOrderAndOptionalInitializer()
+    {
+        var calls = new List<string>();
+        var a = new InitializerOnlyModule(new ModuleDescriptor("a", FixtureVersion, ModuleApi.CurrentVersion, []), calls);
+        var b = new InitializerOnlyModule(new ModuleDescriptor("b", FixtureVersion, ModuleApi.CurrentVersion, [a.Descriptor.Id]), calls);
+        var c = new InitializerOnlyModule(new ModuleDescriptor("c", FixtureVersion, ModuleApi.CurrentVersion, [b.Descriptor.Id]), calls);
+        var services = new ServiceCollection();
+        new ModuleBuilder(services).AddSource(new FakeSource([c, a, b])).Build();
+        using var provider = services.BuildServiceProvider();
+        await provider.GetRequiredService<ModuleRuntime>().InitializeAsync(provider);
+        Assert.Equal([a.Descriptor.Id, b.Descriptor.Id, c.Descriptor.Id], calls);
+    }
+
+    [Theory]
+    [InlineData("duplicate")]
+    [InlineData("missing")]
+    [InlineData("cycle")]
+    public void InvalidGraphFailsBeforeAnyServiceContribution(string fault)
+    {
+        var configured = new List<string>();
+        var first = new FakeModule(new ModuleDescriptor("a", FixtureVersion, ModuleApi.CurrentVersion,
+            fault == "cycle" ? ["b"] : []), configured);
+        var second = new FakeModule(new ModuleDescriptor(fault == "duplicate" ? "a" : "b", FixtureVersion,
+            ModuleApi.CurrentVersion, fault == "missing" ? ["missing"] : ["a"]), configured);
+        var builder = new ModuleBuilder(new ServiceCollection()).AddSource(new FakeSource([second, first]));
+        var error = Assert.Throws<InvalidOperationException>(builder.Build);
+        Assert.Contains(fault, error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(configured);
+    }
+
+    [Fact]
+    public void BuilderRejectsRepeatedBuildLateSourcesAndASecondCatalog()
+    {
+        var services = new ServiceCollection();
+        var builder = new ModuleBuilder(services);
+        builder.Build();
+        Assert.Throws<InvalidOperationException>(builder.Build);
+        Assert.Throws<InvalidOperationException>(() => builder.AddSource(new FakeSource([])));
+        Assert.Throws<InvalidOperationException>(() => new ModuleBuilder(services).Build());
+        Assert.Single(services, service => service.ServiceType == typeof(ModuleRegistry));
+    }
+
+    [Fact]
+    public void CapturedIdentityCannotBeRedefinedToClaimAnotherModulesContribution()
+    {
+        var a = new ChangingModule(new ModuleDescriptor("a", FixtureVersion, ModuleApi.CurrentVersion, []));
+        var b = Module("b");
+        var registry = new ModuleRegistry([new FakeSource([b, a])]);
+        var original = registry.GetDescriptor(a);
+        a.Descriptor = b.Descriptor;
+        Assert.Equal("a", registry.GetDescriptor(a).Id);
+        Assert.Same(original, registry.Descriptors[0]);
+        Assert.Equal([a, b], registry.InitializationOrder);
+        Assert.Throws<InvalidOperationException>(() => new CapabilityRegistry(registry));
+        Assert.Throws<InvalidOperationException>(() => registry.GetDescriptor(Module("unregistered")));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NullModuleOrDescriptorFailsExplicitlyDuringCatalogConstruction(bool nullModule)
+    {
+        IAlxarafeModule module = nullModule ? null! : new DescriptorOnlyModule(null!);
+        var error = Assert.Throws<InvalidOperationException>(() => new ModuleRegistry([new FakeSource([module])]));
+        Assert.Contains("null module or descriptor", error.Message);
+    }
+
+    private sealed record DescriptorOnlyModule(ModuleDescriptor Descriptor) : IAlxarafeModule;
+
+    private sealed class InitializerOnlyModule(ModuleDescriptor descriptor, List<string> calls) : IAlxarafeModule, IModuleInitializer
+    {
+        public ModuleDescriptor Descriptor { get; } = descriptor;
+        public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+        {
+            calls.Add(Descriptor.Id);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ChangingModule(ModuleDescriptor descriptor) : IAlxarafeModule, ICapabilityProvider
+    {
+        private const string Schema = "#/components/schemas/Fixture";
+        public ModuleDescriptor Descriptor { get; set; } = descriptor;
+        public IEnumerable<string> GetSchemaReferences() => [Schema];
+        public IEnumerable<CapabilityDescriptor> GetCapabilities() =>
+            [new("fixture.items.list", Descriptor.Id, FixtureVersion, "Fixture", "Fixture read", "read", new(Schema), new(Schema), [])];
+    }
+
     private static FakeModule Module(string id, params string[] dependencies) =>
-        new(new ModuleDescriptor(id, ModuleApi.CurrentVersion, dependencies));
+        new(new ModuleDescriptor(id, FixtureVersion, ModuleApi.CurrentVersion, dependencies));
 
     private sealed record FakeSource(IEnumerable<IAlxarafeModule> Modules) : IModuleSource
     {
@@ -229,7 +388,7 @@ public sealed class ModularityTests
     }
 
     private sealed class FakeModule(ModuleDescriptor descriptor, List<string>? configured = null,
-        List<string>? initialized = null, Exception? failure = null) : IAlxarafeModule
+        List<string>? initialized = null, Exception? failure = null) : IAlxarafeModule, IModuleServiceContributor, IModuleInitializer
     {
         public ModuleDescriptor Descriptor { get; } = descriptor;
         public void ConfigureServices(IServiceCollection services) => configured?.Add(Descriptor.Id);

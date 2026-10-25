@@ -2,64 +2,168 @@
 
 ## Architectural requirement
 
-ERBAS must support future third-party modules without modifying or recompiling
-its CORE. Production selects one implementation: Java or .NET. Java plugins may
-be distributed as Java JARs/packages and .NET plugins as assemblies/packages.
-They share modular semantics, not binary compatibility or a cross-runtime RPC
-protocol. Physical external loading is not implemented in this task.
+**Core orchestrates modules. Modules own semantics.** CORE-MODULE-001 formalizes
+this rule through the existing .NET modularity pipeline, without a second module
+system. Modules remain compiled and deployed with the application. Built-in entry
+assemblies are selected explicitly; there is no package installation, remote
+resolution, dynamic loading, marketplace or hot loading.
 
-Built-in modules and future third-party modules use the same pipeline:
+The architectural model remains suitable for future third-party modules without
+Core knowing their business semantics. Runtime-specific packaging is a future
+concern, not binary compatibility or a cross-runtime protocol implemented here.
 
 ```text
-ModuleSource(s) -> ModuleRegistry -> ModuleGraph -> ModuleRuntime
+ModuleSource(s) -> ModuleRegistry (ModuleGraph validation/order) -> ModuleRuntime
 ```
 
-## Descriptor, version and availability
+## Descriptor, versions and catalog
 
-`ModuleDescriptor` is immutable and contains only an ID, Module API version and
-an immutable dependency ID list. IDs are stable, opaque, case-sensitive and
-identify modules persistently. They are chosen by the module owner, independently
-of class names, packages, assembly names or package filenames. Third parties are
-responsible for sufficiently unique IDs. Descriptors must remain stable throughout
-startup and are the sole source of identity, version and dependency metadata.
+`IAlxarafeModule` requires only an immutable `ModuleDescriptor`. No empty service
+registration or initialization methods are required. Its metadata is:
 
-The initial Module API version is 1, centralized in the platform's Module API
-constant. Registration supports only that current version. An incompatible version
-fails with the module ID and declared version before service configuration or
-initialization. There is no negotiation, multi-version compatibility or version
-range resolution.
+| Field | Meaning |
+| --- | --- |
+| `Id` | Stable, opaque, case-sensitive module identity, independent of type/assembly/package names |
+| `Version` | Explicit module release metadata, in numeric `major.minor.patch` form |
+| `ModuleApiVersion` | Compatibility with the platform's module API; currently `ModuleApi.CurrentVersion = 1` |
+| `Dependencies` | Immutable list of required module IDs, without implementation types or version ranges |
+| `Persistence` | `None`, `Platform`, `Tenant` or `Both`: ownership declaration, not routing |
+| `HasConfiguration` | Module owns custom configuration requirements and validation; no generic resolution semantics |
 
-A source supplies modules for the current startup. The framework-independent
-registry gathers all sources, rejects duplicate IDs within or across sources,
-validates API versions and exposes a read-only snapshot in ordinal/natural ID
-order. Presence in this registry is the authority for **AVAILABLE**: discovered
-by a valid source during this startup. Availability is not persisted. A future
-package source could make a module available when its package is present and
-absent after removal and restart without changing the registry or graph.
+IDs must be nonempty and contain no whitespace/control characters. Malformed
+versions, invalid persistence values and malformed/duplicate dependency IDs fail
+explicitly. Dependencies are copied at construction. There is no version negotiation,
+package discovery, prerelease/range resolution or automatic dependency installation.
+Module release versions are independent of the HTTP contract revision and module
+API version. WMS and AI initially declare module version `1.0.0`; this metadata does
+not publish a package, tag or release.
 
-The graph consumes all available modules, validates missing dependencies and
-cycles, and traverses root IDs and dependency IDs in ordinal/natural,
-case-sensitive order. Dependencies precede consumers; every module is included
-once. The topological result is deterministic and read-only. Dependencies can
-cross source boundaries. Zero sources or modules are valid.
+`ModuleRegistry` is the single catalog for the startup. It captures each module's
+descriptor once, rejects duplicate IDs and unsupported API versions, and validates
+missing dependencies and cycles before any module service callback. Identity cannot
+be replaced by returning a different descriptor later. `Modules` and `Descriptors`
+are read-only snapshots in ordinal ID order. `InitializationOrder` is the graph's
+read-only topological result: dependency IDs and roots are traversed ordinally,
+dependencies precede consumers and shared dependencies run once. Input/source order
+does not change the result. Empty composition is valid.
 
-## Technical initialization and CORE boundaries
+`ModuleRuntime` consumes this validated catalog rather than accepting a separate,
+unvalidated list. `ModuleBuilder` builds once; late sources, repeat builds and a
+second builder/catalog in the same service collection fail. Normal requests cannot
+mutate the catalog. Presence in it is the authority for **AVAILABLE**; retained
+persistent rows never manufacture module availability.
 
-All AVAILABLE modules initialize sequentially in resolved dependency order.
-Failures propagate and stop subsequent initialization. There is no rollback,
-retry or parallel initialization. **INITIALIZED does not mean ENABLED**:
-initialization remains technical even when the persistent enabled flag is false.
+## Optional composition and current lifecycle
 
-The CORE is not a disableable functional module. Basic Health, essential
-authentication, the modular runtime and essential system administration remain
-outside functional module activation. AUTH/USERS behavior is unchanged.
+A module may implement these existing-purpose, typed hooks:
 
-Modules must not access another module's internal tables or private repositories.
-Future integration must use public contracts/capabilities of the owning module;
-the AI assistant already does so through CORE, and future Inventory integrations
-must follow the same boundary. CORE owns the capability registry, authenticated
-discovery and synchronous READ invocation; in-process module executors own
-capability business behavior. No capability bus is introduced.
+| Contract | Participation |
+| --- | --- |
+| `IModuleServiceContributor` | Register module-owned services using normal application DI composition |
+| `IModuleInitializer` | Perform current technical startup initialization |
+
+Service contributors run in dependency order after graph and contribution validation.
+Initializers run sequentially in the same order, including for administratively
+disabled modules. Modules without a hook are skipped. Cancellation and initialization
+failures propagate and stop subsequent modules; no retries, rollback, parallel
+initialization or lifecycle state machine is added. Initialization remains technical:
+**INITIALIZED does not mean ENABLED**, authorized or a member of a tenant.
+
+The .NET hooks retain the existing `IServiceCollection`/`IServiceProvider` composition
+boundary. Descriptor and dependency semantics do not depend on DI or EF. No module
+`GetService` API, string/type-keyed service locator or untyped contributions dictionary
+is introduced. Modules use their existing typed ports; the composition root continues
+to assemble services normally.
+
+## Persistence and module-owned configuration
+
+Persistence declaration never grants a connection, changes `TenantContext`, creates
+a database or selects a tenant. `None` fits the descriptor-only conformance modules;
+`Platform` describes AI's settings/metering; `Tenant` describes WMS business state.
+`Both` is representable and tested, without inventing a production module that needs it.
+The declaration does not include platform-owned module availability rows in every
+module's scope. There is still one independent business database per canonical Tenant,
+shared by that tenant's business modules with their own migration histories, never
+one database per module.
+
+WMS implements `IModuleInitializer` and retains its callback to the neutral
+`ITenantDatabaseMigrationRunner`. The callback owns `WmsDbContext`, EF configuration
+and migrations. The Host-owned tenancy runner supplies validated active-tenant targets;
+Core knows no WMS table, migration or connection policy. AI implements the same optional
+initializer for its existing Platform usage migrations. Its `tenant_ai_settings`
+remains AI-specific Platform persistence. No DbContext or database is moved and no
+new schema migration is needed for this task.
+
+`HasConfiguration` declares presence, not that every setting is mandatory or valid.
+WMS owns its optional development-user settings; AI owns provider/model/transport
+configuration and its tenant overrides. Existing module-specific validation remains
+unchanged. No generic configuration table, resolver, forms or secret storage is added.
+Authoritative tenancy, assistant/capability/primitive authorization, RBAC and independent
+business database resolution continue through their existing contracts. Registering
+a module or declaring configuration grants none of these rights.
+
+## Typed subsystem contributions
+
+The subsystem that understands a contribution owns its typed contract and validates
+its contents. Core's base module/descriptor contract contains none of those contents:
+
+- The capability subsystem defines `ICapabilityProvider` and `CapabilityRegistry`.
+- The READ primitive subsystem defines `IReadPrimitiveProvider`, its registry and
+  typed executor port; it is shared tooling, not an AI-specific Core branch.
+- The HTTP adapter defines `IHttpModule` and automatic module gating.
+- The tenancy subsystem defines the existing migration callback seam; persistent
+  modules own the callback implementation.
+
+Capability/primitive contracts currently live in the neutral Modularity project;
+HTTP contracts live in AspNetCore. They are logically owned by their subsystems,
+not fields or methods on the base module contract. Their registries verify contribution
+ownership against the catalog's captured identity. Persistent state and HTTP gating
+also use that identity. Modules cannot redefine ownership by changing a descriptor.
+There is no universal contribution container or arbitrary service lookup.
+
+WMS contributes its existing capabilities, READ primitives, endpoints, services and
+startup migrations. AI contributes its services, endpoints and Platform initialization
+as a normal module; it consumes shared authorized tooling and authoritative tenancy.
+Neither creates a production dependency on the other. Test modules exercise dependency
+graphs rather than inventing a WMS/AI dependency.
+
+### Future Resource Platform
+
+RESOURCE-METADATA-001 will own its own contribution contract, conceptually
+`ResourceDefinitionProvider`. Modules can implement that typed provider or register
+it through their normal service contribution; the resource subsystem will consume
+and validate those providers. Core's fundamental descriptor, catalog and lifecycle
+model need no resource-specific field or method and Core must not know
+`ResourceDefinition`.
+
+The approved resource architecture treats the backend as semantic authority. Future
+resource definitions are intended to drive validation, CRUD, security, metadata,
+OpenAPI, frontend generation and later AI/tool schemas. Scalar types, constraints,
+field/relation/action definitions, operations, security, annotations, resource
+registries and providers are future subsystem responsibilities. None of these types,
+CRUD runtime, metadata endpoints, resource persistence or generators is implemented
+by CORE-MODULE-001.
+
+## Future responsibilities, deliberately deferred
+
+Modules will eventually define configuration requirements including required/optional
+values, defaults, scope, inheritance, overrides, secret declarations and validation.
+Possible future scopes are PLATFORM, PARTNER, TENANT and SECRET. Their semantics and
+storage remain module/subsystem-owned; this task does not implement a merge algorithm,
+generic key/value engine, Partner hierarchy, reseller/branding inheritance or secrets
+manager. AI settings do not become the generic model.
+
+Future lifecycle concepts include install, upgrade, validate, activate, deactivate,
+provisionTenant, startTenant and removeTenant. This task implements only current
+startup initialization and graph validation. Existing module enabled-state APIs
+remain unchanged; there is no new administrative API/UI, tenant provisioning engine,
+package lifecycle, billing, themes, Resource Metadata/CRUD platform, Angular/OpenAPI
+generation, AI data policy, BYOK or automatic provider routing.
+
+The CORE itself is not a disableable functional module. Health, essential
+authentication, modular orchestration and essential administration remain outside
+functional module activation. Modules must not access sibling private tables or
+repositories; integration uses the owning module's public contracts.
 
 ## Persistent dynamic state
 
@@ -145,7 +249,7 @@ Specified responses are JSON/no-store. Errors contain only `code`: 400
 
 ### Explicit conformance composition
 
-Normal composition includes erbas.wms. Only environment
+Normal composition includes erbas.wms and erbas.ai. Only environment
 `Testing` together with `Modules:ConformanceEnabled=true`
 (environment binding `Modules__ConformanceEnabled`) adds a
 `ConformanceModuleSource`. The flag defaults to false. Development/Production
