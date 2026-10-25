@@ -5,5 +5,7 @@ namespace Alxarafe.Resources;
 public static class ResourceValueValidator
 {
     public static bool IsValid(FieldDefinition field, ScalarValue value) => value is not null && ResourceValidation.Accepts("$value", field, value);
+    public static EffectiveNumericConstraints? NumericConstraints(FieldDefinition field) => NumericDomain.Intrinsic(field.Type) is null
+        ? null : ResourceValidation.Numeric("$value", field);
     public static bool IsText(string? value) => ResourceValidation.Text(value);
 }

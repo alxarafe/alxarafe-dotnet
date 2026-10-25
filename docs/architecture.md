@@ -47,7 +47,13 @@ orchestration over typed repository/validator ports, consuming existing neutral 
 state and authoritative tenancy. Host adapts existing persisted Identity/native policies;
 module adapters own persistence and atomicity. Resources remains independent of Runtime,
 Core/Modularity depend on neither, and WMS/AI implementations remain unchanged. No generic
-HTTP/EF/UI runtime is introduced. See [backend execution](resources.md#generic-backend-resource-runtime).
+EF/UI runtime is introduced. See [backend execution](resources.md#generic-backend-resource-runtime).
+
+RESOURCE-API-001 adds the inward-facing `Alxarafe.Resources.AspNetCore` adapter for
+generic CRUD, explicit metadata/effective capabilities and OpenAPI derived from the
+frozen registry. Resources and Runtime remain ASP.NET-independent. These endpoints
+are .NET implementation extensions outside shared v0.12.0; see the
+[Resource HTTP boundary](resources.md#http-resource-api-and-metadata-projection).
 
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;

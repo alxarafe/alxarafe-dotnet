@@ -19,7 +19,7 @@ public sealed class ResourceValidationException(string resourceId, string path, 
     public ResourceValidationCode Code { get; } = code;
 }
 
-internal sealed record NumericShape(ResourceNumber? Minimum, ResourceNumber? Maximum,
+public sealed record EffectiveNumericConstraints(ResourceNumber? Minimum, ResourceNumber? Maximum,
     bool ExclusiveMinimum, bool ExclusiveMaximum, ResourceNumber? Step, int? Precision, int? Scale);
 
 internal static class ResourceValidation
@@ -137,7 +137,7 @@ internal static class ResourceValidation
 
     private static Regex Pattern(string pattern) => new(pattern, RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, PatternTimeout);
 
-    internal static NumericShape Numeric(string id, FieldDefinition field)
+    internal static EffectiveNumericConstraints Numeric(string id, FieldDefinition field)
     {
         string path = "fields." + field.Name + ".constraints";
         var intrinsic = NumericDomain.Intrinsic(field.Type)!;
