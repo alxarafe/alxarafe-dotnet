@@ -163,7 +163,22 @@ provider identity cannot alter equivalent hashes. Semantic field, constraint,
 permission, action, relation, version and annotation changes alter hashes. Changes
 to the canonical projection require deliberate format/version review.
 
-## Authority, business rules and future phases
+### Future frontend metadata cache coherence
+
+DefinitionHash, already implemented by RESOURCE-METADATA-001, will also support
+frontend metadata caching/coherence:
+
+```text
+cached hash == backend hash → cached metadata remains valid
+cached hash != backend hash → fetch updated metadata
+```
+
+A metadata change does not imply Angular source regeneration. The future Core FE
+runtime will render updated metadata directly. Cache dependency handling must respect
+the per-resource relation/hash semantics described above. Metadata fetching, cache
+invalidation and this coherence behavior are not implemented in this phase.
+
+## Authority and business rules
 
 Backend metadata will remain authoritative. Frontend validation is convenience only;
 direct REST calls must eventually receive the same backend validation. Declarative
@@ -171,24 +186,188 @@ constraints do not replace contextual domain rules: discount UINT8 0..100 is met
 but salesperson/director discount limits belong to domain services, business validators,
 action handlers or module-specific code. There is no business-rule scripting language.
 
+## Core FE Resource Runtime
+
+The primary frontend architecture is a Core FE Resource Runtime driven directly by
+Resource Metadata. Angular is the planned initial frontend runtime implementation;
+resource semantics and neutral layout remain independent of Angular and any chosen
+UI component library.
+
+> A standard functional module should not need its own frontend to expose CRUD,
+> relations, filters, declarative actions and forms that can be represented through
+> Resource Metadata.
+
+> Changes representable purely through Resource Metadata should not require
+> modifying or regenerating Angular code.
+
+The target end-to-end architecture is:
+
 ```text
-RESOURCE-METADATA-001: semantic model, validation, catalog, hash
+ResourceDefinition
     ↓
-RESOURCE-RUNTIME-001: ResourceRecord, repository port, validation pipeline, CRUD execution
+Resource Runtime
     ↓
-RESOURCE-API-001: REST, metadata API, derived OpenAPI
+Metadata API
     ↓
-ANGULAR-RESOURCE-001: metadata client, generated/, custom/, overrides, themes
-    ↓ later
-AI/tool schema derivation
+Core FE
+    ↓
+Angular Resource Runtime
+    ↓
+rendered CRUD/UI
 ```
 
-The intended customization progression remains:
+The backend Resource Runtime owns generic execution. Core FE owns reusable frontend
+runtime orchestration and rendering, with components equivalent to:
 
 ```text
-Metadata → Automatic CRUD → Metadata extension → Partial custom code → Full custom implementation
+MetadataClient
+ResourceRuntime
+ResourceList
+ResourceForm
+ResourceDetail
+ResourceFilters
+ResourceRelations
+ResourceActions
+LayoutRenderer
+ThemeResolver
+OverrideResolver
 ```
 
-This phase adds no generic persistence repository/record, SQL/EF runtime, dynamic
-schema generation, CRUD/metadata/action HTTP API, query execution, OpenAPI generation,
-Angular/client changes or AI/tool generation. Existing WMS resources are not migrated.
+A module-specific frontend is reserved for exceptional requirements that cannot
+reasonably be represented by the generic Resource Runtime. Standard resource
+maintenance uses the shared Core FE components.
+
+### Runtime and optional generation
+
+```text
+Primary:         metadata → Core FE Resource Runtime → UI
+Optional future: metadata → code generator → specialized/generated source
+```
+
+Angular source generation is no longer the primary path. A generator may later
+support specialized implementations; normal CRUD operation must not depend on it.
+Metadata-only changes flow through metadata retrieval and runtime rendering without
+Angular source modification or regeneration.
+
+### Neutral composable layout
+
+Resource Metadata must eventually support a composable, presentation-neutral layout
+model capable of expressing structures equivalent to:
+
+```text
+Layout
+├── Header
+├── TabGroup
+│   ├── Tab
+│   │   ├── Section
+│   │   │   ├── Field
+│   │   │   └── Section
+│   │   └── Section
+│   └── Tab
+└── Actions
+```
+
+The current annotation/vocabulary architecture must remain extensible enough to
+support typed layout terms and nested structures in a later phase. Exact layout
+types, schemas and renderers are outside RESOURCE-METADATA-001 and are not implemented
+here. Layout describes composition and intent; it must not encode `MatInput`,
+`PrimeNG`, Bootstrap classes, Tailwind classes or CSS classes.
+
+### Architectural precedent and acceptance reference
+
+[`alxarafe/resource-test`](https://github.com/alxarafe/resource-test) is a useful
+architectural precedent and future acceptance case. The Resource Platform/Core FE
+should be capable of expressing UI structures equivalent to its declarative showcase:
+tabs, nested panels/sections, fields, semantic types, constraints, actions/buttons
+and nested layout. It is a reference, with no runtime dependency introduced.
+
+The target architecture separates responsibilities explicitly:
+
+| Boundary | Responsibility |
+| --- | --- |
+| ResourceDefinition | Semantic definition and neutral layout |
+| Resource Runtime | Behavior |
+| Repository adapter | Persistence |
+| Core FE | Rendering |
+| Theme | Presentation |
+
+### Partial overrides
+
+The intended frontend override progression is:
+
+1. Standard metadata.
+2. Metadata override/extension.
+3. Custom renderer.
+4. Custom component.
+5. Fully custom frontend.
+
+This refines the progression from metadata and automatic CRUD through metadata
+extension and partial custom code to full custom implementation. Replacing one part
+must preserve generic behavior for the remaining CRUD. For example:
+
+```text
+LIST       generic runtime
+DETAIL     generic runtime
+FORM       generic runtime
+MAP        custom component
+```
+
+Overrides preserve backend validation and authorization. Exceptional UI behavior
+can replace a renderer/component without requiring a replacement resource frontend.
+
+### Themes
+
+```text
+Resource Runtime → decides WHAT must be rendered
+Theme            → decides HOW it is rendered
+```
+
+The same ResourceDefinition must remain usable across visual themes. Theme and
+presentation choices belong to the frontend rendering boundary; resource metadata
+must remain independent of the Angular/UI framework selected to implement it.
+
+### Long-term success criteria
+
+1. A standard business maintenance screen supports list, create, update, detail,
+   filtering, searching, ordering, relations, declarative validation, permissions,
+   actions and layout without resource-specific Angular code.
+2. A change representable in metadata requires no change to Core FE or the module
+   frontend.
+3. Adding a standard resource requires no manual registration of Angular components
+   for that resource.
+4. The same ResourceDefinition works independently of the visual theme.
+5. Exceptional UI behavior can be replaced partially without losing generic behavior
+   for the remaining CRUD.
+
+## Future phases
+
+```text
+RESOURCE-METADATA-001
+    semantic model
+    ↓
+RESOURCE-RUNTIME-001
+    generic backend execution
+    ↓
+RESOURCE-API-001
+    REST + Metadata API + OpenAPI
+    ↓
+ANGULAR-RESOURCE-RUNTIME-001
+    universal Core FE renderer
+    ↓
+RESOURCE-OVERRIDES-001
+    metadata/custom component overrides
+    ↓
+THEME-RUNTIME-001
+    presentation/theme resolution
+
+Later, optionally:
+    Angular code generation
+    AI/tool schema derivation
+```
+
+RESOURCE-METADATA-001 implements semantic metadata, validation, the registry and
+DefinitionHash only. Frontend runtime components, composable layout, cache coherence,
+overrides and theme resolution are future architectural requirements. This phase adds
+no generic persistence repository/record, SQL/EF runtime, dynamic schema generation,
+CRUD/metadata/action HTTP API, query execution, OpenAPI generation, Angular/client
+changes or AI/tool generation. Existing WMS resources are not migrated.
