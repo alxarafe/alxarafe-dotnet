@@ -273,13 +273,51 @@ types, schemas and renderers are outside RESOURCE-METADATA-001 and are not imple
 here. Layout describes composition and intent; it must not encode `MatInput`,
 `PrimeNG`, Bootstrap classes, Tailwind classes or CSS classes.
 
-### Architectural precedent and acceptance reference
+### WMS acceptance domain
 
-[`alxarafe/resource-test`](https://github.com/alxarafe/resource-test) is a useful
-architectural precedent and future acceptance case. The Resource Platform/Core FE
-should be capable of expressing UI structures equivalent to its declarative showcase:
-tabs, nested panels/sections, fields, semantic types, constraints, actions/buttons
-and nested layout. It is a reference, with no runtime dependency introduced.
+The existing WMS module is the primary real application acceptance domain for the
+future ERBAS/Mosaiko Resource Platform and Core FE Resource Runtime. Its real
+requirements must validate whether Resource Metadata and runtime rendering are
+expressive enough. Relevant existing resources include:
+
+- Warehouse.
+- Location.
+- Item (the existing `StockItem` domain model).
+- InventoryMovement.
+- Inventory (the existing `InventoryBalance` query projection).
+
+See [the current WMS inventory foundation](wms-inventory.md) for the implemented
+operations, relationships, constraints and permissions. Standard declarative WMS
+interfaces should be representable through Resource Metadata without resource-specific
+Angular code. Use real WMS requirements to evaluate:
+
+- Complex forms, multiple sections/groups and nested/sectioned layouts.
+- Relations between resources.
+- Create versus update behavior and read-only resources/views.
+- Filtering, searching and sorting.
+- Permissions and declarative actions.
+- Contextual field behavior where representable declaratively.
+
+Acceptance must preserve each resource's actual supported operations and semantics.
+The current warehouse/location/item masters and movements expose creation and reads;
+movements remain append-only, and Inventory is a read-only projection. Create/update
+distinctions must reflect where updates are actually supported. Filtering and ordering
+must preserve the documented behavior. Broader search, actions and contextual/layout
+behavior are evaluation dimensions to validate against actual WMS requirements,
+not claims that every listed resource already implements them or authorization to
+invent functionality for a showcase.
+
+> Do not simplify WMS requirements to fit the generic Resource Runtime. The Resource
+> Platform must be expressive enough to support normal WMS requirements or provide a
+> clean partial override mechanism when a requirement is genuinely non-declarative.
+
+WMS is an acceptance domain, not a dependency of `Alxarafe.Resources`:
+
+```text
+Alxarafe.Resources        → must NOT depend on WMS
+WMS                      → may later contribute ResourceDefinitions
+Core FE Resource Runtime → consumes generic Resource Metadata
+```
 
 The target architecture separates responsibilities explicitly:
 
@@ -302,15 +340,22 @@ The intended frontend override progression is:
 5. Fully custom frontend.
 
 This refines the progression from metadata and automatic CRUD through metadata
-extension and partial custom code to full custom implementation. Replacing one part
-must preserve generic behavior for the remaining CRUD. For example:
+extension and partial custom code to full custom implementation. If a future WMS
+screen contains behavior that cannot reasonably be represented declaratively, only
+that part should require custom frontend. For a future Warehouse screen needing an
+exceptional visualization, the conceptual split could be:
 
 ```text
-LIST       generic runtime
-DETAIL     generic runtime
-FORM       generic runtime
+Warehouse
+
+LIST       generic Resource Runtime
+FORM       generic Resource Runtime
+DETAIL     generic Resource Runtime
 MAP        custom component
 ```
+
+A custom component must not force replacement of the whole resource UI; generic
+behavior remains available for the other views and CRUD operations.
 
 Overrides preserve backend validation and authorization. Exceptional UI behavior
 can replace a renderer/component without requiring a replacement resource frontend.
@@ -338,6 +383,11 @@ must remain independent of the Angular/UI framework selected to implement it.
 4. The same ResourceDefinition works independently of the visual theme.
 5. Exceptional UI behavior can be replaced partially without losing generic behavior
    for the remaining CRUD.
+6. A meaningful set of existing WMS maintenance screens must be implementable through
+   Resource Metadata and the Core FE Resource Runtime with little or no
+   resource-specific Angular code.
+7. Resource Runtime design must be validated against real WMS requirements before
+   being considered mature.
 
 ## Future phases
 
