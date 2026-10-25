@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><AssemblyName>Alxarafe.Modules.Ai.Persistence</AssemblyName><RootNamespace>Alxarafe.Modules.Ai.Persistence</RootNamespace></PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Alxarafe.Modules.Ai.Application/Alxarafe.Modules.Ai.Application.csproj" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    </ItemGroup>
+</Project>

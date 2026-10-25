@@ -214,3 +214,22 @@ interpreting a live test result.
 
 This stops the local services and preserves database volumes. Do not remove volumes
 unless you intentionally want to discard local development data.
+
+## Deterministic usage tests
+
+[Usage metering](ai-usage.md) is internal telemetry, not an addition to the public
+assistant response. `AiUsageNormalizationTests` uses synthetic HTTP responses for
+Groq/Ollama token fields, IDs, failures, timeout/cancellation and retry attempts.
+`AiUsageMeteringTests` uses the existing Testing host and disposable PostgreSQL
+validation databases for real persistence, aggregation, tool-dispatch counts,
+content exclusion, idempotent concurrent writes and secondary-meter failure.
+`AiUsageTests` verifies the existing provider-neutral port and dependency boundary.
+No inference service or Internet connection is required by these tests.
+
+After provisioning the repository validation databases with the normal
+`bin/validation-db` workflow, the focused integration filter inside the Docker
+`app` service is `FullyQualifiedName~AiUsage`. The standard architecture,
+integration and `./bin/check` workflows include these tests; `./bin/check` also
+checks the AI migration and both usage tables. Do not run a new live-provider
+request merely to turn optional metrics into apparent validation evidence.
+Historical smoke timings/tool traces do not certify newly persisted usage.

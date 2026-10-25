@@ -3,9 +3,11 @@ using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai.Application;
 using Alxarafe.Modules.Ai.Http;
 using Alxarafe.Modules.Ai.Infrastructure;
+using Alxarafe.Modules.Ai.Persistence;
 using Alxarafe.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,11 +40,19 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
         });
         services.AddHttpClient(HttpClientName);
         services.AddScoped<IAiModelClient>(CreateModelClient);
+        services.AddDbContextFactory<AiUsageDbContext>((provider, options) =>
+            AiUsageStorage.Configure(options,
+                provider.GetRequiredService<IConfiguration>().GetConnectionString(AiUsageStorage.ConnectionName),
+                provider.GetRequiredService<IHostEnvironment>().IsEnvironment(DeterministicEnvironment)));
+        services.AddSingleton<IAiUsageMeter, EfAiUsageMeter>();
         services.AddScoped<AiAssistant>();
     }
 
-    public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default) =>
-        Task.CompletedTask;
+    public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+    {
+        await using var context = await services.GetRequiredService<IDbContextFactory<AiUsageDbContext>>().CreateDbContextAsync(cancellationToken);
+        await context.Database.MigrateAsync(cancellationToken);
+    }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => AiAssistantEndpoints.Map(endpoints);
 

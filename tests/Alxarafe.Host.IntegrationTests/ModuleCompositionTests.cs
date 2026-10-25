@@ -3,7 +3,9 @@ using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai;
+using Alxarafe.Modules.Ai.Application;
 using Alxarafe.Modules.Ai.Http;
+using Alxarafe.Modules.Ai.Persistence;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Modules.Wms.Http;
 using Alxarafe.Modules.Wms.Infrastructure;
@@ -18,7 +20,7 @@ namespace Alxarafe.Host.IntegrationTests;
 public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     [Fact]
-    public async Task FreshCompositionKeepsPlatformAndWmsStorageOwnershipSeparate()
+    public async Task FreshCompositionKeepsPlatformAndModuleStorageOwnershipSeparate()
     {
         using var client = factory.CreateClient();
         var document = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/openapi/v1.json");
@@ -35,10 +37,11 @@ public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factor
         await using var reader = await command.ExecuteReaderAsync();
         var tables = new List<string>();
         while (await reader.ReadAsync()) tables.Add(reader.GetString(0));
-        Assert.Equal([PlatformStorage.MigrationHistory, WmsStorage.MigrationHistory, PlatformStorage.ModuleStatesTable, "wms_inventory_movements", WmsStorage.ItemFamilyTable, WmsStorage.AssociationTable, "wms_items", "wms_locations", WmsStorage.StorageAttributeTable, WmsStorage.UomTable, "wms_warehouses"], tables);
+        Assert.Equal([AiUsageStorage.MigrationHistory, PlatformStorage.MigrationHistory, WmsStorage.MigrationHistory, AiUsageStorage.InvocationsTable, AiUsageStorage.RecordsTable, PlatformStorage.ModuleStatesTable, "wms_inventory_movements", WmsStorage.ItemFamilyTable, WmsStorage.AssociationTable, "wms_items", "wms_locations", WmsStorage.StorageAttributeTable, WmsStorage.UomTable, "wms_warehouses"], tables);
         Assert.Single(context.Model.GetEntityTypes());
         Assert.DoesNotContain(context.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow) || type.ClrType == typeof(StorageAttributeRow)
-            || type.ClrType == typeof(ItemFamilyRow) || type.ClrType == typeof(ItemFamilyAssociationRow));
+            || type.ClrType == typeof(ItemFamilyRow) || type.ClrType == typeof(ItemFamilyAssociationRow)
+            || type.ClrType == typeof(AiUsageRecord) || type.ClrType == typeof(AiInvocationUsage));
     }
 
     [Theory]

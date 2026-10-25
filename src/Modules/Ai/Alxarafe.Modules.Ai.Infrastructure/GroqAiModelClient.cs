@@ -28,18 +28,19 @@ public sealed class GroqAiModelClient : OpenAiCompatibleModelClient
     public GroqAiModelClient(HttpClient http, IConfiguration configuration, ILogger<GroqAiModelClient>? logger = null)
         : base(http, configuration[BaseUrlConfiguration] ?? DefaultBaseUrl,
             configuration[AiProviderResolver.ModelConfiguration] ?? configuration[ModelConfiguration] ?? DefaultModel,
-            configuration[ApiKeyConfiguration] ?? "", logger)
+            configuration[ApiKeyConfiguration] ?? "", logger, ProviderName)
     {
         this.logger = logger;
         http.Timeout = TimeSpan.FromSeconds(configuration.GetValue(TimeoutConfiguration, DefaultTimeoutSeconds));
     }
 
-    protected override async Task<AiModelResponse> CompleteRequestAsync(ChatRequest payload, AiModelRequest request, CancellationToken cancellationToken)
+    protected override async Task<AiModelResponse> CompleteRequestAsync(ChatRequest payload, CompletionContext completion, CancellationToken cancellationToken)
     {
+        var request = completion.Request;
         int generationRetries = 0, providerRetries = 0;
         for (int attempt = 0; attempt <= MaximumToolGenerationRetries + MaximumProviderRetries; attempt++)
         {
-            using var response = await SendAsync(payload, request.InvocationId, attempt + 1, cancellationToken);
+            using var response = await SendAsync(payload, completion, attempt + 1, cancellationToken);
             if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)
             {
                 await AuditFailureAsync(request.InvocationId, response, attempt + 1, cancellationToken);
@@ -83,6 +84,9 @@ public sealed class GroqAiModelClient : OpenAiCompatibleModelClient
         }
         throw new AiModelFailureException();
     }
+
+    protected override string? ReadProviderRequestId(HttpResponseMessage response, JsonElement? body) =>
+        ReadText(ReadObject(body, "x_groq"), "id") ?? base.ReadProviderRequestId(response, body);
 
     private async Task AuditFailureAsync(string? id, HttpResponseMessage response, int attempt, CancellationToken ct)
     {

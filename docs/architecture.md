@@ -117,11 +117,11 @@ no module permissions and never silently escalates an existing account.
 
 ## AI assistant
 
-The AI module owns Application, Infrastructure, Http and Module projects. Its
+The AI module owns Application, Infrastructure, Persistence, Http and Module projects. Its
 Application orchestrator combines effective capabilities and independently
 registered module READ primitives through neutral shared ports. Capabilities retain
 CORE-CAP-002 execution; primitives use a controlled router with authoritative
-persisted identity resolution at discovery and before each execution. AI never
+persisted identity resolution at discovery and before each execution. The AI orchestrator never
 references WMS/persistence or accepts arbitrary HTTP. Successful typed identities
 are returned in ordered `toolsUsed`; input is untrusted and budgets remain finite.
 See [AI-API-001 design](ai-read-primitives.md), including the published v0.12.0
@@ -154,6 +154,15 @@ It does not log messages, prompts, provider bodies, credentials or capability
 payloads. CORE audit remains authoritative for each capability invocation.
 Primitive audit separately links AI correlation, sequence, duration, logical
 outcome and bounded paging counts, without arguments/results.
+
+Normalized usage belongs to the existing Application model contract:
+`IAiModelClient` returns `AiModelResponse` with optional execution records, not an
+OpenAI wire type. The assistant passes attempt records and an invocation summary
+to `IAiUsageMeter`; AI.Persistence implements the port using its own PostgreSQL
+schema/migrations on the Platform connection. HTTP Infrastructure and Application
+remain independent of EF. Usage is content-free, nullable, retry-aware and
+best effort; it does not change functional audit or authorization. See
+[usage metric semantics and limitations](ai-usage.md).
 
 ## Verification and deliberate limits
 
