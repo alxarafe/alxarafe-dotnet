@@ -7,6 +7,27 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class ResourceTransportTests
 {
+    [Fact]
+    public void ValidSurrogatePairsRemainExactUnicodeText()
+    {
+        const string json = """
+            "\uD83D\uDE00"
+            """;
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(new TextValue("😀"), ResourceTransport.Parse(ScalarType.String, document.RootElement));
+    }
+
+    [Theory]
+    [InlineData("\"\\uD800\"")]
+    [InlineData("\"\\uDC00\"")]
+    public void InvalidUnicodeIsATransportFailureRatherThanAnInfrastructureFailure(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        var failure = Record.Exception(() => ResourceTransport.Parse(ScalarType.String, document.RootElement));
+        Assert.NotNull(failure);
+        Assert.Equal("ResourceTransportException", failure.GetType().Name);
+    }
+
     [Theory]
     [InlineData(ScalarType.Boolean, "true")]
     [InlineData(ScalarType.String, "\"text\"")]

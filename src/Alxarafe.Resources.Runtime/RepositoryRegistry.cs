@@ -45,8 +45,13 @@ public sealed class ResourceRepositoryRegistry
         IEnumerable<IResourceRepository> repositories, IEnumerable<IResourceOperationValidator> validators)
     {
         foreach (var repository in repositories)
-            if (repository is null || !catalog.Contains(repository.ResourceId) || !_repositories.TryAdd(repository.ResourceId, repository))
+        {
+            if (repository is null) throw new InvalidOperationException("Null resource repository.");
+            // Capture once: validation and association must use the same identity.
+            string resourceId = repository.ResourceId;
+            if (resourceId is null || !catalog.Contains(resourceId) || !_repositories.TryAdd(resourceId, repository))
                 throw new InvalidOperationException("Unknown, unbound or duplicate resource repository.");
+        }
         foreach (var group in validators.GroupBy(validator => validator.ResourceId, StringComparer.Ordinal))
         {
             if (!resources.TryGet(group.Key, out _) || group.Any(validator => string.IsNullOrWhiteSpace(validator.Id))

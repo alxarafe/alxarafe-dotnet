@@ -8,6 +8,32 @@ namespace Alxarafe.Resources.Runtime.Tests;
 public sealed class QueryAndRegistryTests
 {
     [Fact]
+    public async Task RegistrationCannotBindARepositoryUnderAnIdentityItNeverValidated()
+    {
+        var fixture = new Fixture();
+        var metadata = new ResourceRegistry(fixture.Modules, [new Fixture.Provider([Fixture.Definition(), Fixture.Definition(id: Fixture.OtherId)])]);
+        var catalog = new ResourceRepositoryCatalog(metadata, fixture.Modules, [new(Fixture.ResourceId, ResourceRepositoryScope.Tenant)]);
+        var repository = new ChangingIdentityRepository();
+        var registry = new ResourceRepositoryRegistry(metadata, catalog, [repository], []);
+        var runtime = new ResourceRuntime(metadata, new ModuleStateService(fixture.Modules, fixture.States), catalog, registry, fixture.Tenant, fixture.Authorization);
+        var failure = await Assert.ThrowsAsync<ResourceRuntimeException>(() => runtime.GetAsync(Fixture.OtherId, Fixture.Id));
+        Assert.Equal(ResourceRuntimeError.RepositoryNotRegistered, failure.Code);
+        Assert.Equal(0, repository.Inner.Calls);
+    }
+
+    private sealed class ChangingIdentityRepository : IResourceRepository
+    {
+        private int reads;
+        public string ResourceId => reads++ == 0 ? Fixture.ResourceId : Fixture.OtherId;
+        internal MemoryRepository Inner { get; } = new(Fixture.ResourceId);
+        public Task<ResourcePage> ListAsync(ResourceQuery query, CancellationToken cancellationToken = default) => Inner.ListAsync(query, cancellationToken);
+        public Task<ResourceRecord?> GetAsync(ResourceIdentifier identifier, CancellationToken cancellationToken = default) => Inner.GetAsync(identifier, cancellationToken);
+        public Task<ResourceRecord> CreateAsync(ResourceRecord values, CancellationToken cancellationToken = default) => Inner.CreateAsync(values, cancellationToken);
+        public Task<ResourceRecord?> UpdateAsync(ResourceIdentifier identifier, ResourceRecord patch, CancellationToken cancellationToken = default) => Inner.UpdateAsync(identifier, patch, cancellationToken);
+        public Task<bool> DeleteAsync(ResourceIdentifier identifier, CancellationToken cancellationToken = default) => Inner.DeleteAsync(identifier, cancellationToken);
+    }
+
+    [Fact]
     public async Task WhitelistedQueryIsPassedWithoutReorderingAndHasBoundedResults()
     {
         var fixture = new Fixture();
