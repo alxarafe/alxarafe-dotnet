@@ -26,11 +26,13 @@ public sealed class ModuleStateRow
 public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> options) : DbContext(options)
 {
     public DbSet<ModuleStateRow> ModuleStates => Set<ModuleStateRow>();
+    public DbSet<TenantAiSettingsRow> TenantAiSettings => Set<TenantAiSettingsRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => ConfigureModel(modelBuilder);
 
     internal static void ConfigureModel(ModelBuilder modelBuilder)
     {
+        TenantAiSettingsStorage.Configure(modelBuilder);
         var states = modelBuilder.Entity<ModuleStateRow>();
         states.ToTable(PlatformStorage.ModuleStatesTable);
         states.HasKey(state => state.ModuleId).HasName(PlatformStorage.ModuleStatesPrimaryKey);

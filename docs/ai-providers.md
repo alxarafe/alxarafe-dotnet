@@ -22,11 +22,13 @@ AI_MODEL=gemma4:latest
 
 Only lowercase `groq` and `ollama` are registered. For compatibility, an omitted
 provider defaults to `groq`; this is a fixed default, not inference from the model.
-An unknown provider fails when `IAiModelClient` is resolved. Set both variables
-when changing provider: the selected service must actually serve that model and
-support the tools needed for the intended task. No model discovery, fallback,
-per-request/tenant selection or automatic routing exists. Testing uses the
-existing deterministic adapter without resolving a real provider.
+An unknown global provider fails when `IAiModelClient` is resolved. Review both
+global settings when changing provider: the selected service must actually serve
+the chosen model and support the tools needed for the intended task. No model
+discovery, fallback, public per-request selection or automatic routing exists.
+Tenant overrides are prepared internally as described below, but inactive without
+runtime identity. Testing uses the existing deterministic adapter without
+resolving a real provider.
 
 Root `.env` names below are read by Docker Compose and `bin/configure-ai`.
 Native .NET configuration uses `AI:Provider` / `AI:Model` (environment variables
@@ -53,6 +55,98 @@ Always set `AI_MODEL=gemma4:latest` explicitly for the recorded Ollama case.
 Defaults are shipped configuration values, not promises of model availability,
 quota or tool compatibility. The legacy Groq model alias remains supported; the
 helper migrates it to `AI_MODEL` only when Groq is selected.
+
+## Tenant overrides (prepared, not active in runtime)
+
+AI-PROVIDER-002 adds Platform-owned persistence and effective configuration
+resolution. **There is no authoritative runtime tenant identity yet.** Identity
+represents users and permission claims; Platform module state does not identify
+an organization/company/account. The shipped `ICurrentTenantContext` implementation
+returns null. All real requests therefore retain global provider/model selection,
+even when settings rows exist. Email, username, hostname, arbitrary headers and
+development conventions never establish a tenant. This is not tenant isolation
+for business data or an implementation of multi-tenancy.
+
+Once an authoritative authenticated tenant context exists, selection is independent
+for each field:
+
+```text
+effective provider = nonblank tenant provider override, otherwise global provider
+effective model    = nonblank tenant model override, otherwise global model
+```
+
+| Global defaults | Tenant provider override | Tenant model override | Effective provider / model |
+| --- | --- | --- | --- |
+| groq / qwen/qwen3.8-27b | null | null | groq / qwen/qwen3.8-27b |
+| groq / qwen/qwen3.8-27b | ollama | gemma4:latest | ollama / gemma4:latest |
+| groq / qwen/qwen3.8-27b | ollama | null | ollama / qwen/qwen3.8-27b |
+| groq / qwen/qwen3.8-27b | null | gemma4:latest | groq / gemma4:latest |
+
+These are precedence examples, not assertions that either server serves every
+model. Overrides need not be supplied together. Null, empty and whitespace-only
+overrides inherit their respective global value. Nonblank provider IDs must match
+the registered lowercase IDs exactly. Unknown tenant providers fail before HTTP,
+without silent fallback. An unsupported global provider retains its clear error when that provider is
+used, or when its provider-specific model default is needed. An explicit valid
+tenant selection does not validate an unused global provider. A settings read failure is not
+converted into a global fallback.
+
+`AI_PROVIDER` and `AI_MODEL` remain the global environment settings. Existing
+provider defaults and the Groq-only legacy `AI_GROQ_MODEL` alias retain the
+precedence above. A provider-only override inherits the model resolved from the
+**global** configuration; it does not substitute the new provider's default model.
+Provider URLs, timeouts and credentials remain installation configuration. Selecting
+Groq uses the platform-managed Groq key; selecting Ollama retains keyless transport.
+Settings cannot carry credentials, prompts or business permissions.
+
+### Storage and internal composition
+
+Platform's `PlatformDbContext` owns `tenant_ai_settings` and migration
+`202610250002_TenantAiSettings` in `__PlatformMigrationsHistory`. The table has only
+`tenant_id`, nullable `provider_override` and nullable `model_override`. Its ordinal,
+case-sensitive tenant primary key permits one row per opaque tenant identifier;
+identifiers and selection values are bounded to 256 characters, and blank-space
+tenant identifiers are rejected. There is no tenant registry/FK to invent before
+an authority exists, no seed, enabled flag or speculative timestamps.
+
+Internal tooling/tests may use the normal `PlatformDbContext.TenantAiSettings`
+DbSet to create/update/delete settings. There is no new public administrative
+endpoint or UI. Real tenant onboarding, membership validation and management
+remain blocked on the authoritative tenant design. A row is configuration data,
+not proof of identity or tenant membership.
+
+`EffectiveAiConfigurationResolver` reads Platform's `ITenantAiSettingsStore` using
+the current context and returns `EffectiveAiConfiguration(ProviderId, ModelId)`.
+The store is singleton/stateless and creates a fresh EF context per read. The
+current context, effective resolver, model client and assistant are scoped.
+Without a tenant, DI constructs the existing selected provider directly, without
+a settings query. The prepared tenant path uses `ConfiguredAiModelClient` to await
+the database lookup outside the synchronous DI factory, then freezes the selected
+provider/model for the invocation's completions. Its snapshot never crosses
+request scopes; a later request reads current settings. The temporary configuration
+overlay is disposed after provider construction, without changing global settings.
+
+The common transport meters the effective provider and configured model actually
+used; reported model remains a separate field. Tenant attribution in usage is
+**not implemented or fabricated** while runtime identity is absent; the existing
+user attribution remains unchanged. Wiring an authoritative context and adding
+validated tenant metering attribution require that future tenant work. Billing
+mode and cost continue to be nullable; provider selection does not infer
+MANAGED/BYOK/LOCAL or prices.
+
+No data-processing policy, LOCAL_ONLY/CLOUD_ALLOWED, provider classification,
+BYOK, routing or fallback is implemented. A future policy can evaluate the
+settings/effective selection before provider construction without changing
+`AiAssistant` or the provider clients. This task changes no permissions,
+capabilities, READ primitives, execution-time authorization, functional audit,
+eight-call/turn budget or public `v0.12.0` API.
+
+Deterministic tests use explicitly injected synthetic tenant contexts, synthetic
+HTTP handlers and real disposable PostgreSQL validation storage. They cover
+independent overrides, scoped concurrent requests, snapshot refresh on later
+requests, platform credentials, identical authorized tools and effective usage
+persisted through the real ERBAS endpoint. They do not certify a runtime tenant
+authority. No live Groq or Ollama inference is required.
 
 ## Groq configuration
 

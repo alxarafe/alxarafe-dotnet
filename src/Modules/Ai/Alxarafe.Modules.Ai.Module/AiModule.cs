@@ -1,4 +1,5 @@
 using Alxarafe.AspNetCore;
+using Alxarafe.Core;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai.Application;
 using Alxarafe.Modules.Ai.Http;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -19,7 +21,7 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
 {
     public const string Id = AiContract.ModuleId;
     public const string DeterministicEnvironment = "Testing";
-    private const string HttpClientName = "ai-model";
+    public const string HttpClientName = "ai-model";
     public ModuleDescriptor Descriptor { get; } = new(Id, ModuleApi.CurrentVersion, []);
 
     public void ConfigureServices(IServiceCollection services)
@@ -38,6 +40,8 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
                 options.Users[i] = user with { Permissions = user.Permissions.Append(AiContract.AssistantPermission).Distinct(StringComparer.Ordinal).ToArray() };
             }
         });
+        services.TryAddScoped<ICurrentTenantContext, UnavailableTenantContext>();
+        services.AddScoped<EffectiveAiConfigurationResolver>();
         services.AddHttpClient(HttpClientName);
         services.AddScoped<IAiModelClient>(CreateModelClient);
         services.AddDbContextFactory<AiUsageDbContext>((provider, options) =>
@@ -65,6 +69,10 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
             return new DeterministicAiModelClient();
         var configuration = provider.GetRequiredService<IConfiguration>();
         var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientName);
-        return AiProviderResolver.Resolve(client, configuration, provider.GetRequiredService<ILoggerFactory>());
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        if (provider.GetRequiredService<ICurrentTenantContext>().TenantId is null)
+            return AiProviderResolver.Resolve(client, configuration, loggerFactory);
+        return new ConfiguredAiModelClient(client, configuration,
+            provider.GetRequiredService<EffectiveAiConfigurationResolver>(), loggerFactory);
     }
 }

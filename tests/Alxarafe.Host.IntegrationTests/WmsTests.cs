@@ -83,7 +83,7 @@ public sealed class WmsTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.True(index.IsUnique);
         Assert.Equal(WmsStorage.UomCodeIndex, index.GetDatabaseName());
         await using var platform = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
-        Assert.Equal(["202610120001_ModuleStates"], await platform.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610120001_ModuleStates", Alxarafe.EntityFrameworkCore.Migrations.TenantAiSettingsMigration.MigrationId], await platform.Database.GetAppliedMigrationsAsync());
         Assert.DoesNotContain(platform.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow));
     }
 

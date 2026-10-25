@@ -1,5 +1,6 @@
 using System.Globalization;
 using Alxarafe.AspNetCore;
+using Alxarafe.Core;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
@@ -33,6 +34,7 @@ builder.Services.AddDbContextFactory<PlatformDbContext>(options =>
     PlatformStorage.Configure(options, builder.Configuration.GetConnectionString(PlatformStorage.ConnectionName)
         ?? throw new InvalidOperationException("The Platform connection string must be configured.")));
 builder.Services.AddSingleton<IModuleStateStore, EfModuleStateStore>();
+builder.Services.AddSingleton<ITenantAiSettingsStore, EfTenantAiSettingsStore>();
 builder.Services.AddSingleton<ModuleStateService>();
 builder.Services.AddScoped<ICurrentSecurityContext, CurrentSecurityContext>();
 builder.Services.AddScoped<IReadPrimitiveService, ReadPrimitiveService>();

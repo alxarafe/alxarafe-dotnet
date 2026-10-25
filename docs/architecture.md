@@ -135,6 +135,11 @@ of the provider name, retaining the legacy Groq model alias. Testing selects the
 deterministic adapter. Application depends only on its model port; provider
 selection cannot change effective tools or authorization. See
 [canonical provider configuration and capabilities](ai-providers.md).
+Platform also owns prepared tenant provider/model settings. A scoped effective
+configuration resolver and asynchronous model-client bridge keep persistence
+outside the assistant and provider clients. Runtime currently has no authoritative
+tenant context, so selection remains global and usage has no invented tenant
+attribution. See [precedence and the runtime blocker](ai-providers.md#tenant-overrides-prepared-not-active-in-runtime).
 The common abstraction does not imply functional equivalence: every observable
 difference, limitation, configuration requirement or unvalidated capability must
 be documented by provider and, when relevant, by model. Adding a provider requires
