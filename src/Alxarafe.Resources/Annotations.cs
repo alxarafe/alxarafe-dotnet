@@ -35,10 +35,11 @@ public static class StandardAnnotations
     public static AnnotationTerm Label { get; } = new("Common", "Label", AnnotationValueKind.Text,
         AnnotationTarget.Resource | AnnotationTarget.Field | AnnotationTarget.Action | AnnotationTarget.ActionParameter);
     public static AnnotationTerm Hidden { get; } = new("UI", "Hidden", AnnotationValueKind.Boolean, AnnotationTarget.Field | AnnotationTarget.Action);
+    public static AnnotationTerm FormExcluded { get; } = new("UI", "FormExcluded", AnnotationValueKind.Boolean, AnnotationTarget.Field);
     public static AnnotationTerm SelectionFields { get; } = new("UI", "SelectionFields", AnnotationValueKind.FieldNames, AnnotationTarget.Resource);
     public static IReadOnlyList<AnnotationVocabulary> Vocabularies { get; } = Snapshot.Of(new[]
     {
         new AnnotationVocabulary(Label.Vocabulary, [Label]),
-        new AnnotationVocabulary(Hidden.Vocabulary, [Hidden, SelectionFields])
+        new AnnotationVocabulary(Hidden.Vocabulary, [Hidden, FormExcluded, SelectionFields])
     });
 }

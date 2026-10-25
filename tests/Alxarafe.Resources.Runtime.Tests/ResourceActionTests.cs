@@ -45,7 +45,7 @@ public sealed class ResourceActionTests
         internal Availability Provider { get; } = new();
         internal ResourceActionRuntime Runtime { get; }
         internal ResourceRepositoryCatalog Scopes { get; }
-        internal Harness(ModulePersistence persistence = ModulePersistence.Tenant, bool handlers = true, bool provider = true)
+        internal Harness(ModulePersistence persistence = ModulePersistence.Tenant, bool handlers = true, bool provider = true, bool form = false)
         {
             Base = new(persistence: persistence);
             Base.Authorization.Permissions.Add(ActionPermission);
@@ -53,7 +53,8 @@ public sealed class ResourceActionTests
             Metadata = new(Base.Modules, [new Fixture.Provider([new(source.Id, source.Version, source.ModuleId, source.IdDefinition, source.Fields, source.Operations, source.Security,
                 actions: [new(Post, ActionScope.Entity, ActionPermission, parameters: [new("reason", ScalarType.String, required: true, constraints: new TextConstraints(MaximumLength: 10)), new("optional", ScalarType.String, nullable: true, defaultValue: new TextValue("default")), new("count", ScalarType.UInt8, constraints: new NumericConstraints(Maximum: ResourceNumber.Parse("10"))), new("mode", ScalarType.Enum, enumValues: ["open", "closed"])]),
                     new(Import, ActionScope.Collection, Fixture.Create, parameters: [new("active", ScalarType.Boolean, defaultValue: new BooleanValue(true))]),
-                    new(Close, ActionScope.Selection, Fixture.Delete, requiresSelection: true)])])]);
+                    new(Close, ActionScope.Selection, Fixture.Delete, requiresSelection: true)],
+                presentation: form ? new(new([new("general", [new("details", [new("allFields", source.Fields.Select(field => field.Name))])])], actions: [Post])) : null)])]);
             Scopes = new(Metadata, Base.Modules, [new(Fixture.ResourceId, persistence == ModulePersistence.Tenant ? ResourceRepositoryScope.Tenant : ResourceRepositoryScope.Platform)]);
             Runtime = new(Metadata, new ModuleStateService(Base.Modules, Base.States), Scopes,
                 new(Metadata, Scopes, handlers ? [PostHandler, ImportHandler, CloseHandler] : [], provider ? [Provider] : []), Base.Tenant, Base.Authorization);
@@ -69,6 +70,16 @@ public sealed class ResourceActionTests
         Assert.Equal(new TextValue("default"), h.PostHandler.Received!.Input.Values["optional"]);
         await h.Runtime.ExecuteAsync(Fixture.ResourceId, Post, Entity, Input(("reason", new TextValue("valid")), ("optional", new NullValue())));
         Assert.IsType<NullValue>(h.PostHandler.Received!.Input.Values["optional"]); Assert.Equal(2, h.PostHandler.Calls); Assert.Equal(0, h.Base.Repository.Calls);
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PlacedAndUnplacedActionsExecuteIndependentlyOfFormLayout(bool form)
+    {
+        var h = new Harness(form: form);
+        await h.Runtime.ExecuteAsync(Fixture.ResourceId, Post, Entity, Input(("reason", new TextValue("valid"))));
+        await h.Runtime.ExecuteAsync(Fixture.ResourceId, Import, new ResourceCollectionTarget(), Input());
+        Assert.Equal(1, h.PostHandler.Calls); Assert.Equal(1, h.ImportHandler.Calls);
     }
     [Theory]
     [InlineData("unknown")]

@@ -8,7 +8,7 @@ namespace Alxarafe.Resources;
 public enum ResourceValidationCode
 {
     InvalidIdentity, Duplicate, UnknownModule, InvalidField, InvalidConstraint,
-    InvalidDefault, InvalidSecurity, InvalidRelation, InvalidAction, InvalidAnnotation
+    InvalidDefault, InvalidSecurity, InvalidRelation, InvalidAction, InvalidAnnotation, InvalidPresentation
 }
 
 public sealed class ResourceValidationException(string resourceId, string path, ResourceValidationCode code, string detail)
@@ -97,6 +97,7 @@ internal static class ResourceValidation
                 Field(resource, parameter.Field, terms, AnnotationTarget.ActionParameter, "actions." + action.Name + ".parameters." + parameter.Name);
         }
         Annotations(resource, resource.Annotations, AnnotationTarget.Resource, terms, "annotations");
+        FormValidation.Validate(resource);
     }
 
     private static void Field(ResourceDefinition resource, FieldDefinition field, IReadOnlyDictionary<string, AnnotationTerm> terms,

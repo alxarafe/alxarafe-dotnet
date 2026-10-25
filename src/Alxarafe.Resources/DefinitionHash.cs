@@ -6,9 +6,9 @@ namespace Alxarafe.Resources;
 
 // Deliberate semantic projection, not reflection/object serialization. Format changes
 // require a new canonical format identifier and golden-vector review.
-internal static class DefinitionHash
+internal static partial class DefinitionHash
 {
-    private const string CanonicalFormat = "erbas.resource-definition.v2";
+    private const string CanonicalFormat = "erbas.resource-definition.v3";
     internal static string Compute(ResourceDefinition resource, IReadOnlyDictionary<string, AnnotationTerm> terms)
     {
         using var stream = new MemoryStream();
@@ -67,6 +67,7 @@ internal static class DefinitionHash
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
+            Presentation(writer, resource.Presentation);
             Annotations(writer, resource.Annotations, terms);
             writer.WriteEndObject();
         }
