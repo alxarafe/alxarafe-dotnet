@@ -32,6 +32,16 @@ registration; its runtime never initializes an unvalidated list. Subsystems own 
 contribution contracts; Core orchestrates while modules own semantics. See the
 [module contract and contribution model](modularity.md).
 
+RESOURCE-METADATA-001 adds the dedicated `Alxarafe.Resources` subsystem, depending
+only on Modularity for ownership validation. Core/Modularity do not know resources.
+The Host eagerly validates and freezes typed provider contributions before persistence
+initialization or HTTP; normal composition currently contributes none. The semantic
+model and canonical hashes have no HTTP/ORM/UI/OpenAPI/AI dependencies. Existing WMS
+and AI APIs remain unchanged. The primary planned frontend is a metadata-driven
+Core FE Resource Runtime; Angular source generation is an optional later path.
+See [semantic Resource Metadata](resources.md) and the
+[Core FE runtime decision](resources.md#core-fe-resource-runtime).
+
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;
 validation uses alxarafe_test/alxarafe_security_test for the control plane and

@@ -127,22 +127,22 @@ as a normal module; it consumes shared authorized tooling and authoritative tena
 Neither creates a production dependency on the other. Test modules exercise dependency
 graphs rather than inventing a WMS/AI dependency.
 
-### Future Resource Platform
+### Resource Platform contribution boundary
 
-RESOURCE-METADATA-001 will own its own contribution contract, conceptually
-`ResourceDefinitionProvider`. Modules can implement that typed provider or register
-it through their normal service contribution; the resource subsystem will consume
-and validate those providers. Core's fundamental descriptor, catalog and lifecycle
+RESOURCE-METADATA-001 now owns `IResourceDefinitionProvider` in the dedicated
+`Alxarafe.Resources` subsystem. Modules can implement that typed provider or register
+it through their normal service contribution; the resource subsystem consumes
+and validates those providers. Core's fundamental descriptor, catalog and lifecycle
 model need no resource-specific field or method and Core must not know
 `ResourceDefinition`.
 
 The approved resource architecture treats the backend as semantic authority. Future
 resource definitions are intended to drive validation, CRUD, security, metadata,
 OpenAPI, frontend generation and later AI/tool schemas. Scalar types, constraints,
-field/relation/action definitions, operations, security, annotations, resource
-registries and providers are future subsystem responsibilities. None of these types,
-CRUD runtime, metadata endpoints, resource persistence or generators is implemented
-by CORE-MODULE-001.
+field/relation/action definitions, operations, security, annotations, registries and
+providers are now implemented by RESOURCE-METADATA-001, with eager startup validation
+and canonical hashes. CRUD runtime, metadata endpoints, resource persistence and
+generators remain deferred. See [semantic Resource Metadata](resources.md).
 
 ## Future responsibilities, deliberately deferred
 

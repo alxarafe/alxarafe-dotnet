@@ -6,6 +6,7 @@ using Alxarafe.Host;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai;
 using Alxarafe.Modules.Wms;
+using Alxarafe.Resources;
 using Alxarafe.Security.AspNetCore;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -89,6 +90,7 @@ if (builder.Environment.IsEnvironment(ConformanceModuleSource.EnvironmentName)
     && builder.Configuration.GetValue<bool>(ConformanceModuleSource.EnabledConfiguration))
     modules.AddSource(new ConformanceModuleSource());
 modules.Build();
+builder.Services.AddSingleton<ResourceRegistry>();
 // Module handlers run first; this handler only handles transversal validation.
 builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
 builder.Services.AddAlxarafePermissionAuthorization();
@@ -129,6 +131,8 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+// Validate/freeze typed resource contributions before persistence initialization or HTTP.
+_ = app.Services.GetRequiredService<ResourceRegistry>();
 // Keep the request culture active while exception handlers build their response.
 app.UseRequestLocalization();
 app.UseExceptionHandler();
