@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Security.Claims;
 using System.Text.Json;
 using Alxarafe.AspNetCore;
+using Alxarafe.Core;
 using Alxarafe.Modularity;
 using Alxarafe.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -76,6 +77,10 @@ internal sealed class CapabilityInvocationService(CapabilityRegistry registry, M
                 invocationId, normalized.Value);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (TenantAccessException failure) when (!failure.ConfigurationFailure)
+        {
+            return Finish(command, invocationId, timestamp, started, CapabilityInvocationOutcome.NotFound, capability);
+        }
         catch (Exception)
         {
             return Finish(command, invocationId, timestamp, started, CapabilityInvocationOutcome.ExecutionFailed, capability);

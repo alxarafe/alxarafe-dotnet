@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class UsersApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class UsersApiTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>, IAsyncLifetime
 {
     private readonly WebApplicationFactory<Program> application = RuntimeProbe.Configure(factory);
     private readonly List<Guid> owned = [];

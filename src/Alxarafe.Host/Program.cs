@@ -35,6 +35,19 @@ builder.Services.AddDbContextFactory<PlatformDbContext>(options =>
         ?? throw new InvalidOperationException("The Platform connection string must be configured.")));
 builder.Services.AddSingleton<IModuleStateStore, EfModuleStateStore>();
 builder.Services.AddSingleton<ITenantAiSettingsStore, EfTenantAiSettingsStore>();
+builder.Services.AddSingleton<ITenantDirectory, EfTenantDirectory>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IRequestTenantContext, TenantContext>();
+builder.Services.AddScoped<ICurrentTenantContext>(provider => provider.GetRequiredService<IRequestTenantContext>());
+builder.Services.AddSingleton<TenantDatabaseResolver>();
+builder.Services.AddSingleton<ITenantDatabaseResolver>(provider => provider.GetRequiredService<TenantDatabaseResolver>());
+builder.Services.AddSingleton<ITenantDatabaseMigrationRunner>(provider => provider.GetRequiredService<TenantDatabaseResolver>());
+if ((builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
+    && builder.Configuration.GetValue<bool>(DevelopmentTenantBootstrap.EnabledConfiguration))
+{
+    builder.Services.AddSingleton<DevelopmentTenantBootstrap>();
+    builder.Services.AddSingleton<IDevelopmentTenantMembership>(provider => provider.GetRequiredService<DevelopmentTenantBootstrap>());
+}
 builder.Services.AddSingleton<ModuleStateService>();
 builder.Services.AddScoped<ICurrentSecurityContext, CurrentSecurityContext>();
 builder.Services.AddScoped<IReadPrimitiveService, ReadPrimitiveService>();
@@ -122,15 +135,18 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseMiddleware<CurrentUserMiddleware>();
+app.UseMiddleware<TenantContextMiddleware>();
 app.UseMiddleware<CapabilityInvocationAuditMiddleware>();
 AiModule.UseInvocationAudit(app);
 app.UseAuthorization();
+await using (var context = await app.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync())
+    await context.Database.MigrateAsync();
+if (app.Services.GetService<DevelopmentTenantBootstrap>() is { } tenantBootstrap)
+    await tenantBootstrap.InitializeAsync();
 await SecuritySeed.InitializeAsync(app.Services, app.Environment);
 // Existing installations also need the small storage upgrade outside seed environments.
 await using (var scope = app.Services.CreateAsyncScope())
     await SecuritySchema.UpgradeEmailStorageAsync(scope.ServiceProvider.GetRequiredService<SecurityDbContext>());
-await using (var context = await app.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync())
-    await context.Database.MigrateAsync();
 await app.Services.GetRequiredService<ModuleStateService>().SynchronizeAsync();
 await app.Services.GetRequiredService<ModuleRuntime>().InitializeAsync(app.Services);
 app.MapOpenApi();

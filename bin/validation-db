@@ -3,6 +3,8 @@
 # Fixed names prevent validation from reaching the development databases.
 validation_platform_db=alxarafe_test
 validation_security_db=alxarafe_security_test
+validation_business_db=alxarafe_business_test
+validation_business_b_db=alxarafe_business_test_b
 
 validation_host_stop() {
     docker compose stop validation-app >/dev/null || true
@@ -12,19 +14,23 @@ validation_host_stop() {
 validation_db_drop() {
     docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 \
         -c "DROP DATABASE IF EXISTS \"$validation_platform_db\" WITH (FORCE)" \
-        -c "DROP DATABASE IF EXISTS \"$validation_security_db\" WITH (FORCE)" >/dev/null
+        -c "DROP DATABASE IF EXISTS \"$validation_security_db\" WITH (FORCE)" \
+        -c "DROP DATABASE IF EXISTS \"$validation_business_db\" WITH (FORCE)" \
+        -c "DROP DATABASE IF EXISTS \"$validation_business_b_db\" WITH (FORCE)" >/dev/null
 }
 
 validation_db_create() {
     validation_db_drop
     docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 \
         -c "CREATE DATABASE \"$validation_platform_db\"" \
-        -c "CREATE DATABASE \"$validation_security_db\"" >/dev/null
+        -c "CREATE DATABASE \"$validation_security_db\"" \
+        -c "CREATE DATABASE \"$validation_business_db\"" \
+        -c "CREATE DATABASE \"$validation_business_b_db\"" >/dev/null
 }
 
 validation_db_removed() {
     local remaining
     remaining="$(docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 -tAc \
-        "SELECT count(*) FROM pg_database WHERE datname IN ('$validation_platform_db', '$validation_security_db')")"
+        "SELECT count(*) FROM pg_database WHERE datname IN ('$validation_platform_db', '$validation_security_db', '$validation_business_db', '$validation_business_b_db')")"
     [[ "$remaining" == "0" ]]
 }

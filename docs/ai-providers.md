@@ -26,8 +26,8 @@ An unknown global provider fails when `IAiModelClient` is resolved. Review both
 global settings when changing provider: the selected service must actually serve
 the chosen model and support the tools needed for the intended task. No model
 discovery, fallback, public per-request selection or automatic routing exists.
-Tenant overrides are prepared internally as described below, but inactive without
-runtime identity. Testing uses the existing deterministic adapter without
+Tenant overrides are prepared internally as described below, with activation
+deferred to AI-PROVIDER-002B. Testing uses the existing deterministic adapter without
 resolving a real provider.
 
 Root `.env` names below are read by Docker Compose and `bin/configure-ai`.
@@ -59,16 +59,13 @@ helper migrates it to `AI_MODEL` only when Groq is selected.
 ## Tenant overrides (prepared, not active in runtime)
 
 AI-PROVIDER-002 adds Platform-owned persistence and effective configuration
-resolution. **There is no authoritative runtime tenant identity yet.** Identity
-represents users and permission claims; Platform module state does not identify
-an organization/company/account. The shipped `ICurrentTenantContext` implementation
-returns null. All real requests therefore retain global provider/model selection,
-even when settings rows exist. Email, username, hostname, arbitrary headers and
-development conventions never establish a tenant. This is not tenant isolation
-for business data or an implementation of multi-tenancy.
+resolution. [CORE-TENANT-001](tenancy.md) now establishes authoritative membership
+context and database-per-tenant business execution. **Tenant AI overrides remain
+inactive in production composition until AI-PROVIDER-002B.** All real requests
+retain global provider/model selection even when linked settings rows exist.
+Tenant selection cannot come from email, hostname, username or arbitrary headers.
 
-Once an authoritative authenticated tenant context exists, selection is independent
-for each field:
+The prepared resolver applies selection independently for each field:
 
 ```text
 effective provider = nonblank tenant provider override, otherwise global provider
@@ -102,25 +99,26 @@ Settings cannot carry credentials, prompts or business permissions.
 ### Storage and internal composition
 
 Platform's `PlatformDbContext` owns `tenant_ai_settings` and migration
-`202610250002_TenantAiSettings` in `__PlatformMigrationsHistory`. The table has only
-`tenant_id`, nullable `provider_override` and nullable `model_override`. Its ordinal,
-case-sensitive tenant primary key permits one row per opaque tenant identifier;
+`202610250002_TenantAiSettings` in `__PlatformMigrationsHistory`. The original table has
+legacy `tenant_id`, nullable `provider_override` and nullable `model_override`.
+CORE-TENANT-001 adds a unique nullable `canonical_tenant_id` foreign key; see
+[legacy alignment](tenancy.md#legacy-tenant-ai-settings). The legacy primary key
+preserves pre-authority rows, while only explicit canonical links are readable;
 identifiers and selection values are bounded to 256 characters, and blank-space
-tenant identifiers are rejected. There is no tenant registry/FK to invent before
-an authority exists, no seed, enabled flag or speculative timestamps.
+tenant identifiers are rejected. There is no settings seed, enabled flag or speculative timestamp.
 
 Internal tooling/tests may use the normal `PlatformDbContext.TenantAiSettings`
 DbSet to create/update/delete settings. There is no new public administrative
-endpoint or UI. Real tenant onboarding, membership validation and management
-remain blocked on the authoritative tenant design. A row is configuration data,
+endpoint or UI. Tenant onboarding and membership management use controlled internal persistence;
+there is no tenant administration API in CORE-TENANT-001. A row is configuration data,
 not proof of identity or tenant membership.
 
 `EffectiveAiConfigurationResolver` reads Platform's `ITenantAiSettingsStore` using
 the current context and returns `EffectiveAiConfiguration(ProviderId, ModelId)`.
 The store is singleton/stateless and creates a fresh EF context per read. The
 current context, effective resolver, model client and assistant are scoped.
-Without a tenant, DI constructs the existing selected provider directly, without
-a settings query. The prepared tenant path uses `ConfiguredAiModelClient` to await
+Production DI constructs the global selected provider directly, without a tenant
+settings query. The prepared, explicitly injected test path uses `ConfiguredAiModelClient` to await
 the database lookup outside the synchronous DI factory, then freezes the selected
 provider/model for the invocation's completions. Its snapshot never crosses
 request scopes; a later request reads current settings. The temporary configuration
@@ -128,9 +126,9 @@ overlay is disposed after provider construction, without changing global setting
 
 The common transport meters the effective provider and configured model actually
 used; reported model remains a separate field. Tenant attribution in usage is
-**not implemented or fabricated** while runtime identity is absent; the existing
-user attribution remains unchanged. Wiring an authoritative context and adding
-validated tenant metering attribution require that future tenant work. Billing
+**not implemented or fabricated** in CORE-TENANT-001; existing user attribution
+remains unchanged. Provider activation and validated tenant metering attribution
+belong to AI-PROVIDER-002B. Billing
 mode and cost continue to be nullable; provider selection does not infer
 MANAGED/BYOK/LOCAL or prices.
 
@@ -145,8 +143,8 @@ Deterministic tests use explicitly injected synthetic tenant contexts, synthetic
 HTTP handlers and real disposable PostgreSQL validation storage. They cover
 independent overrides, scoped concurrent requests, snapshot refresh on later
 requests, platform credentials, identical authorized tools and effective usage
-persisted through the real ERBAS endpoint. They do not certify a runtime tenant
-authority. No live Groq or Ollama inference is required.
+persisted through the real ERBAS endpoint. They do not activate tenant overrides in production; authoritative context is
+covered separately by CORE-TENANT-001 isolation tests. No live Groq or Ollama inference is required.
 
 ## Groq configuration
 

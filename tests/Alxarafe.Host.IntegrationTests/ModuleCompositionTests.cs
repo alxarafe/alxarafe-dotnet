@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ModuleCompositionTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     [Fact]
     public async Task FreshCompositionKeepsPlatformAndModuleStorageOwnershipSeparate()
@@ -37,8 +37,10 @@ public sealed class ModuleCompositionTests(WebApplicationFactory<Program> factor
         await using var reader = await command.ExecuteReaderAsync();
         var tables = new List<string>();
         while (await reader.ReadAsync()) tables.Add(reader.GetString(0));
-        Assert.Equal([AiUsageStorage.MigrationHistory, PlatformStorage.MigrationHistory, WmsStorage.MigrationHistory, AiUsageStorage.InvocationsTable, AiUsageStorage.RecordsTable, PlatformStorage.ModuleStatesTable, TenantAiSettingsStorage.Table, "wms_inventory_movements", WmsStorage.ItemFamilyTable, WmsStorage.AssociationTable, "wms_items", "wms_locations", WmsStorage.StorageAttributeTable, WmsStorage.UomTable, "wms_warehouses"], tables);
-        Assert.Equal(2, context.Model.GetEntityTypes().Count());
+        Assert.Equal([AiUsageStorage.MigrationHistory, PlatformStorage.MigrationHistory, AiUsageStorage.InvocationsTable,
+            AiUsageStorage.RecordsTable, PlatformStorage.ModuleStatesTable, TenantAiSettingsStorage.Table,
+            TenantStorage.MembershipsTable, TenantStorage.TenantsTable], tables);
+        Assert.Equal(4, context.Model.GetEntityTypes().Count());
         Assert.DoesNotContain(context.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow) || type.ClrType == typeof(StorageAttributeRow)
             || type.ClrType == typeof(ItemFamilyRow) || type.ClrType == typeof(ItemFamilyAssociationRow)
             || type.ClrType == typeof(AiUsageRecord) || type.ClrType == typeof(AiInvocationUsage));

@@ -20,6 +20,11 @@ WMS contract conformance. [AI READ primitives](docs/ai-read-primitives.md) are
 part of the published v0.12.0 contract implemented by this backend. Real-provider
 results remain observational evidence, separate from deterministic conformance.
 
+The [tenancy foundation](docs/tenancy.md) separates Platform/Identity control-plane
+storage from an independent business database per tenant. Business execution
+requires exactly one active membership plus existing permissions. Tenant selection
+for multiple memberships and commercial/branding hierarchy remain deferred.
+
 ## ERBAS ecosystem
 
 | Repository | Responsibility |

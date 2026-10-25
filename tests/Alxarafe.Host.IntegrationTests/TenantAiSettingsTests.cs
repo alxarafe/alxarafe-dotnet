@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class TenantAiSettingsTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class TenantAiSettingsTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     private static readonly string[] PreviousMigrations = ["202610120001_ModuleStates"];
 
@@ -27,13 +27,15 @@ public sealed class TenantAiSettingsTests(WebApplicationFactory<Program> factory
         {
             await using (var context = await contexts.CreateDbContextAsync())
             {
-                context.TenantAiSettings.AddRange(new TenantAiSettingsRow { TenantId = tenant, ProviderOverride = OllamaAiModelClient.ProviderName },
-                    new TenantAiSettingsRow { TenantId = otherTenant, ModelOverride = EffectiveAiConfigurationTests.LocalModel });
+                context.Tenants.AddRange(new TenantRow { Id = tenant, Key = tenant, DisplayName = "Fixture", DatabaseReference = tenant },
+                    new TenantRow { Id = otherTenant, Key = otherTenant, DisplayName = "Fixture", DatabaseReference = otherTenant });
+                context.TenantAiSettings.AddRange(new TenantAiSettingsRow { TenantId = tenant, CanonicalTenantId = tenant, ProviderOverride = OllamaAiModelClient.ProviderName },
+                    new TenantAiSettingsRow { TenantId = otherTenant, CanonicalTenantId = otherTenant, ModelOverride = EffectiveAiConfigurationTests.LocalModel });
                 await context.SaveChangesAsync();
                 Assert.False(context.Database.HasPendingModelChanges());
                 Assert.Contains(TenantAiSettingsMigration.MigrationId, await context.Database.GetAppliedMigrationsAsync());
                 var properties = context.Model.FindEntityType(typeof(TenantAiSettingsRow))!.GetProperties().Select(property => property.Name).Order();
-                Assert.Equal(new[] { nameof(TenantAiSettingsRow.ModelOverride), nameof(TenantAiSettingsRow.ProviderOverride), nameof(TenantAiSettingsRow.TenantId) }, properties);
+                Assert.Equal(new[] { nameof(TenantAiSettingsRow.CanonicalTenantId), nameof(TenantAiSettingsRow.ModelOverride), nameof(TenantAiSettingsRow.ProviderOverride), nameof(TenantAiSettingsRow.TenantId) }, properties);
             }
             var store = factory.Services.GetRequiredService<ITenantAiSettingsStore>();
             var values = await Task.WhenAll(store.FindAsync(tenant), store.FindAsync(otherTenant));
@@ -52,6 +54,7 @@ public sealed class TenantAiSettingsTests(WebApplicationFactory<Program> factory
         {
             await using var context = await contexts.CreateDbContextAsync();
             await context.TenantAiSettings.Where(row => row.TenantId == tenant || row.TenantId == otherTenant).ExecuteDeleteAsync();
+            await context.Tenants.Where(row => row.Id == tenant || row.Id == otherTenant).ExecuteDeleteAsync();
         }
     }
 

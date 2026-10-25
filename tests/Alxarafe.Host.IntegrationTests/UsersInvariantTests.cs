@@ -16,7 +16,7 @@ namespace Alxarafe.Host.IntegrationTests;
 
 // Host tests are serialized at assembly level. These cases temporarily isolate
 // CORE administrator claims in the disposable security database and restore them.
-public sealed class UsersInvariantTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class UsersInvariantTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     [Theory]
     [InlineData(false)]

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class LoginIdentityTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class LoginIdentityTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     [Fact]
     public async Task LoginWhenPasswordFailsIdentityCountsFailureAndHonorsLockout()

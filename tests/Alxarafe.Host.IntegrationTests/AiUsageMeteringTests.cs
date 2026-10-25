@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class AiUsageMeteringTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class AiUsageMeteringTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>, IAsyncLifetime
 {
     private static readonly string[] PublicResponseFields = ["answer", "invocationId", "toolsUsed"];
     private const string Password = "ai-usage-fixture-password";

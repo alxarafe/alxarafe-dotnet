@@ -110,9 +110,10 @@ Only the authenticated user UUID is attributable today, after it matches the
 invocation subject. There is no tenant/account/installation/reseller dimension
 added speculatively, no conversation copy, and no new usage query endpoint.
 [Prepared tenant provider settings](ai-providers.md#tenant-overrides-prepared-not-active-in-runtime)
-do not establish runtime tenant identity. Effective provider/configured model are
-metered by the common transport; tenant attribution remains blocked until an
-authoritative tenant source exists. A reported provider model never replaces the
+do not activate provider overrides. CORE-TENANT-001 establishes authoritative
+membership context, but tenant usage attribution remains deferred to
+AI-PROVIDER-002B. Global effective provider/configured model continue to be
+metered by the common transport. A reported provider model never replaces the
 configured model.
 There is no cross-database identity foreign key. Existing authorization and
 functional audit remain authoritative and unchanged; telemetry grants no access.

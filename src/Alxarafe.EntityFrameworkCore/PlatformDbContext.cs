@@ -27,12 +27,15 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
 {
     public DbSet<ModuleStateRow> ModuleStates => Set<ModuleStateRow>();
     public DbSet<TenantAiSettingsRow> TenantAiSettings => Set<TenantAiSettingsRow>();
+    public DbSet<TenantRow> Tenants => Set<TenantRow>();
+    public DbSet<TenantMembershipRow> TenantMemberships => Set<TenantMembershipRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => ConfigureModel(modelBuilder);
 
     internal static void ConfigureModel(ModelBuilder modelBuilder)
     {
         TenantAiSettingsStorage.Configure(modelBuilder);
+        TenantStorage.Configure(modelBuilder);
         var states = modelBuilder.Entity<ModuleStateRow>();
         states.ToTable(PlatformStorage.ModuleStatesTable);
         states.HasKey(state => state.ModuleId).HasName(PlatformStorage.ModuleStatesPrimaryKey);

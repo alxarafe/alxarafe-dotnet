@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Alxarafe.Core;
 using Alxarafe.Security;
 using Alxarafe.Security.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -21,7 +22,11 @@ public static class SecuritySeed
         var userManager = provider.GetRequiredService<UserManager<AlxarafeUser>>();
 
         foreach (var user in provider.GetRequiredService<IOptions<DevelopmentUsersOptions>>().Value.Users)
+        {
             await EnsureUserAsync(userManager, user.Email, user.Password, user.Permissions);
+            var account = (await userManager.FindByEmailAsync(user.Email))!;
+            if (provider.GetService<IDevelopmentTenantMembership>() is { } membership) await membership.AssignAsync(account.Id);
+        }
 
         var configuration = provider.GetRequiredService<IConfiguration>();
         var adminPassword = configuration["SecuritySeed:AdminPassword"];
@@ -35,6 +40,7 @@ public static class SecuritySeed
                 var state = existing is null ? null : await administration.FindAsync(existing.Id);
                 if (state is not { Enabled: true, Admin: true })
                     throw new InvalidOperationException("Controlled administrator seed conflicts with an existing account; no state was overwritten.");
+                if (provider.GetService<IDevelopmentTenantMembership>() is { } membership) await membership.AssignAsync(existing!.Id);
             }
         }
     }

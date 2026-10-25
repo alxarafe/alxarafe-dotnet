@@ -6,6 +6,7 @@ namespace Alxarafe.EntityFrameworkCore;
 public sealed class TenantAiSettingsRow
 {
     public string TenantId { get; set; } = string.Empty;
+    public string? CanonicalTenantId { get; set; }
     public string? ProviderOverride { get; set; }
     public string? ModelOverride { get; set; }
 }
@@ -38,8 +39,8 @@ public sealed class EfTenantAiSettingsStore(IDbContextFactory<PlatformDbContext>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
         await using var context = await factory.CreateDbContextAsync(cancellationToken);
-        return await context.TenantAiSettings.AsNoTracking().Where(row => row.TenantId == tenantId)
-            .Select(row => new TenantAiSettings(row.TenantId, row.ProviderOverride, row.ModelOverride))
+        return await context.TenantAiSettings.AsNoTracking().Where(row => row.CanonicalTenantId == tenantId)
+            .Select(row => new TenantAiSettings(row.CanonicalTenantId!, row.ProviderOverride, row.ModelOverride))
             .SingleOrDefaultAsync(cancellationToken);
     }
 }

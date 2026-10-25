@@ -25,7 +25,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class TenantAiInvocationTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class TenantAiInvocationTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     private const string Password = "tenant-ai-fixture-password";
     private const string InvokePath = "/api/ai/assistant/invocations";
@@ -51,9 +51,11 @@ public sealed class TenantAiInvocationTests(WebApplicationFactory<Program> facto
             Assert.True((await identity.AddClaimAsync(account, new Claim(PermissionClaim.Type, AiContract.AssistantPermission))).Succeeded);
         }
         await using var platform = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
+        platform.Tenants.Add(new TenantRow { Id = tenantId, Key = tenantId, DisplayName = "Synthetic settings fixture", DatabaseReference = tenantId, Active = false });
         platform.TenantAiSettings.Add(new TenantAiSettingsRow
         {
             TenantId = tenantId,
+            CanonicalTenantId = tenantId,
             ProviderOverride = OllamaAiModelClient.ProviderName,
             ModelOverride = EffectiveAiConfigurationTests.LocalModel
         });
@@ -109,6 +111,7 @@ public sealed class TenantAiInvocationTests(WebApplicationFactory<Program> facto
             await usage.UsageRecords.Where(row => row.InvocationId != null && invocationIds.Contains(row.InvocationId)).ExecuteDeleteAsync();
             await usage.Invocations.Where(row => invocationIds.Contains(row.InvocationId)).ExecuteDeleteAsync();
             await platform.TenantAiSettings.Where(row => row.TenantId == tenantId).ExecuteDeleteAsync();
+            await platform.Tenants.Where(row => row.Id == tenantId).ExecuteDeleteAsync();
             await setup.ServiceProvider.GetRequiredService<SecurityDbContext>().Users.Where(row => row.Id == user.Id).ExecuteDeleteAsync();
         }
     }
@@ -126,6 +129,10 @@ public sealed class TenantAiInvocationTests(WebApplicationFactory<Program> facto
                     services.RemoveAll<ICurrentTenantContext>();
                     services.AddScoped<ICurrentTenantContext>(_ => new EffectiveAiConfigurationTests.Tenant(tenantId));
                 }
+                services.AddScoped<IAiModelClient>(provider => new ConfiguredAiModelClient(
+                    provider.GetRequiredService<IHttpClientFactory>().CreateClient(AiModule.HttpClientName),
+                    provider.GetRequiredService<IConfiguration>(), provider.GetRequiredService<EffectiveAiConfigurationResolver>(),
+                    Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
                 services.AddHttpClient(AiModule.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => wire);
             });
         });

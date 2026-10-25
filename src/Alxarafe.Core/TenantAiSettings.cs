@@ -1,6 +1,6 @@
 namespace Alxarafe.Core;
 
-// Opaque identifier reserved for a future authoritative tenant source, not a user ID.
+// TenantId supplied to the read port is the canonical Tenant ID, never a user ID.
 public sealed record TenantAiSettings(string TenantId, string? ProviderOverride = null, string? ModelOverride = null)
 {
     public const int MaximumTenantIdLength = 256;
@@ -17,7 +17,7 @@ public interface ICurrentTenantContext
     string? TenantId { get; }
 }
 
-// Runtime has no tenant membership/identity authority yet. Never infer one from HTTP or user data.
+// Explicit unavailable context for non-request compositions. The Host registers authoritative tenancy.
 public sealed class UnavailableTenantContext : ICurrentTenantContext
 {
     public string? TenantId => null;

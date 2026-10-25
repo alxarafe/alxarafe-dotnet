@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class ModuleGatingTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ModuleGatingTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     private const string LoginPath = "/api/auth/login";
     private const string AdminPassword = "module-gate-admin-fixture-123";

@@ -7,5 +7,5 @@ namespace Alxarafe.EntityFrameworkCore.Migrations;
 [DbContext(typeof(PlatformDbContext))]
 public sealed class PlatformDbContextModelSnapshot : ModelSnapshot
 {
-    protected override void BuildModel(ModelBuilder modelBuilder) => TenantAiSettingsMigration.ConfigureFrozenModel(modelBuilder);
+    protected override void BuildModel(ModelBuilder modelBuilder) => AuthoritativeTenancy.ConfigureFrozenModel(modelBuilder);
 }
