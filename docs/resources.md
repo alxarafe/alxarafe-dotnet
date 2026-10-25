@@ -7,6 +7,28 @@ read-only registry. RESOURCE-RUNTIME-001 adds generic backend execution in the s
 `Alxarafe.Resources.Runtime` boundary. RESOURCE-API-001 projects HTTP/metadata/OpenAPI through
 `Alxarafe.Resources.AspNetCore`; this is not a low-code/business-rule engine.
 
+## Execution boundary and current scope
+
+The generic HTTP controller role is implemented idiomatically by Minimal API
+`ResourceEndpoints` (CRUD/metadata) and `ResourceActionEndpoints` (actions), not by a
+parallel MVC ResourceController. Both use the same frozen registry as orchestration:
+
+```text
+HTTP → ResourceEndpoints / ResourceActionEndpoints
+     → ResourceRuntime / ResourceActionRuntime
+     → registered ResourceDefinition + shared semantic validation
+     → typed repository / handler ports → module-owned adapters
+```
+
+The HTTP layer parses/projects transport and maps structured errors; it does not
+validate resource-specific numeric ranges or choose concrete business entities.
+Definitions contain no execution state. Records, queries, action targets and inputs
+are separate runtime values. Registration, invalid-definition/unknown-resource
+failures, constraints, structural relation resolution and action execution are covered
+by behavior tests. This is a usable generic infrastructure boundary, not a production
+ERP module or universal persistence engine. Production resource contribution/adapters
+remain module-owned; the normal catalog is currently empty.
+
 ## Boundary and composition
 
 ```text
@@ -51,7 +73,10 @@ stored. UINT32 covers 0..4294967295 regardless of the eventual storage represent
 
 Integer domains expose exact intrinsic minimum/maximum and unit step through
 `NumericDomain.Intrinsic`. DECIMAL is an exact, initially unbounded base-ten domain,
-not CLR `decimal`. `ResourceNumber` uses arbitrary-precision integer coefficient and
+not CLR `decimal`. UINT8's intrinsic domain is exactly 0..255: -1/256 fail, 0/255
+succeed. Field constraints can further restrict that domain. Scalar validation,
+CREATE/PATCH and HTTP behavior tests pin these boundaries without byte-range logic
+in the HTTP adapter. `ResourceNumber` uses arbitrary-precision integer coefficient and
 scale, normalizes trailing zeros and compares without floating-point rounding.
 Fixed decimal precision/scale may exceed CLR decimal limits. Decimal literals use
 plain base-ten notation; exponents, NaN and infinities are not accepted.
@@ -228,7 +253,8 @@ never inferred from a record, annotation or the presence of a current tenant.
 
 `ResourceRepositoryRegistry` is scoped and snapshots typed repository instances by
 their declared ResourceId. It rejects duplicate, unbound or unknown repositories and
-checks identity again before dispatch. Repositories may not change identity after
+captures one ResourceId for both binding validation and association, then checks
+identity again before dispatch. Repositories may not change identity after
 registration. The Host validates one scope before initialization/HTTP; each request
 gets its own scoped adapters. Adapter constructors must be side-effect-free: resolve
 connections only inside operations through the appropriate infrastructure. Bindings
@@ -413,7 +439,10 @@ The Runtime validates the parsed ID's domain and constraints before repository u
 
 Mutation bodies are JSON objects of field names to scalar values, not serialized
 Runtime objects. Maximum body size is 65,536 bytes; duplicate keys, nested values for
-scalar fields and malformed values are rejected. Explicit DTO projections prevent
+scalar fields and malformed values are rejected. JSON text is decoded strictly,
+including property names: malformed Unicode/surrogate escapes are transport 400
+errors, not server failures. Valid surrogate pairs retain their exact text. The same
+bounded decoder protects mutation/action bodies and typed JSON filters. Explicit DTO projections prevent
 internal implementation properties from leaking. No transport coercion is performed:
 
 | Semantic type | JSON transport |

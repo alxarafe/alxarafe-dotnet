@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Alxarafe.Resources.Runtime;
@@ -17,6 +18,8 @@ public static class ResourceTransport
     public const int MaximumBodyBytes = 65_536;
     public const int MaximumNumericDigits = 4096;
     private const int NumericRadix = 10;
+    private const int MaximumBodyDepth = 32;
+    private const int MaximumFilterDepth = 4;
     private const string DateFormat = "yyyy-MM-dd";
     private const string TimeFormat = "HH:mm:ss.FFFFFFF";
     private const string InstantFormat = "yyyy-MM-dd'T'HH:mm:ss.FFFFFFFK";
@@ -25,7 +28,7 @@ public static class ResourceTransport
     public static ScalarValue Parse(ScalarType type, JsonElement value)
     {
         if (value.ValueKind == JsonValueKind.Null) return new NullValue();
-        string? text = value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+        string? text = value.ValueKind == JsonValueKind.String ? ReadString(value) : null;
         return type switch
         {
             ScalarType.Boolean when value.ValueKind is JsonValueKind.True or JsonValueKind.False => new BooleanValue(value.GetBoolean()),
@@ -39,6 +42,27 @@ public static class ResourceTransport
             ScalarType.Binary when text is not null && Base64(text) => new BinaryValue(text),
             _ => throw new ResourceTransportException("value")
         };
+    }
+
+    private static string ReadString(JsonElement value)
+    {
+        try { return value.GetString()!; }
+        catch (InvalidOperationException) { throw new ResourceTransportException("value"); }
+    }
+
+    private static JsonDocument ParseDocument(ReadOnlyMemory<byte> bytes, int maximumDepth)
+    {
+        // JsonDocument can retain escaped lone surrogates until string decoding.
+        // Reject invalid text in values AND property names at the bounded transport
+        // boundary; do not mistake decoder failures for server/adapter failures.
+        var reader = new Utf8JsonReader(bytes.Span, new JsonReaderOptions { MaxDepth = maximumDepth });
+        while (reader.Read())
+            if (reader.TokenType is JsonTokenType.String or JsonTokenType.PropertyName)
+            {
+                try { _ = reader.GetString(); }
+                catch (InvalidOperationException) { throw new ResourceTransportException("body"); }
+            }
+        return JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = maximumDepth });
     }
 
     private static bool ExplicitOffset(string value) => value.EndsWith('Z') || (value.Length >= 6 && value[^3] == ':' && value[^6] is '+' or '-');
@@ -103,7 +127,7 @@ public static class ResourceTransport
         var bytes = new byte[MaximumBodyBytes + 1];
         int count = await request.Body.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false, ct);
         if (count > MaximumBodyBytes) throw new ResourceTransportException("body");
-        return JsonDocument.Parse(bytes.AsMemory(0, count), new JsonDocumentOptions { MaxDepth = 32 });
+        return ParseDocument(bytes.AsMemory(0, count), MaximumBodyDepth);
     }
 
     internal static ResourceIdentifier Identifier(ResourceDefinition definition, string id)
@@ -140,15 +164,15 @@ public static class ResourceTransport
                     foreach (var item in pair.Value)
                     {
                         if (item is null || item.Length > MaximumBodyBytes) throw new ResourceTransportException(pair.Key);
-                        using var document = JsonDocument.Parse(item, new JsonDocumentOptions { MaxDepth = 4 });
+                        using var document = ParseDocument(Encoding.UTF8.GetBytes(item), MaximumFilterDepth);
                         var root = document.RootElement;
                         if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != 3
                             || !root.TryGetProperty("field", out var name) || name.ValueKind != JsonValueKind.String
                             || !root.TryGetProperty("operator", out var op) || op.ValueKind != JsonValueKind.String
                             || !root.TryGetProperty("value", out var value)) throw new ResourceTransportException(pair.Key);
-                        var fieldName = name.GetString()!;
+                        var fieldName = ReadString(name);
                         var field = definition.Fields.SingleOrDefault(field => field.Name == fieldName);
-                        filters.Add(new(fieldName, Operator(op.GetString()!), field is null ? new NullValue() : Parse(field.Type, value)));
+                        filters.Add(new(fieldName, Operator(ReadString(op)), field is null ? new NullValue() : Parse(field.Type, value)));
                     }
                     break;
                 default: throw new ResourceTransportException(pair.Key);

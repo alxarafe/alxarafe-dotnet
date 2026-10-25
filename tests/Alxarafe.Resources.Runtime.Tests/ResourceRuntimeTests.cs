@@ -8,6 +8,31 @@ namespace Alxarafe.Resources.Runtime.Tests;
 
 public sealed class ResourceRuntimeTests
 {
+    [Theory]
+    [InlineData("-1", false)]
+    [InlineData("0", true)]
+    [InlineData("255", true)]
+    [InlineData("256", false)]
+    public async Task UInt8CreateAndPatchUseTheSameIntrinsicBounds(string text, bool valid)
+    {
+        var fixture = new Fixture();
+        var value = new NumericValue(ResourceNumber.Parse(text));
+        var create = new ResourceRecord(Fixture.Input.Values.Append(new("byteValue", value)));
+        var patch = Fixture.Record(("byteValue", value));
+        if (valid)
+        {
+            Assert.Equal(value, (await fixture.Runtime.CreateAsync(Fixture.ResourceId, create)).Values["byteValue"]);
+            Assert.Equal(value, (await fixture.Runtime.UpdateAsync(Fixture.ResourceId, Fixture.Id, patch)).Values["byteValue"]);
+            Assert.Equal(2, fixture.Repository.Mutations);
+        }
+        else
+        {
+            Assert.Equal(ResourceRuntimeError.ValidationFailed, (await Assert.ThrowsAsync<ResourceRuntimeException>(() => fixture.Runtime.CreateAsync(Fixture.ResourceId, create))).Code);
+            Assert.Equal(ResourceRuntimeError.ValidationFailed, (await Assert.ThrowsAsync<ResourceRuntimeException>(() => fixture.Runtime.UpdateAsync(Fixture.ResourceId, Fixture.Id, patch))).Code);
+            Assert.Equal(0, fixture.Repository.Calls);
+        }
+    }
+
     [Fact]
     public async Task CreateAppliesDefaultsOnlyWhenAbsentAndAllowsImmutableCreation()
     {

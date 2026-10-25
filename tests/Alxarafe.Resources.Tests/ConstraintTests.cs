@@ -7,6 +7,18 @@ namespace Alxarafe.Resources.Tests;
 public sealed class ConstraintTests
 {
     [Theory]
+    [InlineData("-1", false)]
+    [InlineData("0", true)]
+    [InlineData("255", true)]
+    [InlineData("256", false)]
+    public void UInt8BoundaryValuesAreValidatedByTheSemanticDomain(string value, bool valid)
+    {
+        var field = new FieldDefinition("value", ScalarType.UInt8);
+        Fixture.Registry(Fixture.WithField(field));
+        Assert.Equal(valid, ResourceValueValidator.IsValid(field, new NumericValue(Fixture.Number(value))));
+    }
+
+    [Theory]
     [InlineData(ScalarType.Int8, "-128", "127")]
     [InlineData(ScalarType.UInt8, "0", "255")]
     [InlineData(ScalarType.Int16, "-32768", "32767")]

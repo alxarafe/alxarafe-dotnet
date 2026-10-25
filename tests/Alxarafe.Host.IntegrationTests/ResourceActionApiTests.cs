@@ -128,6 +128,7 @@ public sealed class ResourceActionApiTests(ResourceApiTestContext context) : ICl
     [InlineData(Import, "{\"target\":{\"id\":\"035a2161-c936-42dc-8b4b-d3cf5d1953a6\"}}")]
     [InlineData(Close, "{\"target\":{\"ids\":[]}}")]
     [InlineData(Close, "{\"target\":{\"ids\":[\"035a2161-c936-42dc-8b4b-d3cf5d1953a6\",\"035a2161-c936-42dc-8b4b-d3cf5d1953a6\"]}}")]
+    [InlineData(Import, "{\"parameters\":{\"active\":\"\\uD800\"}}")]
     [InlineData(Import, "{\"tenantId\":\"forged\"}")]
     [InlineData(Import, "{\"userId\":\"forged\"}")]
     [InlineData(Import, "{\"permissions\":[\"wms.items.write\"]}")]

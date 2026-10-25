@@ -25,6 +25,69 @@ public sealed class ResourceApiTests : IClassFixture<ResourceApiTestContext>
         using (response) { Assert.Equal(status, response.StatusCode); var body = await Body(response); Assert.Equal(code, body.GetProperty("code").GetString()); Assert.NotEmpty(body.GetProperty("errors").EnumerateArray()); }
     }
 
+    [Theory]
+    [InlineData(ResourceOperation.List)]
+    [InlineData(ResourceOperation.Get)]
+    [InlineData(ResourceOperation.Create)]
+    [InlineData(ResourceOperation.Update)]
+    [InlineData(ResourceOperation.Delete)]
+    public async Task UnknownResourceNeverFallsBackToAConcreteRepository(ResourceOperation operation)
+    {
+        var method = operation switch
+        {
+            ResourceOperation.List or ResourceOperation.Get => HttpMethod.Get,
+            ResourceOperation.Create => HttpMethod.Post,
+            ResourceOperation.Update => HttpMethod.Patch,
+            _ => HttpMethod.Delete
+        };
+        bool item = operation is ResourceOperation.Get or ResourceOperation.Update or ResourceOperation.Delete;
+        string path = ResourceApiTestContext.Path("missing-resource", item ? ResourceApiFixtures.FirstId : null);
+        await Error(await context.Send(method, path, token: context.Writer), HttpStatusCode.NotFound, ResourceEndpoints.NotFound);
+        Assert.Equal(0, context.Store.Calls);
+    }
+
+    [Theory]
+    [InlineData("-1", false)]
+    [InlineData("0", true)]
+    [InlineData("255", true)]
+    [InlineData("256", false)]
+    public async Task HttpCreateAndPatchPreserveUInt8DomainWithoutControllerRangeRules(string number, bool valid)
+    {
+        string json = "{\"code\":\"BYTE\",\"name\":\"Boundary\",\"byteValue\":" + number + "}";
+        if (valid)
+        {
+            using var created = await context.Send(HttpMethod.Post, ResourceApiTestContext.Path(), json, context.Writer);
+            Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+            Assert.Equal(number, (await Body(created)).GetProperty("byteValue").GetRawText());
+            using var patched = await context.Send(HttpMethod.Patch, created.Headers.Location!.OriginalString, "{\"byteValue\":" + number + "}", context.Writer);
+            Assert.Equal(HttpStatusCode.OK, patched.StatusCode);
+            Assert.Equal(number, (await Body(patched)).GetProperty("byteValue").GetRawText());
+        }
+        else
+        {
+            await Error(await context.Send(HttpMethod.Post, ResourceApiTestContext.Path(), json, context.Writer), HttpStatusCode.BadRequest, ResourceEndpoints.InvalidRequest);
+            await Error(await context.Send(HttpMethod.Patch, ResourceApiTestContext.Path(id: ResourceApiFixtures.FirstId), "{\"byteValue\":" + number + "}", context.Writer), HttpStatusCode.BadRequest, ResourceEndpoints.InvalidRequest);
+            Assert.Equal(0, context.Store.Calls);
+        }
+    }
+
+    [Theory]
+    [InlineData("{\"code\":\"NEW\",\"name\":\"\\uD800\"}")]
+    [InlineData("{\"code\":\"NEW\",\"name\":\"Valid\",\"\\uDC00\":true}")]
+    public async Task MalformedUnicodeBodyReturns400WithoutCallingPersistence(string body)
+    {
+        await Error(await context.Send(HttpMethod.Post, ResourceApiTestContext.Path(), body, context.Writer), HttpStatusCode.BadRequest, ResourceEndpoints.InvalidRequest);
+        Assert.Equal(0, context.Store.Calls);
+    }
+
+    [Fact]
+    public async Task MalformedUnicodeFilterIsRejectedWithoutRepositoryAccess()
+    {
+        string filter = Uri.EscapeDataString("""{"field":"name","operator":"eq","value":"\uD800"}""");
+        await Error(await context.Send(HttpMethod.Get, ResourceApiTestContext.Path() + "?filter=" + filter, token: context.Reader), HttpStatusCode.BadRequest, ResourceEndpoints.InvalidRequest);
+        Assert.Equal(0, context.Store.Calls);
+    }
+
     [Fact]
     public async Task CrudPreservesDefaultsExplicitNullPartialPatchAndLocation()
     {

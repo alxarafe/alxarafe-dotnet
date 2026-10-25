@@ -48,6 +48,7 @@ internal sealed class Fixture
         [new("id", ScalarType.Uuid, readOnly: true, immutable: true),
             new("code", ScalarType.String, required: true, constraints: new TextConstraints(MaximumLength: 30), capabilities: new(true, true)),
             new("name", ScalarType.String, required: true, constraints: new TextConstraints(MaximumLength: 200), capabilities: new(true, true, searchable)),
+            new("byteValue", ScalarType.UInt8),
             new("creditRating", ScalarType.UInt8, constraints: new NumericConstraints(ResourceNumber.Zero, ResourceNumber.Parse("10"))),
             new("active", ScalarType.Boolean, defaultValue: new BooleanValue(true), capabilities: new(true)),
             new("optional", ScalarType.String, nullable: true, defaultValue: new TextValue("fallback")), new("fixed", ScalarType.String, immutable: true),
