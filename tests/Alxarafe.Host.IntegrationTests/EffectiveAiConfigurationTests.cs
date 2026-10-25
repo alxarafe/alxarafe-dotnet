@@ -103,6 +103,9 @@ public sealed class EffectiveAiConfigurationTests
         builder.Services.AddSingleton<ITenantAiSettingsStore>(store);
         builder.Services.AddScoped<ICurrentTenantContext, Tenant>();
         new AiModule().ConfigureServices(builder.Services);
+        builder.Services.AddScoped<IAiModelClient>(provider => new ConfiguredAiModelClient(
+            provider.GetRequiredService<IHttpClientFactory>().CreateClient(AiModule.HttpClientName), builder.Configuration,
+            provider.GetRequiredService<EffectiveAiConfigurationResolver>(), NullLoggerFactory.Instance));
         builder.Services.AddHttpClient(AiModule.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => wire);
         using var host = builder.Build();
         using var a = host.Services.CreateScope();

@@ -26,7 +26,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class ReadPrimitiveTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime, IDisposable
+public sealed class ReadPrimitiveTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>, IAsyncLifetime, IDisposable
 {
     private static readonly string[] PrimitiveUsageFields = ["invocationId", "primitiveId"];
     public void Dispose() { capture.Dispose(); GC.SuppressFinalize(this); }

@@ -1,3 +1,4 @@
+using Alxarafe.Core;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -7,7 +8,7 @@ public static class WmsStorage
 {
     public const string ConnectionName = "Wms";
     public const string TestingEnvironment = "Testing";
-    public const string ValidationDatabase = "alxarafe_test";
+    public const string ValidationDatabase = TenantDatabaseValidation.Primary;
     public const string MigrationHistory = "__WmsMigrationsHistory";
     public const string UomTable = "wms_uoms";
     public const string StorageAttributeTable = "wms_storage_attributes";

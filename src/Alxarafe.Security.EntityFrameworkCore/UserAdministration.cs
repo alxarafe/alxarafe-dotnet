@@ -1,11 +1,12 @@
 using System.Data;
+using Alxarafe.Core;
 using Alxarafe.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Alxarafe.Security.EntityFrameworkCore;
 
-public sealed class UserAdministration(SecurityDbContext database, UserManager<AlxarafeUser> users)
+public sealed class UserAdministration(SecurityDbContext database, UserManager<AlxarafeUser> users, IDevelopmentTenantMembership? developmentTenant = null)
 {
     private IQueryable<CoreUserState> States => Project(database.Users);
     private IQueryable<CoreUserState> Project(IQueryable<AlxarafeUser> source) => source.AsNoTracking().Select(user => new CoreUserState
@@ -57,6 +58,7 @@ public sealed class UserAdministration(SecurityDbContext database, UserManager<A
         database.UserClaims.Add(new IdentityUserClaim<Guid> { UserId = id, ClaimType = CoreUserClaims.Admin, ClaimValue = admin ? "true" : "false" });
         await database.SaveChangesAsync();
         await transaction.CommitAsync();
+        if (developmentTenant is not null) await developmentTenant.AssignAsync(id);
         return new CoreUserState { Id = id, Email = email, Enabled = true, Admin = admin };
     }
 

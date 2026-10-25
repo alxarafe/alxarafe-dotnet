@@ -29,8 +29,10 @@ dependencies and have no functional API. See [modularity](modularity.md).
 
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;
-validation uses alxarafe_test/alxarafe_security_test. Testing rejects non-test
-connections. Startup uses official platform migrations and normal state synchronization.
+validation uses alxarafe_test/alxarafe_security_test for the control plane and
+alxarafe_business_test/alxarafe_business_test_b for independent business storage.
+See [authoritative tenancy](tenancy.md). Testing rejects non-test control-plane
+connections and business mappings outside the two fixed validation databases. Startup uses official platform migrations and normal state synchronization.
 Disabling modules does not remove data or revert migrations.
 
 ## HTTP, security and internationalization
@@ -137,9 +139,9 @@ selection cannot change effective tools or authorization. See
 [canonical provider configuration and capabilities](ai-providers.md).
 Platform also owns prepared tenant provider/model settings. A scoped effective
 configuration resolver and asynchronous model-client bridge keep persistence
-outside the assistant and provider clients. Runtime currently has no authoritative
-tenant context, so selection remains global and usage has no invented tenant
-attribution. See [precedence and the runtime blocker](ai-providers.md#tenant-overrides-prepared-not-active-in-runtime).
+outside the assistant and provider clients. CORE-TENANT-001 now supplies authoritative membership context and independent
+business databases; see [tenancy](tenancy.md). AI selection remains global and
+tenant usage attribution is deferred to AI-PROVIDER-002B. See [precedence and the runtime blocker](ai-providers.md#tenant-overrides-prepared-not-active-in-runtime).
 The common abstraction does not imply functional equivalence: every observable
 difference, limitation, configuration requirement or unvalidated capability must
 be documented by provider and, when relevant, by model. Adding a provider requires

@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class CapabilityInvocationApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class CapabilityInvocationApiTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>, IAsyncLifetime
 {
     private const string Password = "capability-invocation-password";
     private const string UomCapability = "wms.uoms.list";

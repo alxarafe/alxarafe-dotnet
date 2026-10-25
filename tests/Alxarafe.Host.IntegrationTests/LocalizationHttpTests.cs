@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class LocalizationHttpTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class LocalizationHttpTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     private const string RegisterPath = "/api/auth/register";
     private static readonly string[] _identityShape = ["errors", "status", "title", "traceId", "type"];

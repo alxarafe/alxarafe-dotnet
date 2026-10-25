@@ -250,8 +250,9 @@ so tracked entities cannot become a permanent enabled-state cache.
 Configure the explicit `ConnectionStrings__Platform` connection. Compose points it
 at `alxarafe` (validation: `alxarafe_test`). Platform uses its own
 `__PlatformMigrationsHistory`; migration `202610120001_ModuleStates` creates only
-platform state and can coexist with existing module migration histories. Security
-continues owning its separate context and tables. Testing rejects a Platform
+platform state; later Platform migrations add tenancy and settings. Security
+continues owning its separate control-plane context and tables; business module
+histories belong to independent tenant databases. See [tenancy](tenancy.md). Testing rejects a Platform
 connection outside the isolated validation database.
 
 Before module initialization, the Host applies platform migrations and calls
@@ -270,11 +271,14 @@ composition respectively. Domain/Application do not reference ASP.NET Core, EF,
 Host or localization. Entry initialization applies its own EF migrations through
 the existing runtime, including when administratively disabled.
 
-WmsDbContext uses explicit ConnectionStrings:Wms, wms_uoms, wms_storage_attributes and its own
-__WmsMigrationsHistory; no WMS entity belongs to Platform or Security contexts.
+WmsDbContext uses the central authoritative tenant database resolver and its own
+__WmsMigrationsHistory in each independent business database; no WMS entity belongs
+to Platform or Security contexts. No global WMS connection fallback is used.
 The unique C-collated code index supplies race-safe uniqueness and ordinal order.
-Testing only permits alxarafe_test. Both catalogues use the same existing gate
-and CORE administrator policy; disable/re-enable preserves both without restart.
+The [tenancy foundation](tenancy.md) describes explicit validation databases,
+membership and migration boundaries. Catalogues retain the existing module gate
+and CORE administrator policy in addition to tenant membership; disable/re-enable
+preserves their data without restart.
 Frozen UoM and Storage Attribute migrations remain unchanged. The third WMS
 migration adds Item Families and the family/attribute join table under the same
 WMS-owned context and history. All association endpoints inherit the existing

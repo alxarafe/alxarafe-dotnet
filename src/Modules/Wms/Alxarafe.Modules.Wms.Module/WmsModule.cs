@@ -1,4 +1,5 @@
 using Alxarafe.AspNetCore;
+using Alxarafe.Core;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Wms.Application;
 using Alxarafe.Modules.Wms.Http;
@@ -33,10 +34,7 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
             options.AddPolicy(WmsCapabilities.StorageAttributesRead, CoreAdministration.Policy);
             options.AddPolicy(WmsCapabilities.ItemFamiliesRead, CoreAdministration.Policy);
         });
-        services.AddDbContextFactory<WmsDbContext>((provider, options) =>
-            WmsStorage.Configure(options,
-                provider.GetRequiredService<IConfiguration>().GetConnectionString(WmsStorage.ConnectionName),
-                provider.GetRequiredService<IHostEnvironment>().IsEnvironment(WmsStorage.TestingEnvironment)));
+        services.AddSingleton<IDbContextFactory<WmsDbContext>, TenantWmsDbContextFactory>();
         InventoryPermissions.Configure(services);
         services.AddOptions<DevelopmentUsersOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
         {
@@ -63,8 +61,15 @@ public sealed class WmsModule : IAlxarafeModule, IHttpModule, ICapabilityProvide
 
     public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
     {
-        await using var context = await services.GetRequiredService<IDbContextFactory<WmsDbContext>>().CreateDbContextAsync(cancellationToken);
-        await context.Database.MigrateAsync(cancellationToken);
+        await services.GetRequiredService<ITenantDatabaseMigrationRunner>().MigrateAsync(async (connection, ct) =>
+        {
+            var options = new DbContextOptionsBuilder<WmsDbContext>();
+            WmsStorage.Configure(options, connection, testing: false);
+            await using var context = new WmsDbContext(options.Options);
+            // Fail if the database does not exist; EF must not create a production database.
+            await context.Database.OpenConnectionAsync(ct);
+            await context.Database.MigrateAsync(ct);
+        }, cancellationToken);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

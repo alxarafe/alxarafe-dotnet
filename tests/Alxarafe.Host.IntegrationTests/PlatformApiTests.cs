@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class PlatformApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class PlatformApiTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     private static void RequireIsolation()
     {

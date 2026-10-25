@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class WmsTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class WmsTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>, IAsyncLifetime
 {
     private const string Password = "wms-native-fixture-password";
     private const string LoginPath = "/api/auth/login";
@@ -83,7 +83,7 @@ public sealed class WmsTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.True(index.IsUnique);
         Assert.Equal(WmsStorage.UomCodeIndex, index.GetDatabaseName());
         await using var platform = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
-        Assert.Equal(["202610120001_ModuleStates", Alxarafe.EntityFrameworkCore.Migrations.TenantAiSettingsMigration.MigrationId], await platform.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(["202610120001_ModuleStates", Alxarafe.EntityFrameworkCore.Migrations.TenantAiSettingsMigration.MigrationId, Alxarafe.EntityFrameworkCore.Migrations.AuthoritativeTenancy.MigrationId], await platform.Database.GetAppliedMigrationsAsync());
         Assert.DoesNotContain(platform.Model.GetEntityTypes(), type => type.ClrType == typeof(UomRow));
     }
 

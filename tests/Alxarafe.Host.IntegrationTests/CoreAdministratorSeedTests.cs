@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class CoreAdministratorSeedTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class CoreAdministratorSeedTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     [Fact]
     public async Task CurrentValidationAdminHasNoModulePermissionsOrExperimentalSeeds()

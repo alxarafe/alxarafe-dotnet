@@ -25,7 +25,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class AiAssistantApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class AiAssistantApiTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>, IAsyncLifetime
 {
     private const string Password = "ai-assistant-fixture-password";
     private const string DirectMessage = "Reply with a short greeting.";

@@ -16,7 +16,12 @@ docker compose config >/dev/null
 echo "==> Building application images"
 docker compose build
 echo "==> Starting PostgreSQL and application"
-docker compose up -d
+docker compose up -d --wait --wait-timeout 120 postgres
+# Local development bootstrap only, never part of application/production migration.
+docker compose exec -T postgres psql -U alxarafe -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+SELECT 'CREATE DATABASE alxarafe_business' WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'alxarafe_business')\gexec
+SQL
+docker compose up -d app
 
 deadline=$((SECONDS + 120))
 while (( SECONDS < deadline )); do

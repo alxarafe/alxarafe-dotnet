@@ -1,4 +1,5 @@
 using Alxarafe.AspNetCore;
+using Alxarafe.Core;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,12 @@ public sealed partial class PlatformExceptionHandler(
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        if (exception is TenantAccessException tenant)
+        {
+            httpContext.Response.StatusCode = tenant.ConfigurationFailure ? StatusCodes.Status503ServiceUnavailable : StatusCodes.Status403Forbidden;
+            await httpContext.Response.WriteAsJsonAsync(new ContractError(tenant.Code), cancellationToken);
+            return true;
+        }
         var (status, code) = exception switch
         {
             ArgumentException => (StatusCodes.Status400BadRequest, CoreMessages.ValidationCode),

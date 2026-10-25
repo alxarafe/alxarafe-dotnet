@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
+using Alxarafe.Core;
 using Alxarafe.Modularity;
 using Microsoft.AspNetCore.Authorization;
 
@@ -61,6 +62,7 @@ internal sealed partial class ReadPrimitiveService(ReadPrimitiveRegistry registr
             return Finish(ReadPrimitiveOutcome.Succeeded, normalized);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (TenantAccessException failure) { return Finish(failure.ConfigurationFailure ? ReadPrimitiveOutcome.Unavailable : ReadPrimitiveOutcome.Denied); }
         catch (ReadPrimitiveInputException) { return Finish(ReadPrimitiveOutcome.InvalidRequest); }
         catch (Exception) { return Finish(ReadPrimitiveOutcome.Failed); }
         finally

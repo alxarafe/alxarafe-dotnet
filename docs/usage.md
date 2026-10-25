@@ -16,9 +16,11 @@ architecture and integration tests, clean migrations, isolated Host startup, ful
 shared Bruno, local Core Bruno (three requests), OpenAPI/persistence/secrecy checks
 and cleanup. Any failure propagates nonzero.
 
-Validation uses only alxarafe_test and alxarafe_security_test. Existing development
-databases and volumes are preserved. The validation Host is removed and both test
-databases are dropped even after failure. bin/test runs native tests through Docker;
+Validation uses alxarafe_test and alxarafe_security_test for the control plane,
+plus alxarafe_business_test and alxarafe_business_test_b for independent tenant
+business storage. Existing development databases/volumes are preserved. The
+validation Host and all four test databases are removed even after failure.
+bin/test runs native tests through Docker;
 bin/bruno runs isolated HTTP checks. These are components of bin/check, not substitutes.
 No shared test is run against persistent development.
 
@@ -127,17 +129,14 @@ ERBAS_DOTNET_PORT=49081 ./bin/up
 
 Development defaults to 127.0.0.1:48081 (container 8080); PostgreSQL is unpublished.
 The volume persists across stops. Do not use bin/down --volumes to clean validation:
-it deletes development storage. A fresh volume creates alxarafe and alxarafe_security;
-Identity uses its existing initialization and Platform applies official EF migrations.
-ConnectionStrings__Platform and ConnectionStrings__Security select the respective
-contexts. WMS owns ConnectionStrings__Wms, its EF context, wms_uoms, wms_storage_attributes, wms_item_families,
-wms_item_family_storage_attributes, the four
-[inventory foundation tables](wms-inventory.md#persistence-validation-and-external-loading)
-and __WmsMigrationsHistory. Development uses the same physical alxarafe database;
-Testing requires alxarafe_test and rejects every other WMS database. WMS applies
-its migrations through normal module initialization, without changing Platform or
-Security entities or migration histories. Existing obsolete experiment databases/tables are neither accessed nor
-purged by startup. Retiring their projects does not rewrite applied migration history.
+it deletes development storage. A fresh volume creates alxarafe, alxarafe_security
+and alxarafe_business. Existing volumes receive the synthetic business database
+through the local `bin/up` bootstrap; existing shared business data is not moved.
+Identity retains its existing initialization. Platform/AI usage remain in the
+control plane; WMS migrates independently in tenant business databases through
+central reference resolution. Runtime never falls back to ConnectionStrings__Wms.
+See [tenancy](tenancy.md) for configuration, single-membership execution,
+operator-controlled upgrades and migration ownership.
 
 A local CORE administrator requires explicit `ERBAS_CORE_ADMIN_PASSWORD`;
 `ERBAS_CORE_ADMIN_EMAIL` defaults to `admin@example.test`. The administrator seed

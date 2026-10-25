@@ -18,6 +18,12 @@ and AI entry assemblies for explicit composition; framework projects remain
 independent of business modules. Further business capabilities require separately
 approved designs.
 
+Business persistence must use the central authoritative tenant database resolver,
+with an independent business database per tenant. Never fall back to a global
+business database or add shared-business tenant discriminator columns. Keep
+Platform/Identity/AI usage in the control plane; see `docs/tenancy.md` for membership,
+migrations and the deliberately deferred commercial architecture.
+
 ## Environment, tools and validation
 
 Docker and Docker Compose are the only supported development environment; do not

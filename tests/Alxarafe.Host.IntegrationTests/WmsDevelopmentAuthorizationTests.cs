@@ -23,8 +23,8 @@ using Xunit.Abstractions;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class WmsDevelopmentAuthorizationTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class WmsDevelopmentAuthorizationTests(TenantApplicationFactory factory, ITestOutputHelper output)
+    : IClassFixture<TenantApplicationFactory>
 {
     private const string AdminPassword = "Authorization_admin_123";
     private const string ReaderPassword = "Authorization_reader_123";

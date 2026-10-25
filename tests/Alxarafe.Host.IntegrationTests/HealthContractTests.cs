@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Alxarafe.Host.IntegrationTests;
 
-public sealed class HealthContractTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class HealthContractTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
     [Fact]
     public async Task HealthIsAnonymousJsonLivenessWithoutDependencyChecks()
