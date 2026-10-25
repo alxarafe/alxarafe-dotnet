@@ -34,7 +34,7 @@ internal static class ResourceValidation
     internal static bool Name(string? value) => value is not null && Names.IsMatch(value);
     internal static bool Identifier(string? value) => value is not null && Identifiers.IsMatch(value);
     private static bool Permission(string? value) => Identifier(value) && value!.Contains('.', StringComparison.Ordinal);
-    private static bool Text(string? value)
+    internal static bool Text(string? value)
     {
         if (value is null) return false;
         try { StrictUtf8.GetByteCount(value); return true; }
@@ -205,7 +205,7 @@ internal static class ResourceValidation
         return new(minimum, maximum, exclusiveMinimum, exclusiveMaximum, step, precision, scale);
     }
 
-    private static bool Accepts(string id, FieldDefinition field, ScalarValue value)
+    internal static bool Accepts(string id, FieldDefinition field, ScalarValue value)
     {
         if (value is NullValue) return field.Nullable;
         if (NumericDomain.Intrinsic(field.Type) is not null)

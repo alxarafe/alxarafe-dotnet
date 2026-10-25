@@ -42,6 +42,13 @@ Core FE Resource Runtime; Angular source generation is an optional later path.
 See [semantic Resource Metadata](resources.md) and the
 [Core FE runtime decision](resources.md#core-fe-resource-runtime).
 
+RESOURCE-RUNTIME-001 adds `Alxarafe.Resources.Runtime`: framework-neutral CRUD/query
+orchestration over typed repository/validator ports, consuming existing neutral module
+state and authoritative tenancy. Host adapts existing persisted Identity/native policies;
+module adapters own persistence and atomicity. Resources remains independent of Runtime,
+Core/Modularity depend on neither, and WMS/AI implementations remain unchanged. No generic
+HTTP/EF/UI runtime is introduced. See [backend execution](resources.md#generic-backend-resource-runtime).
+
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;
 validation uses alxarafe_test/alxarafe_security_test for the control plane and
