@@ -35,5 +35,5 @@ public sealed class AiUsageDbContext(DbContextOptions<AiUsageDbContext> options)
 {
     public DbSet<AiUsageRecord> UsageRecords => Set<AiUsageRecord>();
     public DbSet<AiInvocationUsage> Invocations => Set<AiInvocationUsage>();
-    protected override void OnModelCreating(ModelBuilder modelBuilder) => Migrations.UsageMetering.ConfigureModel(modelBuilder);
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => Migrations.TenantUsageAttribution.ConfigureModel(modelBuilder);
 }

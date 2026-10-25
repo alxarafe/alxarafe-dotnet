@@ -180,7 +180,7 @@ public sealed class TenantIsolationTests(TenantApplicationFactory factory) : ICl
     }
 
     [Fact]
-    public async Task AuthoritativeTenantDoesNotActivateLinkedAiOverridesOrTenantMetering()
+    public async Task AuthoritativeTenantActivatesOnlyCanonicallyLinkedAiOverrides()
     {
         string legacyKey = "inactive-ai-override-" + Guid.NewGuid().ToString("N");
         await using var platform = await Platform();
@@ -212,14 +212,14 @@ public sealed class TenantIsolationTests(TenantApplicationFactory factory) : ICl
             Assert.Equal(DevelopmentTenantBootstrap.TenantId, (await context.RequireAsync()).Id);
             Assert.Equal(DevelopmentTenantBootstrap.TenantId, context.TenantId);
             var client = scope.ServiceProvider.GetRequiredService<IAiModelClient>();
-            Assert.IsType<GroqAiModelClient>(client);
+            Assert.IsType<ConfiguredAiModelClient>(client);
             var response = await client.CompleteAsync(new AiModelRequest("Fixture", [new(AiRoles.User, "Hello")], []));
             var usage = Assert.Single(response.Executions!);
-            Assert.Equal(GroqAiModelClient.ProviderName, usage.Provider);
-            Assert.Equal(EffectiveAiConfigurationTests.GlobalModel, usage.Model);
+            Assert.Equal(OllamaAiModelClient.ProviderName, usage.Provider);
+            Assert.Equal(EffectiveAiConfigurationTests.LocalModel, usage.Model);
             Assert.Null(usage.BillingMode);
             Assert.Null(usage.ProviderCost);
-            Assert.Equal(EffectiveAiConfigurationTests.GlobalModel, Assert.Single(wire.Calls).Model);
+            Assert.Equal(EffectiveAiConfigurationTests.LocalModel, Assert.Single(wire.Calls).Model);
         }
         finally
         {

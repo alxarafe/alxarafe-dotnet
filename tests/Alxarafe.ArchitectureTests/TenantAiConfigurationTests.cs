@@ -25,6 +25,17 @@ public sealed class TenantAiConfigurationTests
     }
 
     [Fact]
+    public void AiConsumesReadOnlyTenancyWithoutMakingCoreDependOnAi()
+    {
+        Assert.Contains(typeof(AiAssistant).GetConstructors().SelectMany(constructor => constructor.GetParameters()),
+            parameter => parameter.ParameterType == typeof(ICurrentTenantContext));
+        Assert.DoesNotContain(typeof(Tenant).Assembly.GetReferencedAssemblies(),
+            reference => reference.Name!.StartsWith("Alxarafe.Modules.Ai", StringComparison.Ordinal));
+        Assert.DoesNotContain(typeof(EfTenantAiSettingsStore).GetConstructors().SelectMany(constructor => constructor.GetParameters()),
+            parameter => parameter.ParameterType == typeof(Microsoft.AspNetCore.Http.IHttpContextAccessor));
+    }
+
+    [Fact]
     public void ProviderClientsHaveNoTenantContextOrSettingsDependencies()
     {
         foreach (var type in new[] { typeof(GroqAiModelClient), typeof(OllamaAiModelClient), typeof(OpenAiCompatibleModelClient) })

@@ -204,12 +204,16 @@ rows. Old rows remain unlinked; migrations do not manufacture tenants from them.
 Only an explicit controlled mapping can establish the relationship. The read port
 now queries canonical identity, never guesses from a matching legacy string.
 
-**No tenant AI override is activated in CORE-TENANT-001.** Production AI composition
-continues to use global `AI_PROVIDER` / `AI_MODEL`. The prepared resolver/bridge
-remain available for deterministic internal tests. Activation and tenant usage
-attribution belong to AI-PROVIDER-002B. Existing AI usage remains in Platform with
-its existing user attribution; no TenantId or billing-mode inference is added.
-LOCAL_ONLY/CLOUD_ALLOWED, BYOK and data policy remain deferred.
+AI-PROVIDER-002B activates the scoped AI resolver/bridge in production using only
+this authoritative context and the canonical settings FK. Provider and model
+independently inherit global defaults; later scopes see settings updates. Usage
+summaries in Platform capture canonical tenant identity alongside existing user
+attribution; attempts link to the same invocation. Unresolved contexts and historical
+usage remain unattributed. Billing mode is not inferred. See [AI providers](ai-providers.md#tenant-overrides-active-at-runtime).
+AI remains one module using tenancy, not a privileged Core concept. Generic module
+configuration, Partner/reseller inheritance, BYOK, LOCAL_ONLY/CLOUD_ALLOWED,
+data-processing/location policy, automatic routing/fallback and administrative UI
+remain deferred.
 
 ## Development and deterministic validation
 

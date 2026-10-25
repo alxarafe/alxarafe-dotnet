@@ -70,7 +70,10 @@ public sealed class AiModule : IAlxarafeModule, IHttpModule
         var configuration = provider.GetRequiredService<IConfiguration>();
         var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientName);
         var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-        // CORE-TENANT-001 establishes identity only. Tenant AI activation belongs to AI-PROVIDER-002B.
-        return AiProviderResolver.Resolve(client, configuration, loggerFactory);
+        // Control-plane/non-request composition preserves the existing global path.
+        if (provider.GetRequiredService<ICurrentTenantContext>().TenantId is null)
+            return AiProviderResolver.Resolve(client, configuration, loggerFactory);
+        return new ConfiguredAiModelClient(client, configuration,
+            provider.GetRequiredService<EffectiveAiConfigurationResolver>(), loggerFactory);
     }
 }

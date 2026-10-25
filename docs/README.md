@@ -4,7 +4,7 @@
 | --- | --- |
 | [AI usage metering](ai-usage.md) | Internal normalized usage, PostgreSQL records, metric semantics, attribution and limitations |
 | [Authoritative tenancy](tenancy.md) | Database-per-tenant foundation, membership context, control-plane boundary and deferred commercial architecture |
-| [AI providers](ai-providers.md) | Global defaults, prepared tenant overrides and deferred activation, capability states, evidence and limitations |
+| [AI providers](ai-providers.md) | Global defaults, active authoritative tenant overrides, capability states, evidence and limitations |
 | [Ollama integration smoke](verification/ai-provider-001b.md) | AI-PROVIDER-001B: shared transport reuse, deterministic validation and real loopback-only Ollama evidence |
 | [Authorized READ primitives](ai-read-primitives.md) | AI-API-001: module ownership, persisted authority, routing and composition limits |
 | [AI-API-001 verification](verification/ai-api-001.md) | Published v0.12.0 adoption, historical candidate checks and observational Groq results |

@@ -65,6 +65,7 @@ public sealed class UsageMetering : Migration
     internal static void ConfigureModel(ModelBuilder modelBuilder)
     {
         var invocation = modelBuilder.Entity<AiInvocationUsage>();
+        invocation.Ignore(row => row.TenantId);
         invocation.ToTable(AiUsageStorage.InvocationsTable);
         invocation.Property<string>("InvocationId").HasColumnType(AiUsageStorage.IdentifierColumnType).IsRequired();
         invocation.Property<Guid?>("UserId").HasColumnType("uuid").IsRequired(false);

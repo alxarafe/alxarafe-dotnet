@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
+using Alxarafe.Core;
 using Alxarafe.Modularity;
 
 namespace Alxarafe.Modules.Ai.Application;
@@ -11,7 +12,7 @@ public enum AiAnswerLimitation { None, Access, Information }
 public sealed record AiAssistantResult(string Answer, IReadOnlyList<AiToolUsageResult> ToolsUsed, AiAnswerLimitation Limitation = AiAnswerLimitation.None);
 
 public sealed class AiAssistant(ICapabilityInvocationService capabilities, IReadPrimitiveService primitives, IAiModelClient model, TimeProvider clock,
-    IAiUsageMeter usageMeter)
+    IAiUsageMeter usageMeter, ICurrentTenantContext? tenant = null)
 {
     private static readonly System.Text.RegularExpressions.Regex InternalReference = new(
         @"/api/|\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+\.(?:read|write|invoke)\b|\b[a-z][a-z0-9_]*_(?:list|read|write|invoke|create)\b",
@@ -49,6 +50,8 @@ public sealed class AiAssistant(ICapabilityInvocationService capabilities, IRead
         string? correlationId, string? aiInvocationId = null, CancellationToken cancellationToken = default)
     {
         aiInvocationId ??= Guid.NewGuid().ToString("N");
+        // Capture the authoritative request identity once, including for failed invocations.
+        string? tenantId = tenant?.TenantId;
         long usageStarted = Stopwatch.GetTimestamp();
         DateTimeOffset usageTimestamp = clock.GetUtcNow();
         var executions = new List<AiUsageRecord>();
@@ -143,6 +146,7 @@ public sealed class AiAssistant(ICapabilityInvocationService capabilities, IRead
             var invocation = new AiInvocationUsage
             {
                 InvocationId = aiInvocationId,
+                TenantId = tenantId,
                 UserId = principal.Identity?.IsAuthenticated == true
                     && Guid.TryParse(subject, out var userId)
                     && Guid.TryParse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var principalId) && userId == principalId ? userId : null,

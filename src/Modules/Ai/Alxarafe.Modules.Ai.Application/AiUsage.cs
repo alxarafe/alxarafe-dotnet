@@ -34,6 +34,7 @@ public sealed record AiInvocationUsage
 {
     public required string InvocationId { get; init; }
     public Guid? UserId { get; init; }
+    public string? TenantId { get; init; }
     public DateTimeOffset StartedAt { get; init; }
     public TimeSpan Duration { get; init; }
     public AiInvocationOutcome Outcome { get; init; }

@@ -106,15 +106,17 @@ batch/attempt. Writes are parameterized and transactional, using conflict-safe
 inserts. Concurrent repetition is idempotent. Vendor IDs are not deduplication
 keys: distinct actual calls may legitimately return the same vendor identifier.
 
-Only the authenticated user UUID is attributable today, after it matches the
-invocation subject. There is no tenant/account/installation/reseller dimension
-added speculatively, no conversation copy, and no new usage query endpoint.
-[Prepared tenant provider settings](ai-providers.md#tenant-overrides-prepared-not-active-in-runtime)
-do not activate provider overrides. CORE-TENANT-001 establishes authoritative
-membership context, but tenant usage attribution remains deferred to
-AI-PROVIDER-002B. Global effective provider/configured model continue to be
-metered by the common transport. A reported provider model never replaces the
-configured model.
+AI-PROVIDER-002B adds nullable canonical `tenant_id` to invocation summaries using
+AI-owned Platform migration `202610260002_TenantUsageAttribution`. It captures only
+the authoritative request context at invocation start; no user/email/provider
+inference occurs. Historical rows and execution without authoritative context stay
+null. Attempts inherit tenant attribution through their invocation FK, avoiding
+duplicated tenant identity. The column is retained as historical attribution without
+a tenant deletion constraint. Upgrade preserves all records; rollback drops only
+this nullable attribution column. The existing authenticated user UUID check is
+unchanged. Effective provider/configured model and separate reported model remain
+metered on success and failure; no billing logic or aggregation API is added.
+See [runtime tenant overrides](ai-providers.md#tenant-overrides-active-at-runtime).
 There is no cross-database identity foreign key. Existing authorization and
 functional audit remain authoritative and unchanged; telemetry grants no access.
 

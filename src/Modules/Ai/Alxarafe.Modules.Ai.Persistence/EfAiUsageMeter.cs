@@ -21,8 +21,8 @@ public sealed class EfAiUsageMeter(IDbContextFactory<AiUsageDbContext> contexts,
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var invocation = batch.Invocation;
         await context.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO ai_usage_invocations (invocation_id, user_id, started_at, duration, outcome, model_calls, tool_calls, successful_tool_calls)
-            VALUES ({invocation.InvocationId}, {invocation.UserId}, {invocation.StartedAt}, {invocation.Duration.Ticks}, {(int)invocation.Outcome},
+            INSERT INTO ai_usage_invocations (invocation_id, user_id, tenant_id, started_at, duration, outcome, model_calls, tool_calls, successful_tool_calls)
+            VALUES ({invocation.InvocationId}, {invocation.UserId}, {invocation.TenantId}, {invocation.StartedAt}, {invocation.Duration.Ticks}, {(int)invocation.Outcome},
                 {invocation.ModelCalls}, {invocation.ToolCalls}, {invocation.SuccessfulToolCalls}) ON CONFLICT DO NOTHING
             """, cancellationToken);
         foreach (var record in batch.Records)
