@@ -194,7 +194,10 @@ including Qwen and `openai/gpt-oss-20b` successes, failures and variability. Tho
 observations predate the shared-transport extraction; subsequent Groq regressions
 are deterministic, not a new post-extraction real-provider certification.
 Evidence **O** is [AI-PROVIDER-001B](verification/ai-provider-001b.md#real-erbas-endpoint-observations)
-with local Ollama 0.20.7 and `gemma4:latest`. Deterministic transport/resolver
+with local Ollama 0.20.7 and `gemma4:latest`. Its
+[metering follow-up](verification/ai-provider-001b.md#2026-10-25-follow-up-persisted-metering)
+adds real persisted counters and retains a failed water answer and an invented
+warehouse label. Deterministic transport/resolver
 coverage is in the linked [provider tests](../tests/Alxarafe.Host.IntegrationTests/).
 
 | ERBAS capability / evidence scope | Groq | Ollama |
@@ -208,11 +211,11 @@ coverage is in the linked [provider tests](../tests/Alxarafe.Host.IntegrationTes
 | Configurable completion timeout | `SUPPORTED`: 60 s default; configuration and synthetic timeout mapping tested, not a universal live deadline guarantee | `SUPPORTED`: 1800 s default; setter tested and used by O; expiry not exercised in that smoke |
 | Automatic provider-level retries | `VALIDATED`: G records generation and rate-limit recovery; internal bounds also have deterministic tests | `NOT_SUPPORTED`: no Ollama retry policy; argument correction above is a different mechanism |
 | Streaming public answers | `NOT_SUPPORTED`: current endpoint returns a complete JSON response | `NOT_SUPPORTED`: O was nonstreaming; no ERBAS streaming interface |
-| Normalized input-token metering | `SUPPORTED`: optional chat usage, synthetic coverage | `SUPPORTED`: optional compatible chat usage, synthetic coverage |
-| Normalized output-token metering | `SUPPORTED`: optional completion counter | `SUPPORTED`: optional completion counter |
-| Normalized reasoning-token metering | `PARTIAL`: optional numeric details when supplied; no new live evidence | `PARTIAL`: common optional decoder only; actual availability unverified, reasoning content ignored |
-| Normalized cached-token metering | `SUPPORTED`: optional cached-token details | `PARTIAL`: optional details depend on service version/model; no live metering evidence |
-| Request/provider ID capture | `SUPPORTED`: optional safe x_groq/header request ID and body response ID | `SUPPORTED`: optional safe header request ID and body response ID |
+| Normalized input-token metering | `SUPPORTED`: optional chat usage, synthetic coverage | `VALIDATED`: follow-up persisted compatible prompt counters for the three identified invocations |
+| Normalized output-token metering | `SUPPORTED`: optional completion counter | `VALIDATED`: follow-up persisted compatible completion counters |
+| Normalized reasoning-token metering | `PARTIAL`: optional numeric details when supplied; no new live evidence | `PARTIAL`: numeric decoder has synthetic coverage; counter null in the follow-up; reasoning content ignored |
+| Normalized cached-token metering | `SUPPORTED`: optional cached-token details | `PARTIAL`: optional decoder; cache counter null in every follow-up attempt |
+| Request/provider ID capture | `SUPPORTED`: optional safe x_groq/header request ID and body response ID | `VALIDATED`: safe body response IDs persisted in the follow-up; header request IDs remained null |
 | Monetary cost metering | `NOT_SUPPORTED`: no pricing, billing or normalized cost calculation | `NOT_SUPPORTED`: no cost calculation; this local service is not billed per token |
 | End-to-end execution without Internet | `NOT_SUPPORTED`: the configured hosted Groq service requires network access; synthetic local fixtures are not offline Groq | `NOT_TESTED`: local inference succeeded, but no controlled Internet-disconnected ERBAS run was recorded |
 | Use from Docker | `VALIDATED`: G used backend-owned Docker validation hosts | `PARTIAL`: O validates temporary host networking; normal bridge-to-host deployment remains unresolved |
@@ -220,7 +223,8 @@ coverage is in the linked [provider tests](../tests/Alxarafe.Host.IntegrationTes
 
 Token rows concern internal accounting, not model context sizes or public token-limit
 settings. AI-USAGE-001 adds nullable normalized counters and PostgreSQL records;
-new metrics have synthetic coverage, **not new real-provider validation**.
+Groq metrics have synthetic coverage; the linked Ollama follow-up identifies
+exactly which metrics were persisted locally.
 See [usage metering](ai-usage.md) for exact fields, duration/tool semantics,
 aggregation, idempotency, failure behavior and unresolved billing attribution.
 ERBAS invocation/correlation IDs remain distinct from provider identifiers.
@@ -234,7 +238,8 @@ functional audit content or persisted conversation state.
   response time is effectively the final answer time, not first-token latency.
 - Ollama `reasoning` was neither recorded nor exposed in O. Ignoring that field
   is not reasoning-token metering or a reasoning-content API.
-- Normalized tokens/IDs are optional and not newly live-validated. Provider cost
+- Normalized tokens/IDs are optional; the follow-up validates Ollama input/output
+  counters and body response IDs only for its identified invocations. Provider cost
   remains null: no pricing or cost calculation exists. Local Ollama is not an
   invoiced per-token service in this installation; hardware, power and operations
   cost are not measured. Billing ownership/locality remains unresolved at runtime.

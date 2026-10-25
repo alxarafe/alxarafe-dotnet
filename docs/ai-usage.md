@@ -77,11 +77,14 @@ establish reasoning-token availability for every version/model. Native Ollama
 `/api` timing/token fields are not consumed by this `/v1/chat/completions` adapter.
 No mapping from an arbitrary `cost` field is assumed.
 
-All new normalization, retry and persistence evidence is **synthetic**. No new
-Groq or Ollama inference was performed for this task; availability of particular
-live metrics remains unverified. Historical [Groq](verification/ai-api-001.md)
-and [Ollama](verification/ai-provider-001b.md) smoke reports predate metering and
-are not evidence of persisted usage. See the [provider matrix](ai-providers.md#capability-matrix).
+AI-USAGE-001 originally supplied synthetic normalization, retry and persistence
+evidence. The subsequent [Ollama follow-up](verification/ai-provider-001b.md#2026-10-25-follow-up-persisted-metering)
+certifies persisted input/output counters, configured/reported model, safe response
+IDs and execution timings/counts for local Ollama 0.20.7 with `gemma4:latest`,
+including a failed functional water observation. Reasoning/cache counters,
+provider request ID, cost/currency and billing mode remained null. Historical
+[Groq](verification/ai-api-001.md) and the original Ollama smoke predate metering;
+no new Groq inference was performed. See the [provider matrix](ai-providers.md#capability-matrix).
 Local Ollama has no provider invoice per token in the tested installation;
 provider cost stays null, not zero. Hardware, power and operations cost are not
 measured. Other models/versions may supply different optional metadata.

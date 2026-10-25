@@ -45,11 +45,16 @@ public sealed class AiUsageNormalizationTests
         Assert.DoesNotContain(Secret, JsonSerializer.Serialize(usage));
     }
 
-    [Fact]
-    public async Task OllamaMapsCompatibleUsageWithoutInventingReasoningOrPrice()
+    [Theory]
+    [InlineData(null)]
+    [InlineData(3L)]
+    public async Task OllamaMapsCompatibleUsageWithoutInventingReasoningOrPrice(long? reasoningTokens)
     {
         const string body = """{"id":"ollama-completion","usage":{"prompt_tokens":11,"completion_tokens":5,"prompt_tokens_details":{"cached_tokens":0},"cost":99},"choices":[{"message":{"content":"Safe final answer.","reasoning":"sensitive-content-and-credential"}}]}""";
-        using var handler = new Wire((HttpStatusCode.OK, body));
+        string completion = reasoningTokens is { } count
+            ? body.Replace("\"completion_tokens\":5", "\"completion_tokens\":5,\"completion_tokens_details\":{\"reasoning_tokens\":" + count + "}", StringComparison.Ordinal)
+            : body;
+        using var handler = new Wire((HttpStatusCode.OK, completion));
         using var http = new HttpClient(handler);
         var result = await Client(OllamaAiModelClient.ProviderName, http).CompleteAsync(Request);
         var usage = Assert.Single(result.Executions!);
@@ -57,7 +62,7 @@ public sealed class AiUsageNormalizationTests
         Assert.Equal(11, usage.InputTokens);
         Assert.Equal(5, usage.OutputTokens);
         Assert.Equal(0, usage.CachedTokens);
-        Assert.Null(usage.ReasoningTokens);
+        Assert.Equal(reasoningTokens, usage.ReasoningTokens);
         Assert.Null(usage.ProviderCost);
         Assert.Null(usage.ProviderCostCurrency);
         Assert.Null(usage.BillingMode);
@@ -66,21 +71,29 @@ public sealed class AiUsageNormalizationTests
     }
 
     [Theory]
-    [InlineData("null")]
-    [InlineData("{}")]
-    [InlineData("{\"prompt_tokens\":-1,\"completion_tokens\":1.5,\"prompt_tokens_details\":[],\"completion_tokens_details\":{\"reasoning_tokens\":\"unknown\"}}")]
-    public async Task MissingOrMalformedMetricsStayUnknownWithoutChangingTheAnswer(string metrics)
+    [InlineData(GroqAiModelClient.ProviderName, null)]
+    [InlineData(OllamaAiModelClient.ProviderName, null)]
+    [InlineData(GroqAiModelClient.ProviderName, "null")]
+    [InlineData(OllamaAiModelClient.ProviderName, "null")]
+    [InlineData(GroqAiModelClient.ProviderName, "{}")]
+    [InlineData(OllamaAiModelClient.ProviderName, "{}")]
+    [InlineData(GroqAiModelClient.ProviderName, "{\"prompt_tokens\":-1,\"completion_tokens\":1.5,\"prompt_tokens_details\":[],\"completion_tokens_details\":{\"reasoning_tokens\":\"unknown\"}}")]
+    [InlineData(OllamaAiModelClient.ProviderName, "{\"prompt_tokens\":-1,\"completion_tokens\":1.5,\"prompt_tokens_details\":[],\"completion_tokens_details\":{\"reasoning_tokens\":\"unknown\"}}")]
+    public async Task MissingOrMalformedMetricsStayUnknownWithoutChangingTheAnswer(string provider, string? metrics)
     {
-        string body = Completion.Replace("\"choices\":", "\"usage\":" + metrics + ",\"choices\":", StringComparison.Ordinal);
+        string body = metrics is null ? Completion
+            : Completion.Replace("\"choices\":", "\"usage\":" + metrics + ",\"choices\":", StringComparison.Ordinal);
         using var handler = new Wire((HttpStatusCode.OK, body));
         using var http = new HttpClient(handler);
-        var result = await Client(GroqAiModelClient.ProviderName, http).CompleteAsync(Request);
+        var result = await Client(provider, http).CompleteAsync(Request);
         Assert.Equal(Answer, result.Answer);
         var usage = Assert.Single(result.Executions!);
         Assert.Null(usage.InputTokens);
         Assert.Null(usage.OutputTokens);
         Assert.Null(usage.ReasoningTokens);
         Assert.Null(usage.CachedTokens);
+        Assert.Null(usage.ProviderCost);
+        Assert.DoesNotContain(Secret, JsonSerializer.Serialize(usage));
     }
 
     [Fact]
