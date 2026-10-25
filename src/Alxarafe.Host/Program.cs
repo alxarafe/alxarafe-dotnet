@@ -97,6 +97,8 @@ builder.Services.AddSingleton<ResourceRepositoryCatalog>();
 builder.Services.AddScoped<ResourceRepositoryRegistry>();
 builder.Services.AddScoped<IResourceAuthorization, CurrentResourceAuthorization>();
 builder.Services.AddScoped<ResourceRuntime>();
+builder.Services.AddScoped<ResourceActionRegistry>();
+builder.Services.AddScoped<ResourceActionRuntime>();
 builder.Services.AddScoped<ResourceMetadataProjection>();
 // Module handlers run first; this handler only handles transversal validation.
 builder.Services.AddExceptionHandler<PlatformExceptionHandler>();
@@ -143,7 +145,10 @@ var app = builder.Build();
 _ = app.Services.GetRequiredService<ResourceRegistry>();
 _ = app.Services.GetRequiredService<ResourceRepositoryCatalog>();
 using (var resourceScope = app.Services.CreateScope())
+{
     _ = resourceScope.ServiceProvider.GetRequiredService<ResourceRepositoryRegistry>();
+    _ = resourceScope.ServiceProvider.GetRequiredService<ResourceActionRegistry>();
+}
 // Keep the request culture active while exception handlers build their response.
 app.UseRequestLocalization();
 app.UseExceptionHandler();
@@ -177,6 +182,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 }).AllowAnonymous();
 app.MapAlxarafeModuleEndpoints();
 ResourceEndpoints.Map(app);
+ResourceActionEndpoints.Map(app);
 app.Run();
 
 public partial class Program { }

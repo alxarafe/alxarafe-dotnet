@@ -26,7 +26,10 @@ public sealed record ResourceFieldDto(string Name, string Type, bool Nullable, b
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] JsonElement? Default,
     ResourceConstraintsDto Constraints, ResourceCapabilitiesDto Capabilities, IReadOnlyList<string> EnumValues, IReadOnlyList<ResourceAnnotationDto> Annotations);
 public sealed record ResourceRelationDto(string Name, string Kind, string TargetResource, string LocalField, string TargetField, string? DisplayField, bool Required);
-public sealed record ResourceActionDto(string Name, string Scope, bool RequiresSelection, bool Authorized, IReadOnlyList<ResourceAnnotationDto> Annotations);
+public sealed record ResourceActionParameterDto(string Name, string Type, bool Nullable, bool Required,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] JsonElement? Default,
+    ResourceConstraintsDto Constraints, IReadOnlyList<string> EnumValues, IReadOnlyList<ResourceAnnotationDto> Annotations);
+public sealed record ResourceActionDto(string Name, string Scope, bool RequiresSelection, bool Authorized, IReadOnlyList<ResourceAnnotationDto> Annotations, IReadOnlyList<ResourceActionParameterDto> Parameters);
 public sealed record ResourceMetadataDto(string Id, string Version, string ModuleId, string DefinitionHash,
     ResourceIdDto IdDefinition, bool ModuleEnabled, IReadOnlyList<ResourceFieldDto> Fields, IReadOnlyList<ResourceRelationDto> Relations,
     IReadOnlyDictionary<string, ResourceOperationDto> Operations, IReadOnlyList<ResourceActionDto> Actions, IReadOnlyList<ResourceAnnotationDto> Annotations);
@@ -48,7 +51,7 @@ public sealed class ResourceMetadataProjection(ResourceRegistry resources, Modul
         var actions = new List<ResourceActionDto>();
         foreach (var action in resource.Actions.OrderBy(action => action.Name, StringComparer.Ordinal))
             actions.Add(new(action.Name, Enum.GetName(action.Scope)!.ToUpperInvariant(), action.RequiresSelection,
-                await authorization.IsAllowedAsync([action.Permission], ct), Annotations(action.Annotations)));
+                await authorization.IsAllowedAsync([action.Permission], ct), Annotations(action.Annotations), action.Parameters.OrderBy(parameter => parameter.Name, StringComparer.Ordinal).Select(Parameter).ToArray()));
         return new(resource.Id, resource.Version, resource.ModuleId, resources.DefinitionHashes[resource.Id], new(resource.IdDefinition.Field), enabled,
             resource.Fields.OrderBy(field => field.Name, StringComparer.Ordinal).Select(Field).ToArray(),
             resource.Relations.OrderBy(relation => relation.Name, StringComparer.Ordinal).Select(relation => new ResourceRelationDto(relation.Name,
@@ -56,6 +59,12 @@ public sealed class ResourceMetadataProjection(ResourceRegistry resources, Modul
                 relation.TargetResource, relation.LocalField, relation.TargetField, relation.DisplayField, relation.Required)).ToArray(),
             operations, actions, Annotations(resource.Annotations));
     }
+    internal static FieldDefinition ParameterField(ActionParameterDefinition parameter) => new(parameter.Name, parameter.Type,
+        parameter.Nullable, parameter.Required, defaultValue: parameter.DefaultValue, constraints: parameter.Constraints,
+        enumValues: parameter.EnumValues, annotations: parameter.Annotations);
+    private static ResourceActionParameterDto Parameter(ActionParameterDefinition parameter) => new(parameter.Name, Enum.GetName(parameter.Type)!.ToUpperInvariant(),
+        parameter.Nullable, parameter.Required, parameter.DefaultValue is null ? null : ResourceTransport.Project(parameter.DefaultValue),
+        Constraints(ParameterField(parameter)), parameter.EnumValues.Order(StringComparer.Ordinal).ToArray(), Annotations(parameter.Annotations));
     public static string ETag(ResourceMetadataDto metadata)
     {
         // Authorization/module state is not part of structural DefinitionHash. It must

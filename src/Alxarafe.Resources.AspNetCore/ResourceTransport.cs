@@ -79,11 +79,7 @@ public static class ResourceTransport
 
     internal static async Task<ResourceRecord> ReadAsync(HttpRequest request, ResourceDefinition definition, CancellationToken ct)
     {
-        if (!request.HasJsonContentType() || request.ContentLength > MaximumBodyBytes) throw new ResourceTransportException("body");
-        var bytes = new byte[MaximumBodyBytes + 1];
-        int count = await request.Body.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false, ct);
-        if (count > MaximumBodyBytes) throw new ResourceTransportException("body");
-        using var document = JsonDocument.Parse(bytes.AsMemory(0, count), new JsonDocumentOptions { MaxDepth = 32 });
+        using var document = await ReadDocumentAsync(request, ct);
         if (document.RootElement.ValueKind != JsonValueKind.Object) throw new ResourceTransportException("body");
         var values = new Dictionary<string, ScalarValue>(StringComparer.Ordinal);
         foreach (var property in document.RootElement.EnumerateObject())
@@ -99,6 +95,15 @@ public static class ResourceTransport
             catch (ResourceTransportException) { throw new ResourceTransportException(property.Name); }
         }
         return new(values);
+    }
+
+    internal static async Task<JsonDocument> ReadDocumentAsync(HttpRequest request, CancellationToken ct)
+    {
+        if (!request.HasJsonContentType() || request.ContentLength > MaximumBodyBytes) throw new ResourceTransportException("body");
+        var bytes = new byte[MaximumBodyBytes + 1];
+        int count = await request.Body.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false, ct);
+        if (count > MaximumBodyBytes) throw new ResourceTransportException("body");
+        return JsonDocument.Parse(bytes.AsMemory(0, count), new JsonDocumentOptions { MaxDepth = 32 });
     }
 
     internal static ResourceIdentifier Identifier(ResourceDefinition definition, string id)

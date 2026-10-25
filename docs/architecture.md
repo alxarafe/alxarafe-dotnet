@@ -55,6 +55,11 @@ frozen registry. Resources and Runtime remain ASP.NET-independent. These endpoin
 are .NET implementation extensions outside shared v0.12.0; see the
 [Resource HTTP boundary](resources.md#http-resource-api-and-metadata-projection).
 
+RESOURCE-ACTIONS-001 extends the same boundaries with typed semantic action parameters,
+scoped handler/availability composition and guarded execution. Actions reuse authoritative
+permissions/tenancy and fixed resource scope metadata; modules own domain invariants and
+atomicity. See [Resource Actions](resources.md#executable-resource-actions).
+
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;
 validation uses alxarafe_test/alxarafe_security_test for the control plane and

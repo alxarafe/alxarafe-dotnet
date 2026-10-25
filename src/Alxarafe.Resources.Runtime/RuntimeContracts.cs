@@ -19,7 +19,8 @@ public sealed record ResourceIdentifier(string Field, ScalarValue Value);
 public enum ResourceRuntimeError
 {
     ResourceNotFound, OperationNotSupported, RepositoryNotRegistered, ValidationFailed,
-    Forbidden, TenantRequired, ModuleDisabled, ExecutionFailed, InvalidRepositoryResult
+    Forbidden, TenantRequired, ModuleDisabled, ExecutionFailed, InvalidRepositoryResult,
+    ActionNotFound, ActionHandlerNotRegistered, ActionUnavailable, ActionConflict
 }
 public enum ResourceInputError { UnknownField, Required, InvalidValue, ReadOnly, Immutable, IdentifierMutation, InvalidQuery, BusinessRule }
 public sealed record ResourceIssue(string Path, ResourceInputError Code, string Message);
@@ -28,10 +29,11 @@ public sealed class ResourceRuntimeException : InvalidOperationException
     public string ResourceId { get; }
     public ResourceRuntimeError Code { get; }
     public IReadOnlyList<ResourceIssue> Issues { get; }
-    public ResourceRuntimeException(string resourceId, ResourceRuntimeError code, IEnumerable<ResourceIssue>? issues = null)
+    public string? ReasonCode { get; }
+    public ResourceRuntimeException(string resourceId, ResourceRuntimeError code, IEnumerable<ResourceIssue>? issues = null, string? reasonCode = null)
         : base($"Resource '{resourceId}': {code}.")
     {
-        ResourceId = resourceId; Code = code; Issues = Array.AsReadOnly(issues?.ToArray() ?? []);
+        ResourceId = resourceId; Code = code; ReasonCode = reasonCode; Issues = Array.AsReadOnly(issues?.ToArray() ?? []);
     }
 }
 

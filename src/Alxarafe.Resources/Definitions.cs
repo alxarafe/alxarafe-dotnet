@@ -48,16 +48,35 @@ public enum RelationKind { ManyToOne }
 public sealed record RelationDefinition(string Name, RelationKind Kind, string TargetResource, string LocalField,
     string TargetField, string? DisplayField = null, bool Required = false);
 public enum ActionScope { Entity, Collection, Selection }
+public sealed record ActionParameterDefinition
+{
+    internal FieldDefinition Field { get; }
+    public string Name => Field.Name;
+    public ScalarType Type => Field.Type;
+    public bool Nullable => Field.Nullable;
+    public bool Required => Field.Required;
+    public ScalarValue? DefaultValue => Field.DefaultValue;
+    public FieldConstraints? Constraints => Field.Constraints;
+    public IReadOnlyList<string> EnumValues => Field.EnumValues;
+    public IReadOnlyList<Annotation> Annotations => Field.Annotations;
+    public ActionParameterDefinition(string name, ScalarType type, bool nullable = false, bool required = false,
+        ScalarValue? defaultValue = null, FieldConstraints? constraints = null,
+        IEnumerable<string>? enumValues = null, IEnumerable<Annotation>? annotations = null)
+        => Field = new(name, type, nullable, required, defaultValue: defaultValue, constraints: constraints,
+            enumValues: enumValues, annotations: annotations);
+}
 public sealed record ActionDefinition
 {
+    public IReadOnlyList<ActionParameterDefinition> Parameters { get; }
     public string Name { get; }
     public ActionScope Scope { get; }
     public string Permission { get; }
     public bool RequiresSelection { get; }
     public IReadOnlyList<Annotation> Annotations { get; }
     public ActionDefinition(string name, ActionScope scope, string permission, bool requiresSelection = false,
-        IEnumerable<Annotation>? annotations = null)
+        IEnumerable<Annotation>? annotations = null, IEnumerable<ActionParameterDefinition>? parameters = null)
     {
+        Parameters = Snapshot.Of(parameters);
         Name = name; Scope = scope; Permission = permission; RequiresSelection = requiresSelection;
         Annotations = Snapshot.Of(annotations);
     }

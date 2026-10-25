@@ -92,13 +92,17 @@ internal static class ResourceValidation
                 || action.RequiresSelection != (action.Scope == ActionScope.Selection))
                 Fail(id, "actions." + action.Name, ResourceValidationCode.InvalidAction, "Invalid action identity, permission, scope or selection requirement.");
             Annotations(resource, action.Annotations, AnnotationTarget.Action, terms, "actions." + action.Name);
+            Unique(action.Parameters, parameter => parameter.Name, id, "actions." + action.Name + ".parameters");
+            foreach (var parameter in action.Parameters)
+                Field(resource, parameter.Field, terms, AnnotationTarget.ActionParameter, "actions." + action.Name + ".parameters." + parameter.Name);
         }
         Annotations(resource, resource.Annotations, AnnotationTarget.Resource, terms, "annotations");
     }
 
-    private static void Field(ResourceDefinition resource, FieldDefinition field, IReadOnlyDictionary<string, AnnotationTerm> terms)
+    private static void Field(ResourceDefinition resource, FieldDefinition field, IReadOnlyDictionary<string, AnnotationTerm> terms,
+        AnnotationTarget target = AnnotationTarget.Field, string? path = null)
     {
-        string path = "fields." + field.Name;
+        path ??= "fields." + field.Name;
         if (!Name(field.Name) || !Enum.IsDefined(field.Type) || (field.Required && (field.Nullable || field.ReadOnly))
             || (field.Capabilities.Searchable && field.Type is not (ScalarType.String or ScalarType.Text)))
             Fail(resource.Id, path, ResourceValidationCode.InvalidField, "Invalid name/type, contradictory input flags or non-text search capability.");
@@ -132,7 +136,7 @@ internal static class ResourceValidation
             Fail(resource.Id, path, ResourceValidationCode.InvalidConstraint, "Constraints are incompatible with the semantic type.");
         if (field.DefaultValue is not null && !Accepts(resource.Id, field, field.DefaultValue))
             Fail(resource.Id, path + ".defaultValue", ResourceValidationCode.InvalidDefault, "Default is incompatible with the type or effective constraints.");
-        Annotations(resource, field.Annotations, AnnotationTarget.Field, terms, path + ".annotations");
+        Annotations(resource, field.Annotations, target, terms, path + ".annotations");
     }
 
     private static Regex Pattern(string pattern) => new(pattern, RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, PatternTimeout);
@@ -250,7 +254,7 @@ internal static class ResourceValidation
     {
         var terms = new Dictionary<string, AnnotationTerm>(StringComparer.Ordinal);
         Unique(vocabularies, vocabulary => vocabulary.Name, VocabularyContext, "vocabularies");
-        const AnnotationTarget targets = AnnotationTarget.Resource | AnnotationTarget.Field | AnnotationTarget.Action;
+        const AnnotationTarget targets = AnnotationTarget.Resource | AnnotationTarget.Field | AnnotationTarget.Action | AnnotationTarget.ActionParameter;
         foreach (var vocabulary in vocabularies)
         {
             if (!Name(vocabulary.Name)) Fail(VocabularyContext, "name", ResourceValidationCode.InvalidAnnotation, "Invalid vocabulary name.");
