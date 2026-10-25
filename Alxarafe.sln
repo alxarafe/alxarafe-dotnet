@@ -42,6 +42,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.Ai.Module"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.Ai.Persistence", "src/Modules/Ai/Alxarafe.Modules.Ai.Persistence/Alxarafe.Modules.Ai.Persistence.csproj", "{10000000-0000-0000-0000-000000000035}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Resources", "src/Alxarafe.Resources/Alxarafe.Resources.csproj", "{10000000-0000-0000-0000-000000000040}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Resources.Tests", "tests/Alxarafe.Resources.Tests/Alxarafe.Resources.Tests.csproj", "{10000000-0000-0000-0000-000000000041}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -108,6 +112,14 @@ Global
 		{10000000-0000-0000-0000-000000000017}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10000000-0000-0000-0000-000000000017}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10000000-0000-0000-0000-000000000017}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000040}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000040}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000040}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000040}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10000000-0000-0000-0000-000000000041}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000041}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10000000-0000-0000-0000-000000000041}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10000000-0000-0000-0000-000000000041}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

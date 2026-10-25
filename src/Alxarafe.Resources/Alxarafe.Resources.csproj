@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Alxarafe.Resources</AssemblyName><RootNamespace>Alxarafe.Resources</RootNamespace></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Alxarafe.Modularity/Alxarafe.Modularity.csproj" /></ItemGroup>
+</Project>
