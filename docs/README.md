@@ -15,7 +15,7 @@
 | [WMS-002 verification](verification/wms-002-dotnet.md) | Storage Attributes, published v0.7.0 adoption, migrations, architecture and live conformance |
 | [WMS-001N verification](verification/wms-001-dotnet.md) | Production UoM, v0.6.0 adoption, architecture and validation evidence |
 | [Usage](usage.md) | Docker development, full validation, networking, isolation and cleanup |
-| [Semantic Resource Metadata](resources.md) | Semantic types, constraints, immutable definitions, typed vocabularies/providers, startup catalog validation and canonical hashes |
+| [Semantic Resource Metadata](resources.md) | Semantic types, immutable metadata, canonical hashes, generic backend execution, authoritative guards and typed persistence ports |
 | [Architecture](architecture.md) | Module boundaries and composition |
 | [API internationalization](i18n.md) | English fallback, native request negotiation and module-owned validation resources |
 | [I18N-001 verification](verification/i18n-001.md) | Historical native/HTTP totals and conformance before experimental-module removal |
