@@ -150,6 +150,29 @@ database fails rather than allowing EF to create it. Inactive tenants are skippe
 an active tenant with an invalid mapping fails startup clearly. With an empty
 registry the control plane can start without a default business database.
 
+### Current module-owned migration extension seam
+
+WMS is currently the only business module with persistence. Its
+`WmsModule.InitializeAsync` supplies a callback to `ITenantDatabaseMigrationRunner`;
+the callback owns construction of `WmsDbContext`, its configuration and EF
+migrations. `ModuleRuntime` already calls each registered module's `InitializeAsync`
+without selecting a business module by name. The neutral runner enumerates tenant
+targets and invokes the supplied callback; it contains no WMS branch, schema,
+DbContext or migration-history knowledge. `ITenantDatabaseResolver` represents
+canonical request context to tenant business database, not a WMS database.
+
+A future persistent business module can supply its own initialization callback
+through this existing composition seam without adding module-specific migration
+logic to Core's tenancy resolver/runner. It uses the same independent business
+database for a given Tenant, with its own module-owned schema/migration history;
+this does not introduce one database per module. The Host's existing explicit
+entry-assembly registration is composition, not knowledge of module business
+semantics or a WMS-specific tenant provisioning path.
+
+This narrow initialization/callback seam is not the future lifecycle contract
+below. CORE-TENANT-001 and this audit do not add lifecycle discovery, descriptors,
+provisioning hooks or a generic migration engine.
+
 This is not production provisioning, a distributed migration coordinator or an
 online schema rollout platform. Operators must create databases/roles, supply
 mappings, register tenants/memberships and run the established startup lifecycle
@@ -165,6 +188,13 @@ business data, configure its reference and then establish explicit memberships.
 The code never reads legacy Platform WMS tables as a fallback.
 
 ### Legacy tenant AI settings
+
+AI is one module among others. Its `tenant_ai_settings` table was introduced by
+AI-PROVIDER-002 before the canonical Tenant foundation. It is AI-specific
+control-plane persistence, not the generic model for tenancy or module
+configuration. Keeping it in Platform does not mean all module configuration
+belongs there. The canonical FK alignment is transitional/evolutionary compatibility
+work, not implementation of the future module configuration contract.
 
 The original `tenant_ai_settings.tenant_id` remains the legacy external key to
 preserve pre-authority rows and rollback compatibility. Nullable
@@ -219,6 +249,77 @@ No live AI provider call is necessary.
 
 The following is future architecture, not implemented behavior or speculative
 schema in CORE-TENANT-001.
+
+### Future common module contract and lifecycle ownership
+
+Every ERBAS module will eventually publish a contract describing the requirements
+Core needs to install, activate, validate and provision that module for a tenant
+without Core containing module-specific knowledge. Core orchestrates modules;
+the module owns the meaning and implementation of its requirements.
+
+Core will know:
+
+- module identity and dependencies;
+- whether the module is available/active;
+- when lifecycle operations must run;
+- tenant, context and configuration scopes.
+
+Each module will own:
+
+- its configuration definition and required versus optional settings;
+- defaults and inheritance/override rules where supported;
+- configuration validation;
+- secret declarations;
+- persistence requirements;
+- tenant provisioning behavior;
+- lifecycle-specific behavior.
+
+Future conceptual lifecycle responsibilities may include equivalents of:
+
+```text
+install
+upgrade
+validate
+activate
+deactivate
+provisionTenant
+startTenant
+removeTenant
+```
+
+These are architectural responsibilities, not new interfaces, hooks or implemented
+operations in CORE-TENANT-001. Existing module descriptors and initialization are
+not presented as already implementing this future contract. Defining that contract,
+discovery and generic lifecycle orchestration requires a separate approved task.
+
+### Future configuration scopes and placement
+
+Configuration is not AI-specific. Where a module supports inheritance, future
+tenant/module configuration may follow:
+
+```text
+Platform defaults
+  -> Partner inherited values
+  -> descendant Partner overrides
+  -> Tenant overrides
+```
+
+Each module defines its own semantics: which values are inheritable, required,
+optional or overridable, how defaults combine, and how validation applies. Core
+must not need to understand meanings such as `ai.provider`,
+`wms.allowNegativeStock` or `accounting.fiscalYear`. The chain does not impose a
+single merge algorithm or override rule on every module or setting, and it does
+not turn branding's nearest-override rule or restrictive module availability into
+a universal configuration policy.
+
+Not all module configuration necessarily belongs in Platform DB. Control-plane
+availability, activation and inheritance metadata may belong in Platform;
+operational business configuration may belong in the Tenant DB. Secrets should
+remain outside ordinary persisted configuration where appropriate, resolved through
+the installation's secret/configuration boundary. Modules will declare their needs
+and scopes; Core will orchestrate those declarations without interpreting business
+values. No generic key/value configuration engine or new persistence model is
+implemented by this foundation or audit.
 
 ### Partner and reseller administration
 
