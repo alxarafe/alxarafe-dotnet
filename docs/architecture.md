@@ -60,6 +60,12 @@ scoped handler/availability composition and guarded execution. Actions reuse aut
 permissions/tenancy and fixed resource scope metadata; modules own domain invariants and
 atomicity. See [Resource Actions](resources.md#executable-resource-actions).
 
+RESOURCE-UI-METADATA-001 adds immutable neutral form tabs/sections/field groups,
+strict placement validation and unsaved-change policy to semantic Resources. HTTP
+projects explicit presentation DTOs; Runtime does not interpret layout. Canonical
+hash v3 and existing ETags cover presentation changes. See
+[form metadata](resources.md#presentation-neutral-form-metadata).
+
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;
 validation uses alxarafe_test/alxarafe_security_test for the control plane and

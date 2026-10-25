@@ -9,8 +9,8 @@ public sealed class DefinitionHashTests
     [Fact]
     public void GoldenVectorPinsCanonicalFormatAcrossProcesses()
     {
-        // SHA-256 of the documented v2 canonical projection of Fixture.Resource().
-        const string expected = "8a222d986a84544626dce11890c651680009c3dd55c16f4e6e68f7278647dc66";
+        // SHA-256 of the documented v3 canonical projection of Fixture.Resource().
+        const string expected = "987e48e21244d1e3a678a6e2ffeafb35d0c485204ab1e55ad55f6c0aedc08d2c";
         Assert.Equal(expected, Fixture.Registry(Fixture.Resource()).DefinitionHashes[Fixture.CustomerId]);
         Assert.Equal(expected, Fixture.Registry(Fixture.Resource()).DefinitionHashes[Fixture.CustomerId]);
     }

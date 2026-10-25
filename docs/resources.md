@@ -145,9 +145,9 @@ invalid defaults/constraints/security/annotations and unresolved relations fail 
 The exception contains no business execution, HTTP response or authorization decision.
 
 Each validated resource gets a lowercase SHA-256 DefinitionHash from a deliberate
-UTF-8 JSON semantic projection marked `erbas.resource-definition.v2`. It includes
+UTF-8 JSON semantic projection marked `erbas.resource-definition.v3`. It includes
 identity/version/owner/ID field, fields and effective constraints/defaults/capabilities,
-relations, operations/security, actions/parameters and typed annotations (including used term
+relations, operations/security, actions/parameters, presentation and typed annotations (including used term
 shapes/targets). It includes no CLR type/assembly name, provider implementation,
 object hash code, DI order or runtime state.
 
@@ -162,10 +162,14 @@ and field names, not recursively: changing a target definition changes its own h
 Consumers needing a whole catalog fingerprint must combine the relevant resource
 hashes in a future, explicit dependency policy.
 
-RESOURCE-ACTIONS-001 deliberately upgrades canonical v1 to v2 to include parameter
-semantics and the new annotation target. All prior hashes therefore invalidate once,
-including resources without actions. The v2 minimal-resource golden vector is
-`8a222d986a84544626dce11890c651680009c3dd55c16f4e6e68f7278647dc66`.
+RESOURCE-ACTIONS-001 upgraded v1 to v2 for parameters and annotation targets.
+RESOURCE-UI-METADATA-001 deliberately upgrades v2 to v3 for optional presentation.
+All prior hashes invalidate once, including resources without a form; absent
+presentation has an explicit canonical null. Layout tabs/sections/groups/fields/action
+references retain declared order because it is meaningful. Layout moves, labels,
+collapsibility, action placements and behavior changes alter the hash. The v3
+minimal-resource golden vector is
+`987e48e21244d1e3a678a6e2ffeafb35d0c485204ab1e55ad55f6c0aedc08d2c`.
 Golden-vector tests pin the canonical format; insertion order, current culture and
 provider identity cannot alter equivalent hashes. Semantic field, constraint,
 permission, action, relation, version and annotation changes alter hashes. Changes
@@ -739,6 +743,152 @@ state-machine/rules engines, scripting and generic compensations. AI/tool deriva
 frontend buttons/dialogs/themes, relation expansion and generic EF/schema generation
 remain separate work.
 
+## Presentation-neutral form metadata
+
+RESOURCE-UI-METADATA-001 adds optional `ResourceDefinition.Presentation` in the semantic
+Resources project, independent of HTTP, ORM, WMS/AI and frontend frameworks. It is an
+explicit immutable hierarchy, not object-valued annotation JSON:
+
+```text
+ResourceDefinition
+  → ResourcePresentationDefinition
+    → ResourceFormDefinition
+      → ResourceFormTab
+        → ResourceFormSection
+          → ResourceFormFieldGroup
+            → existing field names
+```
+
+The form contains behavior, ordered tabs and optional action references. Tabs contain
+ordered sections, sections contain ordered groups, and groups contain ordered field
+references. All collections are defensive read-only snapshots. Tabs must be nonempty;
+every tab/section/group must contain its next level. Tabs have unique technical IDs
+within the form; section IDs are unique within their tab, and group IDs within their
+section. IDs follow the existing technical field-name syntax and are bounded to 100
+characters. Fully qualified parent paths disambiguate repeated child IDs.
+
+Labels are optional literal plain Unicode text, bounded to 200 UTF-16 code units,
+without markup angle brackets or control characters. They are not HTML, Markdown,
+templates, localization keys or component names; renderers must treat them as text.
+This follows the existing literal-label convention without adding a metadata i18n
+framework. Sections may be collapsible/initiallyCollapsed; a non-collapsible section
+cannot start collapsed. No grid, dimensions, responsive breakpoints, CSS, icons,
+colors, numeric tabindex or component-library choices are encoded.
+
+### Complete placement and action context
+
+An explicit form must place every non-hidden, non-excluded resource field exactly
+once, including read-only/immutable identifiers and audit fields. Unknown fields,
+duplicates within/across groups and accidentally omitted visible fields fail startup
+with InvalidPresentation. This deliberately prevents newly added visible fields
+from silently disappearing. Resources without explicit presentation remain valid.
+
+Existing `UI.Hidden=true` exempts a field from placement. New typed boolean
+`UI.FormExcluded=true`, valid only on fields, explicitly excludes it from shared
+form/detail presentation while leaving other uses such as list metadata unaffected.
+False values do not exempt placement. Hidden/excluded fields cannot be placed in an
+explicit form. Exclusion is presentation intent, not authorization or a restriction
+on backend input/output; security remains authoritative independently.
+
+Form, tab and section action lists reference existing ActionDefinition names. An
+action can appear only once across the form; unknown/duplicate references fail startup.
+Unplaced actions remain valid for the future default resource action area. Reference
+order is intentional button order. Placement is visual context only: authorization
+controls visibility, availability controls enabled state, and Resource Actions still
+re-checks all guards and executes the same registered handler. No permission is
+conferred by placement and no action must be placed to execute.
+
+One hierarchy serves create, update and read-only detail. Existing required, nullable,
+readOnly, immutable, defaults and constraints determine behavior for each operation;
+there are no separate near-identical trees or new per-operation field flags. Read-only
+fields may be displayed without being sent in mutations. Layout does not redefine
+semantic fields, validation or persistence.
+
+### Unsaved changes
+
+ResourceFormBehavior exposes one UnsavedChangesPolicy: ConfirmDiscard by default,
+or explicit AllowDiscard. The Metadata API uses CONFIRM_DISCARD / ALLOW_DISCARD.
+Editable forms must track dirty state; read-only detail views are naturally non-dirty.
+Under ConfirmDiscard, internal navigation away from unsaved edits must offer Save,
+Discard/cancel editing, or Remain. Save must first pass normal form validation.
+Protection covers another resource/record, menu navigation, closing edit panels/dialogs
+and browser Back where the Angular runtime can intercept it. Switching tabs within
+the same form does not discard the form. Explicit AllowDiscard permits leaving without
+that confirmation. No redundant dirty-tracking booleans are added.
+
+For refresh/tab close, the future runtime uses browser-supported beforeunload behavior
+where available, subject to browser restrictions and native prompt limitations; it
+cannot promise the internal three-choice dialog there. This ticket implements no
+frontend state tracking, navigation guards or browser behavior.
+
+### Immediate validation and cross-tab errors
+
+```text
+Metadata constraints
+    ↓
+Core FE immediate validation
+    ↓
+backend authoritative validation
+```
+
+Before POST/PATCH, future Core FE must validate every representable constraint:
+required/nullability, semantic type, enums, numeric minimum/maximum and exclusive
+bounds, multipleOf, exact decimal precision/scale, minimumLength, maximumLength and
+pattern. It must preserve exact-number semantics and the documented Unicode/pattern
+dialect, rather than substitute JavaScript floating point or incompatible regexes.
+Frontend validation improves UX; backend validation remains mandatory and authoritative.
+Manipulated requests must still fail backend checks.
+
+Preventive controls should offer valid enum choices and appropriate semantic controls
+for dates, numbers and booleans. For STRING/TEXT maximumLength, Core FE should prevent
+normal typing and paste from producing longer values where the control permits this
+cleanly, matching the semantic Unicode-scalar length rule. Backend maximumLength
+validation still applies. Optional character counters belong to frontend/theme code;
+there is no counter metadata flag.
+
+Reactive validation remains necessary for required/minimumLength/pattern/range errors
+and intermediate editing states. The frontend must never rely exclusively on
+preventive controls.
+
+> When Save is requested, the Core FE resolves errors in the active tab first. If the active tab has no errors but another tab does, it activates the first invalid tab in layout order, reveals the relevant container and focuses the first invalid field.
+
+Save validates the complete applicable form before submission. If the active tab has
+errors, remain there and reveal/focus its first invalid field. Otherwise activate the
+first invalid tab; submit only if no errors remain. Reveal any collapsed section
+containing the target field, then scroll/focus it. Tab error state/count is derived
+from validation; visual indicators belong to the theme. No icons/colors are prescribed.
+Deterministic error/focus order is tab → section → group → field order, never the order
+in which validators happen to return issues. No separate reveal flag or tabindex is
+needed.
+
+### Metadata, cache coherence and acceptance
+
+Individual metadata explicitly projects `presentation.form` with behavior, actions
+and tabs, each tab's id/optional label/actions/sections, each section's id/optional
+label/collapsibility/actions/groups, and each group's id/optional label/field names.
+Absent presentation is omitted. Compact discovery does not include the layout.
+The existing effective ETag incorporates the new projection and v3 DefinitionHash;
+layout changes invalidate it without a second cache key or Angular regeneration.
+
+Presentation affects Metadata API schemas only. CRUD/action OpenAPI request/response
+schemas remain semantic field/parameter projections and contain no tabs or groups.
+Runtime never interprets layout. The same definition continues through existing
+module, tenant, authorization, CRUD and action guards.
+
+A shared test-only item-style fixture exercises General, Logistics, Inventory,
+Configuration and Audit tabs, ten sections, twenty groups and thirty placed fields,
+plus hidden/excluded fields. It includes exact numerics, text, booleans, enums,
+UUID/self-relation, dates/time/instants, required/nullability/defaults, read-only and
+immutable fields, bounds, lengths and pattern, and form/tab/section action placement.
+It is no production WMS adoption. WMS remains the real acceptance domain; a future
+complex WMS maintenance screen must validate these contracts in the Angular runtime.
+
+Conditional visibility/required expressions, nested layout languages, formulas,
+workflow rules, relation expansion, user-saved layouts, table personalization, themes,
+branding, localization infrastructure, frontend generation and AI behavior remain
+out of scope. No Angular/client, frontend validation or WMS production migration is
+implemented here.
+
 ## Authority and business rules
 
 Backend metadata will remain authoritative. Frontend validation is convenience only;
@@ -812,27 +962,11 @@ Angular source modification or regeneration.
 
 ### Neutral composable layout
 
-Resource Metadata must eventually support a composable, presentation-neutral layout
-model capable of expressing structures equivalent to:
-
-```text
-Layout
-├── Header
-├── TabGroup
-│   ├── Tab
-│   │   ├── Section
-│   │   │   ├── Field
-│   │   │   └── Section
-│   │   └── Section
-│   └── Tab
-└── Actions
-```
-
-The current annotation/vocabulary architecture must remain extensible enough to
-support typed layout terms and nested structures in a later phase. Exact layout
-types, schemas and renderers are outside RESOURCE-METADATA-001 and are not implemented
-here. Layout describes composition and intent; it must not encode `MatInput`,
-`PrimeNG`, Bootstrap classes, Tailwind classes or CSS classes.
+The implemented [form metadata](#presentation-neutral-form-metadata) supplies typed
+ordered tabs, sections, field groups and references, with shared create/update/detail
+behavior. It is independent of annotation JSON and component libraries. Richer layout
+concepts such as headers or additional nesting remain future contract evolution;
+rendering and responsive choices belong to Core FE/theme work.
 
 ### WMS acceptance domain
 
@@ -965,8 +1099,13 @@ RESOURCE-API-001 [implemented]
 RESOURCE-ACTIONS-001 [implemented]
     action availability and execution
     ↓
+RESOURCE-UI-METADATA-001 [implemented]
+    neutral form layout and behavior
+    ↓
 ANGULAR-RESOURCE-RUNTIME-001
     universal Core FE renderer
+    ↓
+WMS complex acceptance/adoption
     ↓
 RESOURCE-OVERRIDES-001
     metadata/custom component overrides
@@ -986,7 +1125,9 @@ RESOURCE-METADATA-001 implements semantic metadata, definition validation, the r
 and DefinitionHash. RESOURCE-RUNTIME-001 implements generic backend CRUD through ports,
 authoritative guards, runtime validation and business hooks. RESOURCE-API-001 implements
 HTTP CRUD, explicit metadata projections/coherence and derived OpenAPI. RESOURCE-ACTIONS-001
-adds typed action inputs, authorization, target availability and handler execution. Frontend runtime, composable layout execution, overrides and theme resolution
+adds typed action inputs, authorization, target availability and handler execution.
+RESOURCE-UI-METADATA-001 adds typed form presentation and neutral unsaved-change policy.
+Frontend runtime, layout rendering, overrides and theme resolution
 remain future phases. No generic EF/SQL repository, schema generation, automatic migrations,
 Angular/client code, relation expansion, reseller/branding or AI/tool schemas are added.
 Existing WMS APIs/persistence are not migrated or redesigned. Core FE shell extensions and

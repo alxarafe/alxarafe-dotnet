@@ -32,11 +32,12 @@ public sealed record ResourceActionParameterDto(string Name, string Type, bool N
 public sealed record ResourceActionDto(string Name, string Scope, bool RequiresSelection, bool Authorized, IReadOnlyList<ResourceAnnotationDto> Annotations, IReadOnlyList<ResourceActionParameterDto> Parameters);
 public sealed record ResourceMetadataDto(string Id, string Version, string ModuleId, string DefinitionHash,
     ResourceIdDto IdDefinition, bool ModuleEnabled, IReadOnlyList<ResourceFieldDto> Fields, IReadOnlyList<ResourceRelationDto> Relations,
-    IReadOnlyDictionary<string, ResourceOperationDto> Operations, IReadOnlyList<ResourceActionDto> Actions, IReadOnlyList<ResourceAnnotationDto> Annotations);
+    IReadOnlyDictionary<string, ResourceOperationDto> Operations, IReadOnlyList<ResourceActionDto> Actions, IReadOnlyList<ResourceAnnotationDto> Annotations,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ResourcePresentationDto? Presentation = null);
 public sealed record ResourceSummaryDto(string Id, string Version, string ModuleId, string DefinitionHash,
     IReadOnlyDictionary<string, ResourceOperationDto> Operations, string MetadataPath);
 
-public sealed class ResourceMetadataProjection(ResourceRegistry resources, ModuleStateService modules, IResourceAuthorization authorization)
+public sealed partial class ResourceMetadataProjection(ResourceRegistry resources, ModuleStateService modules, IResourceAuthorization authorization)
 {
     public async Task<ResourceMetadataDto> ProjectAsync(ResourceDefinition resource, CancellationToken ct = default)
     {
@@ -57,7 +58,7 @@ public sealed class ResourceMetadataProjection(ResourceRegistry resources, Modul
             resource.Relations.OrderBy(relation => relation.Name, StringComparer.Ordinal).Select(relation => new ResourceRelationDto(relation.Name,
                 Enum.GetName(relation.Kind) == nameof(RelationKind.ManyToOne) ? "MANY_TO_ONE" : throw new InvalidOperationException("Unsupported relation projection."),
                 relation.TargetResource, relation.LocalField, relation.TargetField, relation.DisplayField, relation.Required)).ToArray(),
-            operations, actions, Annotations(resource.Annotations));
+            operations, actions, Annotations(resource.Annotations), Presentation(resource.Presentation));
     }
     internal static FieldDefinition ParameterField(ActionParameterDefinition parameter) => new(parameter.Name, parameter.Type,
         parameter.Nullable, parameter.Required, defaultValue: parameter.DefaultValue, constraints: parameter.Constraints,
