@@ -107,6 +107,7 @@ DO $$ BEGIN
        OR (SELECT count(*) FROM tenant_ai_settings) <> 0
        OR (SELECT count(*) FROM "__PlatformMigrationsHistory" WHERE "MigrationId" = '202610260001_AuthoritativeTenancy') <> 1
        OR (SELECT count(*) FROM "__AiMigrationsHistory" WHERE "MigrationId" = '202610250001_UsageMetering') <> 1
+       OR (SELECT count(*) FROM "__AiMigrationsHistory" WHERE "MigrationId" = '202610260002_TenantUsageAttribution') <> 1
        OR to_regclass('public.wms_uoms') IS NOT NULL
        OR to_regclass('public."__WmsMigrationsHistory"') IS NOT NULL THEN
         RAISE EXCEPTION 'Platform control-plane ownership invariant failed';

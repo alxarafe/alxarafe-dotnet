@@ -103,9 +103,6 @@ public sealed class EffectiveAiConfigurationTests
         builder.Services.AddSingleton<ITenantAiSettingsStore>(store);
         builder.Services.AddScoped<ICurrentTenantContext, Tenant>();
         new AiModule().ConfigureServices(builder.Services);
-        builder.Services.AddScoped<IAiModelClient>(provider => new ConfiguredAiModelClient(
-            provider.GetRequiredService<IHttpClientFactory>().CreateClient(AiModule.HttpClientName), builder.Configuration,
-            provider.GetRequiredService<EffectiveAiConfigurationResolver>(), NullLoggerFactory.Instance));
         builder.Services.AddHttpClient(AiModule.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => wire);
         using var host = builder.Build();
         using var a = host.Services.CreateScope();
@@ -178,12 +175,16 @@ public sealed class EffectiveAiConfigurationTests
     {
         internal sealed record Call(string Model, string? Authorization, JsonElement[] Tools);
         public ConcurrentBag<Call> Calls { get; } = [];
+        public bool Fail { get; set; }
+        public Func<Task>? BeforeResponse { get; set; }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var body = await request.Content!.ReadFromJsonAsync<JsonElement>(cancellationToken);
             Calls.Add(new(body.GetProperty("model").GetString()!, request.Headers.Authorization?.ToString(),
                 body.TryGetProperty("tools", out var tools) ? tools.EnumerateArray().Select(tool => tool.Clone()).ToArray() : []));
+            if (BeforeResponse is not null) await BeforeResponse();
             await Task.Yield();
+            if (Fail) return new(HttpStatusCode.ServiceUnavailable);
             return new(HttpStatusCode.OK)
             {
                 Content = new StringContent("""{"id":"response-fixture","model":"served-model","usage":{"prompt_tokens":3,"completion_tokens":2},"choices":[{"message":{"content":"Safe answer."}}]}""")

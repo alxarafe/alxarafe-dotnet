@@ -134,14 +134,16 @@ Ollama reuse the common OpenAI-compatible chat client. Groq retains its existing
 error/retry policy; Ollama supplies only configuration and explicit no-auth
 transport, with no provider-specific retry. Model selection uses `AI:Model` independently
 of the provider name, retaining the legacy Groq model alias. Testing selects the
-deterministic adapter. Application depends only on its model port; provider
-selection cannot change effective tools or authorization. See
+deterministic adapter. Application consumes its model port and read-only authoritative
+tenant context for usage attribution; provider selection cannot change effective
+tools or authorization. See
 [canonical provider configuration and capabilities](ai-providers.md).
-Platform also owns prepared tenant provider/model settings. A scoped effective
+Platform also owns tenant provider/model settings. A scoped effective
 configuration resolver and asynchronous model-client bridge keep persistence
 outside the assistant and provider clients. CORE-TENANT-001 now supplies authoritative membership context and independent
-business databases; see [tenancy](tenancy.md). AI selection remains global and
-tenant usage attribution is deferred to AI-PROVIDER-002B. See [precedence and the runtime blocker](ai-providers.md#tenant-overrides-prepared-not-active-in-runtime).
+business databases; see [tenancy](tenancy.md). AI-PROVIDER-002B activates tenant
+provider/model overrides and canonical tenant usage attribution. AI is one module
+consuming tenancy, not a privileged Core concept. See [runtime precedence](ai-providers.md#tenant-overrides-active-at-runtime).
 The common abstraction does not imply functional equivalence: every observable
 difference, limitation, configuration requirement or unvalidated capability must
 be documented by provider and, when relevant, by model. Adding a provider requires
