@@ -14,7 +14,7 @@ public sealed class ModuleStateService
 
     public ModuleStateService(ModuleRegistry registry, IModuleStateStore store)
     {
-        foreach (var module in registry.Modules) _available.Add(module.Descriptor.Id, module.Descriptor);
+        foreach (var descriptor in registry.Descriptors) _available.Add(descriptor.Id, descriptor);
         _store = store;
     }
 

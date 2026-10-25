@@ -155,8 +155,8 @@ registry the control plane can start without a default business database.
 WMS is currently the only business module with persistence. Its
 `WmsModule.InitializeAsync` supplies a callback to `ITenantDatabaseMigrationRunner`;
 the callback owns construction of `WmsDbContext`, its configuration and EF
-migrations. `ModuleRuntime` already calls each registered module's `InitializeAsync`
-without selecting a business module by name. The neutral runner enumerates tenant
+migrations. `ModuleRuntime` calls the optional `IModuleInitializer.InitializeAsync`
+hook in validated dependency order without selecting a business module by name. The neutral runner enumerates tenant
 targets and invokes the supplied callback; it contains no WMS branch, schema,
 DbContext or migration-history knowledge. `ITenantDatabaseResolver` represents
 canonical request context to tenant business database, not a WMS database.
@@ -169,9 +169,11 @@ this does not introduce one database per module. The Host's existing explicit
 entry-assembly registration is composition, not knowledge of module business
 semantics or a WMS-specific tenant provisioning path.
 
-This narrow initialization/callback seam is not the future lifecycle contract
-below. CORE-TENANT-001 and this audit do not add lifecycle discovery, descriptors,
-provisioning hooks or a generic migration engine.
+CORE-MODULE-001 formalizes the optional initializer and declares WMS persistence as
+`Tenant`, while reusing this callback unchanged. The formal module descriptor does
+not route connections or grant tenant access. Broader provisioning/lifecycle behavior
+below remains future architecture; no generic migration engine is added. See
+[the module contract](modularity.md).
 
 This is not production provisioning, a distributed migration coordinator or an
 online schema rollout platform. Operators must create databases/roles, supply
@@ -256,7 +258,12 @@ schema in CORE-TENANT-001.
 
 ### Future common module contract and lifecycle ownership
 
-Every ERBAS module will eventually publish a contract describing the requirements
+CORE-MODULE-001 now implements the minimum [module contract](modularity.md): identity,
+release/API versions, dependency validation, read-only catalog, deterministic ordering,
+persistence scope, presence of module-owned configuration and optional startup hooks.
+The broader responsibilities below remain deferred.
+
+Every ERBAS module will eventually publish richer requirements describing what
 Core needs to install, activate, validate and provision that module for a tenant
 without Core containing module-specific knowledge. Core orchestrates modules;
 the module owns the meaning and implementation of its requirements.
@@ -291,10 +298,10 @@ startTenant
 removeTenant
 ```
 
-These are architectural responsibilities, not new interfaces, hooks or implemented
-operations in CORE-TENANT-001. Existing module descriptors and initialization are
-not presented as already implementing this future contract. Defining that contract,
-discovery and generic lifecycle orchestration requires a separate approved task.
+These are future architectural responsibilities, not operations implemented by
+CORE-MODULE-001. Its optional startup hook preserves current technical initialization;
+it is not an install/upgrade/activation or tenant lifecycle engine. Richer configuration
+definitions and lifecycle orchestration require separately approved work.
 
 ### Future configuration scopes and placement
 

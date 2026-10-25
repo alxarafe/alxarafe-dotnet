@@ -17,7 +17,7 @@ access sibling private tables/repositories. Core contains only transversal conce
 One pipeline remains authoritative:
 
 ```text
-ModuleSource(s) -> ModuleRegistry -> ModuleGraph -> ModuleRuntime
+ModuleSource(s) -> ModuleRegistry (ModuleGraph validation/order) -> ModuleRuntime
                               -> ModuleStateService / persistent state
 ```
 
@@ -25,7 +25,12 @@ ModuleSource(s) -> ModuleRegistry -> ModuleGraph -> ModuleRuntime
 selects the explicit WMS and AI entry assemblies; no external plugin loader exists.
 Normal startup registers erbas.wms and erbas.ai. Testing plus explicit conformance
 opt-in additionally registers Math/Statistics descriptors; they are not business
-dependencies and have no functional API. See [modularity](modularity.md).
+dependencies and have no functional API. CORE-MODULE-001 formalizes explicit module
+release versions, persistence/configuration declarations and optional service/startup
+hooks. The catalog captures identity and graph order before contribution/service
+registration; its runtime never initializes an unvalidated list. Subsystems own typed
+contribution contracts; Core orchestrates while modules own semantics. See the
+[module contract and contribution model](modularity.md).
 
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;

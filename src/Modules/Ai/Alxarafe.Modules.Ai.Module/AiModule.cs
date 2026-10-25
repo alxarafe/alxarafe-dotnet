@@ -17,12 +17,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Alxarafe.Modules.Ai;
 
-public sealed class AiModule : IAlxarafeModule, IHttpModule
+public sealed class AiModule : IAlxarafeModule, IModuleServiceContributor, IModuleInitializer, IHttpModule
 {
+    public const string Version = "1.0.0";
     public const string Id = AiContract.ModuleId;
     public const string DeterministicEnvironment = "Testing";
     public const string HttpClientName = "ai-model";
-    public ModuleDescriptor Descriptor { get; } = new(Id, ModuleApi.CurrentVersion, []);
+    public ModuleDescriptor Descriptor { get; } = new(Id, Version, ModuleApi.CurrentVersion, [],
+        ModulePersistence.Platform, hasConfiguration: true);
 
     public void ConfigureServices(IServiceCollection services)
     {

@@ -18,7 +18,7 @@
 | [Architecture](architecture.md) | Module boundaries and composition |
 | [API internationalization](i18n.md) | English fallback, native request negotiation and module-owned validation resources |
 | [I18N-001 verification](verification/i18n-001.md) | Historical native/HTTP totals and conformance before experimental-module removal |
-| [Modularity](modularity.md) | Descriptors, API version, sources, availability, registry and future external extension boundaries |
+| [Modularity](modularity.md) | Formal module contract, versions, validated catalog, optional initialization, typed contributions and deferred resource/lifecycle architecture |
 | [MODULES-001E-DOTNET verification](verification/modules-001e-dotnet.md) | Historical v0.5.0 adoption and original composition/validation evidence |
 | [USERS-001 / COLLECTIONS-001 verification](verification/users-001-collections-001.md) | CORE users, current Identity state, concurrent last-admin protection and draft 0.4.0 conformance |
 | [Foundation decision](decisions/0001-modular-hexagonal-foundation.md) | Modular and hexagonal foundation |

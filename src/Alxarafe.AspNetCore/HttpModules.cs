@@ -21,7 +21,7 @@ public static class ModuleEndpointExtensions
         {
             if (module is not IHttpModule httpModule) continue;
             var group = endpoints.MapGroup(string.Empty);
-            group.AddEndpointFilter(new ModuleStateEndpointFilter(module.Descriptor.Id));
+            group.AddEndpointFilter(new ModuleStateEndpointFilter(runtime.Registry.GetDescriptor(module).Id));
             group.WithMetadata(new ProducesResponseTypeMetadata(StatusCodes.Status503ServiceUnavailable,
                 typeof(ModuleDisabledResponse), [MediaTypeNames.Application.Json]));
             httpModule.MapEndpoints(group);

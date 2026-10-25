@@ -20,6 +20,7 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class ModuleGatingTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>
 {
+    private const string FixtureVersion = "1.0.0";
     private const string LoginPath = "/api/auth/login";
     private const string AdminPassword = "module-gate-admin-fixture-123";
 
@@ -99,7 +100,7 @@ public sealed class ModuleGatingTests(TenantApplicationFactory factory) : IClass
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddSingleton(states);
-        builder.Services.AddSingleton(new ModuleRuntime([module]));
+        builder.Services.AddSingleton(new ModuleRuntime(new ModuleRegistry([new Source(module)])));
         await using var app = builder.Build();
         app.UseExceptionHandler(handler => handler.Run(context =>
         {
@@ -132,7 +133,7 @@ public sealed class ModuleGatingTests(TenantApplicationFactory factory) : IClass
         builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddSingleton(unavailable);
-        builder.Services.AddSingleton(new ModuleRuntime([module]));
+        builder.Services.AddSingleton(new ModuleRuntime(new ModuleRegistry([new Source(module)])));
         await using var invalidApp = builder.Build();
         invalidApp.UseExceptionHandler(handler => handler.Run(context =>
         {
@@ -174,10 +175,8 @@ public sealed class ModuleGatingTests(TenantApplicationFactory factory) : IClass
     private sealed class NestedHttpModule : IAlxarafeModule, IHttpModule
     {
         public const string Path = "/structural/nested/value";
-        public ModuleDescriptor Descriptor { get; } = new("third-party-fixture", ModuleApi.CurrentVersion, []);
+        public ModuleDescriptor Descriptor { get; } = new("third-party-fixture", FixtureVersion, ModuleApi.CurrentVersion, []);
         public int Executions { get; private set; }
-        public void ConfigureServices(IServiceCollection services) { }
-        public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapGroup("/structural").MapGroup("/nested")
             .MapGet("/value", () => { Executions++; return "executed"; });
     }

@@ -19,6 +19,7 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class ModulesApiTests(TenantApplicationFactory factory) : IClassFixture<TenantApplicationFactory>, IAsyncLifetime
 {
+    private const string FixtureVersion = "1.0.0";
     private const string Password = "module-api-native-password";
     private const string BearerScheme = "Bearer";
     private const string LoginPath = "/api/auth/login";
@@ -320,9 +321,7 @@ public sealed class ModulesApiTests(TenantApplicationFactory factory) : IClassFi
     }
     private sealed class DescriptorModule(string id, string[] dependencies) : IAlxarafeModule
     {
-        public ModuleDescriptor Descriptor { get; } = new(id, ModuleApi.CurrentVersion, dependencies);
-        public void ConfigureServices(IServiceCollection services) { }
-        public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public ModuleDescriptor Descriptor { get; } = new(id, FixtureVersion, ModuleApi.CurrentVersion, dependencies);
     }
     private sealed class UnavailableStore : IModuleStateStore
     {

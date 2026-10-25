@@ -34,7 +34,7 @@ public sealed class CapabilityRegistry
             foreach (var capability in provider.GetCapabilities())
             {
                 if (capability is null || capability.Id is null || !IsValidId(capability.Id)
-                    || capability.Module != module.Descriptor.Id || !Regex.IsMatch(capability.Version ?? "", VersionPattern)
+                    || capability.Module != modules.GetDescriptor(module).Id || !Regex.IsMatch(capability.Version ?? "", VersionPattern)
                     || string.IsNullOrWhiteSpace(capability.Name) || string.IsNullOrWhiteSpace(capability.Description)
                     || capability.Effect is not ("read" or "write")
                     || capability.InputSchema is null || !schemaReferences.Contains(capability.InputSchema.Ref)

@@ -6,6 +6,7 @@ namespace Alxarafe.Host.IntegrationTests;
 
 public sealed class CapabilityRegistryTests
 {
+    private const string FixtureVersion = "1.0.0";
     private const string Schema = "#/components/schemas/Fixture";
     private static CapabilityDescriptor Valid => new("fixture.items.list", "fixture", "1.0.0", "Name", "Description",
         "read", new(Schema), new(Schema), ["fixture.items.read"]);
@@ -33,10 +34,8 @@ public sealed class CapabilityRegistryTests
     }
     private sealed class Provider(CapabilityDescriptor[] descriptors) : IAlxarafeModule, ICapabilityProvider
     {
-        public ModuleDescriptor Descriptor { get; } = new("fixture", ModuleApi.CurrentVersion, []);
+        public ModuleDescriptor Descriptor { get; } = new("fixture", FixtureVersion, ModuleApi.CurrentVersion, []);
         public IEnumerable<CapabilityDescriptor> GetCapabilities() => descriptors;
         public IEnumerable<string> GetSchemaReferences() => [Schema];
-        public void ConfigureServices(IServiceCollection services) { }
-        public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

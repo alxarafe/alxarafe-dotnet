@@ -6,18 +6,32 @@ namespace Alxarafe.Modularity;
 public interface IAlxarafeModule
 {
     ModuleDescriptor Descriptor { get; }
+}
+
+// Optional composition and technical startup hooks; descriptor-only modules need neither.
+public interface IModuleServiceContributor
+{
     void ConfigureServices(IServiceCollection services);
+}
+
+public interface IModuleInitializer
+{
     Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default);
 }
 
-public sealed class ModuleRuntime(IReadOnlyList<IAlxarafeModule> modules)
+public sealed class ModuleRuntime(ModuleRegistry registry)
 {
-    public IReadOnlyList<IAlxarafeModule> Modules { get; } = Array.AsReadOnly(modules.ToArray());
+    public ModuleRegistry Registry { get; } = registry;
+    public IReadOnlyList<IAlxarafeModule> Modules => Registry.InitializationOrder;
 
     public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
     {
         foreach (var module in Modules)
-            await module.InitializeAsync(services, cancellationToken);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (module is IModuleInitializer initializer)
+                await initializer.InitializeAsync(services, cancellationToken);
+        }
     }
 }
 
@@ -25,9 +39,12 @@ public sealed class ModuleBuilder(IServiceCollection services)
 {
     private readonly IServiceCollection _services = services;
     private readonly List<IModuleSource> _sources = [];
+    private bool _built;
 
     public ModuleBuilder AddSource(IModuleSource source)
     {
+        if (_built) throw new InvalidOperationException("Module composition has already been built.");
+        ArgumentNullException.ThrowIfNull(source);
         _sources.Add(source);
         return this;
     }
@@ -37,18 +54,22 @@ public sealed class ModuleBuilder(IServiceCollection services)
 
     public void Build()
     {
+        if (_built || _services.Any(service => service.ServiceType == typeof(ModuleRegistry)))
+            throw new InvalidOperationException("Module composition has already been built.");
+        _built = true;
         var registry = new ModuleRegistry(_sources);
-        var modules = ModuleGraph.Order(registry.Modules);
-        foreach (var module in modules)
+        // Subsystems validate their own typed contributions before service callbacks.
+        var capabilities = new CapabilityRegistry(registry);
+        var primitives = new ReadPrimitiveRegistry(registry, capabilities);
+        foreach (var module in registry.InitializationOrder)
         {
-            module.ConfigureServices(_services);
+            if (module is IModuleServiceContributor contributor) contributor.ConfigureServices(_services);
             _services.AddSingleton(module.GetType(), module);
         }
         _services.AddSingleton(registry);
-        var capabilities = new CapabilityRegistry(registry);
         _services.AddSingleton(capabilities);
-        _services.AddSingleton(new ReadPrimitiveRegistry(registry, capabilities));
-        _services.AddSingleton(new ModuleRuntime(modules));
+        _services.AddSingleton(primitives);
+        _services.AddSingleton(new ModuleRuntime(registry));
     }
 }
 
@@ -64,12 +85,19 @@ public static class ModuleServiceCollectionExtensions
 
 public static class ModuleGraph
 {
-    public static IReadOnlyList<IAlxarafeModule> Order(IEnumerable<IAlxarafeModule> availableModules)
+    public static IReadOnlyList<IAlxarafeModule> Order(IEnumerable<IAlxarafeModule> availableModules) =>
+        Order(availableModules, module => module.Descriptor);
+
+    internal static IReadOnlyList<IAlxarafeModule> Order(IEnumerable<IAlxarafeModule> availableModules,
+        Func<IAlxarafeModule, ModuleDescriptor> descriptorFor)
     {
-        var modules = new SortedDictionary<string, IAlxarafeModule>(StringComparer.Ordinal);
+        var modules = new SortedDictionary<string, (IAlxarafeModule Module, ModuleDescriptor Descriptor)>(StringComparer.Ordinal);
         foreach (var module in availableModules)
-            if (!modules.TryAdd(module.Descriptor.Id, module))
-                throw new InvalidOperationException($"Duplicate module id '{module.Descriptor.Id}'.");
+        {
+            var descriptor = descriptorFor(module);
+            if (!modules.TryAdd(descriptor.Id, (module, descriptor)))
+                throw new InvalidOperationException($"Duplicate module id '{descriptor.Id}'.");
+        }
         foreach (var module in modules.Values)
             foreach (var dependency in module.Descriptor.Dependencies)
                 if (!modules.ContainsKey(dependency))
@@ -85,7 +113,7 @@ public static class ModuleGraph
             foreach (var dependency in modules[id].Descriptor.Dependencies.Order(StringComparer.Ordinal)) Visit(dependency);
             visiting.Remove(id);
             visited.Add(id);
-            ordered.Add(modules[id]);
+            ordered.Add(modules[id].Module);
         }
         foreach (var id in modules.Keys) Visit(id);
         return ordered.AsReadOnly();
