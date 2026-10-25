@@ -2,6 +2,7 @@
     <PropertyGroup><AssemblyName>Alxarafe.Modules.Ai.Infrastructure</AssemblyName><RootNamespace>Alxarafe.Modules.Ai.Infrastructure</RootNamespace></PropertyGroup>
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="../../../Alxarafe.Core/Alxarafe.Core.csproj" />
         <ProjectReference Include="../Alxarafe.Modules.Ai.Application/Alxarafe.Modules.Ai.Application.csproj" />
     </ItemGroup>
 </Project>

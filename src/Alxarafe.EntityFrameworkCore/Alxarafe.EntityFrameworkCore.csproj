@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><AssemblyName>Alxarafe.EntityFrameworkCore</AssemblyName><RootNamespace>Alxarafe.EntityFrameworkCore</RootNamespace></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../Alxarafe.Modularity/Alxarafe.Modularity.csproj" /><PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" /><PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../Alxarafe.Modularity/Alxarafe.Modularity.csproj" /><ProjectReference Include="../Alxarafe.Core/Alxarafe.Core.csproj" /><PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" /><PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" /></ItemGroup>
 </Project>
