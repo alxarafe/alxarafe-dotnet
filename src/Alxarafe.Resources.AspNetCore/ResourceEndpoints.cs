@@ -116,7 +116,7 @@ public static class ResourceEndpoints
         catch (Exception) { return Error(http, StatusCodes.Status500InternalServerError, ExecutionFailed); }
     }
 
-    private static ResourceDefinition Lookup(HttpContext http, string resource) => http.RequestServices.GetRequiredService<ResourceRegistry>().TryGet(resource, out var definition)
+    internal static ResourceDefinition Lookup(HttpContext http, string resource) => http.RequestServices.GetRequiredService<ResourceRegistry>().TryGet(resource, out var definition)
         ? definition! : throw new ResourceRuntimeException(resource, ResourceRuntimeError.ResourceNotFound);
     private static string IdentifierText(ScalarValue value) => value switch
     {
@@ -125,13 +125,13 @@ public static class ResourceEndpoints
         NumericValue number => number.Value.CanonicalText,
         _ => throw new InvalidOperationException("Invalid identifier projection.")
     };
-    private static IResult Json<T>(T value, int status = StatusCodes.Status200OK) => Results.Json(value, ResourceTransport.Json, MediaTypeNames.Application.Json, status);
-    private static IResult Error(HttpContext http, int status, string code, string? resource = null, string? path = null)
+    internal static IResult Json<T>(T value, int status = StatusCodes.Status200OK) => Results.Json(value, ResourceTransport.Json, MediaTypeNames.Application.Json, status);
+    internal static IResult Error(HttpContext http, int status, string code, string? resource = null, string? path = null)
     {
         http.Response.Headers.CacheControl = "no-store";
         return Json(new ContractError(code) { Errors = [new(code, Resource: resource, Path: path is null ? null : "/" + path.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal))] }, status);
     }
-    private static async Task<IResult> RuntimeError(HttpContext http, ResourceRuntimeException failure)
+    internal static async Task<IResult> RuntimeError(HttpContext http, ResourceRuntimeException failure)
     {
         if (failure.Code == ResourceRuntimeError.TenantRequired)
         {
@@ -145,6 +145,10 @@ public static class ResourceEndpoints
         }
         var (status, code) = failure.Code switch
         {
+            ResourceRuntimeError.ActionNotFound => (StatusCodes.Status404NotFound, "resource_action_not_found"),
+            ResourceRuntimeError.ActionHandlerNotRegistered => (StatusCodes.Status503ServiceUnavailable, "resource_action_handler_not_registered"),
+            ResourceRuntimeError.ActionUnavailable => (StatusCodes.Status409Conflict, "resource_action_unavailable"),
+            ResourceRuntimeError.ActionConflict => (StatusCodes.Status409Conflict, "resource_action_conflict"),
             ResourceRuntimeError.ResourceNotFound => (StatusCodes.Status404NotFound, NotFound),
             ResourceRuntimeError.OperationNotSupported => (StatusCodes.Status405MethodNotAllowed, NotSupported),
             ResourceRuntimeError.ValidationFailed => (StatusCodes.Status400BadRequest, InvalidRequest),
@@ -160,6 +164,8 @@ public static class ResourceEndpoints
             http.Response.Headers.Allow = string.Join(", ", definition.Operations.Select(operation => operation switch
             { ResourceOperation.List or ResourceOperation.Get => HttpMethods.Get, ResourceOperation.Create => HttpMethods.Post, ResourceOperation.Update => HttpMethods.Patch, _ => HttpMethods.Delete }).Distinct(StringComparer.Ordinal));
         }
+        if (failure.ReasonCode is { } reason && failure.Code is ResourceRuntimeError.ActionUnavailable or ResourceRuntimeError.ActionConflict)
+            return Json(new ContractError(code) { Errors = [new(reason, Resource: failure.ResourceId)] }, status);
         return failure.Issues.Count == 0 ? Error(http, status, code) : Json(new ContractError(code)
         {
             Errors = failure.Issues.Select(issue => new ContractErrorDetail(JsonNamingPolicy.SnakeCaseLower.ConvertName(Enum.GetName(issue.Code)!), Resource: failure.ResourceId,

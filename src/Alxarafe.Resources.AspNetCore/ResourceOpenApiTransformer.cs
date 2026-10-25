@@ -10,13 +10,14 @@ using Microsoft.OpenApi;
 namespace Alxarafe.Resources.AspNetCore;
 
 // Static structural documentation. Never consults repository instances or user claims.
-public sealed class ResourceOpenApiTransformer(ResourceRegistry resources) : IOpenApiDocumentTransformer
+public sealed partial class ResourceOpenApiTransformer(ResourceRegistry resources) : IOpenApiDocumentTransformer
 {
     public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
     {
         document.Paths ??= new OpenApiPaths();
         foreach (var resource in resources.All)
         {
+            Actions(document, resource);
             string collection = ResourceEndpoints.ResourcePath + "/" + Uri.EscapeDataString(resource.Id);
             foreach (var operation in resource.Operations)
             {

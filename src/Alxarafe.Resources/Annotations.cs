@@ -1,7 +1,7 @@
 namespace Alxarafe.Resources;
 
 [Flags]
-public enum AnnotationTarget { Resource = 1, Field = 2, Action = 4 }
+public enum AnnotationTarget { Resource = 1, Field = 2, Action = 4, ActionParameter = 8 }
 public enum AnnotationValueKind { Text, Boolean, Number, FieldNames }
 public sealed record AnnotationTerm(string Vocabulary, string Name, AnnotationValueKind Kind, AnnotationTarget Targets)
 {
@@ -33,7 +33,7 @@ public sealed record AnnotationVocabulary
 public static class StandardAnnotations
 {
     public static AnnotationTerm Label { get; } = new("Common", "Label", AnnotationValueKind.Text,
-        AnnotationTarget.Resource | AnnotationTarget.Field | AnnotationTarget.Action);
+        AnnotationTarget.Resource | AnnotationTarget.Field | AnnotationTarget.Action | AnnotationTarget.ActionParameter);
     public static AnnotationTerm Hidden { get; } = new("UI", "Hidden", AnnotationValueKind.Boolean, AnnotationTarget.Field | AnnotationTarget.Action);
     public static AnnotationTerm SelectionFields { get; } = new("UI", "SelectionFields", AnnotationValueKind.FieldNames, AnnotationTarget.Resource);
     public static IReadOnlyList<AnnotationVocabulary> Vocabularies { get; } = Snapshot.Of(new[]

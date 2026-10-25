@@ -119,7 +119,7 @@ explicit resource identifiers is a future runtime/domain responsibility.
 permission, selection requirement and annotations. SELECTION must require selection;
 ENTITY uses its entity context and COLLECTION has no selected-record requirement.
 Names/permissions/scopes and duplicates are validated. Actions are metadata only,
-with no execution handlers or HTTP routes here.
+with execution supplied through the typed Action Runtime described below.
 
 ## Typed annotation vocabularies
 
@@ -145,14 +145,14 @@ invalid defaults/constraints/security/annotations and unresolved relations fail 
 The exception contains no business execution, HTTP response or authorization decision.
 
 Each validated resource gets a lowercase SHA-256 DefinitionHash from a deliberate
-UTF-8 JSON semantic projection marked `erbas.resource-definition.v1`. It includes
+UTF-8 JSON semantic projection marked `erbas.resource-definition.v2`. It includes
 identity/version/owner/ID field, fields and effective constraints/defaults/capabilities,
-relations, operations/security, actions and typed annotations (including used term
+relations, operations/security, actions/parameters and typed annotations (including used term
 shapes/targets). It includes no CLR type/assembly name, provider implementation,
 object hash code, DI order or runtime state.
 
 Object property order is fixed. Fields, relations and actions are sorted by technical
-name; operations use declared semantic enum order; permission sets, enum values and
+name; action parameters are also sorted by name; operations use declared semantic enum order; permission sets, enum values and
 annotation keys use ordinal order. Numeric spelling and equivalent discrete bounds
 are normalized; UUIDs use canonical form, instants UTC and binary canonical base64.
 Explicit annotation field-name list order remains significant. Text and regex
@@ -162,6 +162,10 @@ and field names, not recursively: changing a target definition changes its own h
 Consumers needing a whole catalog fingerprint must combine the relevant resource
 hashes in a future, explicit dependency policy.
 
+RESOURCE-ACTIONS-001 deliberately upgrades canonical v1 to v2 to include parameter
+semantics and the new annotation target. All prior hashes therefore invalidate once,
+including resources without actions. The v2 minimal-resource golden vector is
+`8a222d986a84544626dce11890c651680009c3dd55c16f4e6e68f7278647dc66`.
 Golden-vector tests pin the canonical format; insertion order, current culture and
 provider identity cannot alter equivalent hashes. Semantic field, constraint,
 permission, action, relation, version and annotation changes alter hashes. Changes
@@ -180,7 +184,7 @@ cached hash != backend hash → fetch updated metadata
 A metadata change does not imply Angular source regeneration. The future Core FE
 runtime will render updated metadata directly. Cache dependency handling must respect
 the per-resource relation/hash semantics described above. Metadata fetching, cache
-invalidation and this coherence behavior are not implemented in this phase.
+invalidation in Core FE remain future work; backend ETag coherence is implemented below.
 
 ## Generic backend Resource Runtime
 
@@ -428,7 +432,7 @@ Number cannot represent every valid value. Quoted numeric strings are rejected.
 POST leaves defaults and complete create validation to Runtime. PATCH maps only
 supplied properties: omission leaves a field untouched; explicit null requests null.
 It applies no create defaults and rejects ID/read-only/immutable mutations through
-Runtime. PUT, actions and relation expansion are not exposed. CRUD responses/errors
+Runtime. PUT and relation expansion are not exposed; actions have a separate namespace. CRUD responses/errors
 are `Cache-Control: no-store`.
 
 LIST accepts only the following query parameters (names are case-sensitive):
@@ -513,15 +517,14 @@ repository types, CLR names and database references are deliberately not exposed
 
 Actions expose name, scope, requiresSelection, authorized and annotations. Their
 permission IDs are not exposed. There is no fabricated `available: true` value and
-no action endpoint.
+no contextual availability value in static metadata.
 
 > Authorization controls visibility. Availability controls enabled state.
 
 Core FE should normally hide unauthorized actions, render authorized but unavailable
-actions disabled with a reason, and enable authorized/available actions. Record-specific
-`available`/`unavailableReason` evaluation and execution are deferred to
-RESOURCE-ACTIONS-001. Future execution must re-check both authorization and
-availability. Current metadata exposes authorization only.
+actions disabled with a reason, and enable authorized/available actions. Target-specific evaluation and execution are implemented by the separate Resource
+Actions contract below. Execution rechecks authorization and availability. Static
+metadata continues to expose authorization only.
 
 Individual definitions support ETag and If-None-Match (including weak validators and
 `*`): a matching representation returns 304 without a body. The quoted ETag contains
@@ -561,6 +564,180 @@ remain unchanged. Portable clients must not assume these endpoints exist on othe
 stacks. Promotion to the shared contract requires the cross-stack review and explicit
 contract revision described by that repository's implementation-extension policy;
 this task neither revises nor republishes it.
+
+## Executable Resource Actions
+
+RESOURCE-ACTIONS-001 adds semantic parameters in Resources, typed orchestration in
+Resources.Runtime and HTTP/OpenAPI projections in Resources.AspNetCore. Core and
+Modularity have no outward action dependency. There are no production WMS action
+adapters yet; test-only invoice/item/order examples prove the boundary.
+
+`ActionDefinition` keeps its name, ENTITY/COLLECTION/SELECTION scope, permission,
+RequiresSelection and annotations, adding a read-only Parameters list. Each
+`ActionParameterDefinition` contains name, scalar type, nullable/required flags,
+default, typed constraints, enum values and annotations. It has no persisted-field
+capabilities, read-only or immutable flags. The existing scalar/constraint/default
+validator is reused internally; invalid parameter definitions fail at registration.
+`AnnotationTarget.ActionParameter` deliberately extends vocabulary targeting;
+Common.Label is supported and custom typed vocabulary terms can opt into that target.
+
+`ResourceActionInput` snapshots an ordinal read-only map of ScalarValue values. No
+object, dynamic or JSON DOM crosses into Runtime. Unknown parameters, incompatible
+values, constraints, enums and nullability are validated; required values must exist.
+Defaults apply only to absent parameters. Explicit null remains null and never asks
+for a default. No input is coerced. These parameter definitions also drive metadata
+and OpenAPI; there is no separate HTTP action model.
+
+Targets are typed `ResourceEntityTarget` (exactly one ResourceIdentifier),
+`ResourceCollectionTarget` (no identifier) and `ResourceSelectionTarget` (snapshot of
+explicit identifiers in caller order). IDs follow the resource's declared semantic
+ID type. Selection is nonempty, duplicate-free and bounded to **100** IDs, sharing
+the ResourceQuery maximum page-size constant. There is no all-matching-query target.
+
+### Composition, scope and execution
+
+Each `IResourceActionHandler` identifies exactly one registered resource/action and
+receives a neutral execution context with its definition, target and validated input.
+Ordinary scoped DI supplies module/domain services. `ResourceActionRegistry` captures
+handlers and optional availability providers, rejects unknown/duplicate composition,
+and checks captured identities again at dispatch. The Host resolves a validation scope
+at startup, before serving HTTP. Constructors must remain free of database/domain
+side effects, as with repository adapters. There is no mutation API or service locator.
+
+Metadata-only actions remain legitimate. Executing an unbound action fails closed
+with ActionHandlerNotRegistered; authorized availability for it also fails rather
+than claiming it can execute. Handler presence is not a grant of permission.
+
+Actions reuse `ResourceRepositoryCatalog` as fixed per-resource execution-scope
+metadata, without requiring an IResourceRepository instance. Tenant/Platform/None
+module declarations determine scope as for CRUD. Both modules require an explicit
+existing ResourceRepositoryBinding for that resource; absence/contradictory/invalid
+scope fails composition for registered handlers/providers. Scope never comes from
+payload, annotations, current tenant presence or action name.
+
+Execution follows:
+
+```text
+resource and registered action lookup
+    ↓
+module enabled?
+    ↓
+fixed execution scope; authoritative IRequestTenantContext when Tenant is required
+    ↓
+action's metadata permission through existing IResourceAuthorization
+    ↓
+matching typed target and bounded identifier validation
+    ↓
+parameter validation and defaults
+    ↓
+current business availability
+    ↓
+handler resolution and execution
+    ↓
+validated neutral outcome
+```
+
+Actions do not require public GET, UPDATE or other unrelated CRUD permissions.
+The handler/domain owns entity/selection lookup and returns typed NotFound when
+appropriate. There are no mandatory repository reads or generic N+1 existence checks.
+Selection handlers must validate targets and enforce all-or-nothing business mutation
+inside their own atomic boundary; generic orchestration never partially iterates them.
+
+Tenant and permission authority remains scoped infrastructure, never caller input.
+Zero memberships deny tenant actions; exactly one active membership/tenant establishes
+context; multiple memberships retain `tenant_selection_required`. Revocation is
+rechecked on later requests. Platform actions require no tenant membership. No tenant
+selector, user/permission selector or database selector is introduced.
+
+### Availability and outcomes
+
+`IResourceActionAvailabilityProvider` optionally evaluates one resource/action's
+neutral target context. It does not authorize and receives no arbitrary input JSON.
+Without a provider, an otherwise executable authorized valid target defaults to
+available. Availability is target-specific, not parameter-dependent in this first
+contract; parameter-dependent business acceptance remains handler-owned.
+
+`ResourceActionAvailability` contains Available and optional ReasonCode. Reasons must
+be lowercase machine codes with dot/underscore/hyphen separators, bounded to 100
+characters; available results must have no reason. Malformed results and unexpected
+provider exceptions fail safely. Unauthorized actions return authorized=false,
+available=false and no reason, without calling a provider or handler. Availability
+batches return only actions of the requested scope in ordinal name order.
+
+Execution always rechecks module/tenant/permission and evaluates availability again.
+Metadata/availability responses are advisory frontend state, never authorization.
+State or permission changes between discovery and click can therefore deny execution.
+
+Handlers return only Success, NotFound, or Conflict with a validated stable reason
+code. Success has no generic payload. Unexpected handler/provider failures become
+safe ExecutionFailed errors; exception messages are not exposed. Handlers own final
+transactional invariants, target existence and atomic persistence. Availability is
+not a transaction guarantee; concurrent domain changes must still be checked by the
+handler inside its transaction. Runtime cannot roll back effects already committed.
+No generic transaction coordinator, locking framework or optimistic-lock engine exists.
+
+Current audit seams remain HTTP/capability-specific. Generic domain/action audit
+integration is deferred; no synthetic capability events or new audit framework is added.
+
+### HTTP contract and Core FE
+
+Execution is `POST /api/resource-actions/{resource}/{action}/execute`:
+
+```json
+{"target":{"id":"035a2161-c936-42dc-8b4b-d3cf5d1953a6"},"parameters":{"reason":"Approved"}}
+```
+
+For COLLECTION, omit target entirely. For SELECTION, use target.ids containing typed
+ID values. Parameters may be omitted when no required input remains after defaults.
+The `/execute` suffix deliberately avoids collision between the batch `/availability`
+endpoint and a legitimate action named `availability`. CRUD routes remain unchanged.
+Scope mismatches, extra authority fields, duplicate keys, query parameters and malformed
+transport are rejected. Scalar JSON mapping/body limits are the existing Resource API
+policy. Successful execution returns **204** with no body; Core FE refreshes affected
+resource/list views.
+
+`POST /api/resource-actions/{resource}/availability` accepts exactly a scope and the
+corresponding target: `{"scope":"ENTITY","id":"..."}`,
+`{"scope":"COLLECTION"}`, or `{"scope":"SELECTION","ids":["..."]}`.
+It returns states such as:
+
+```json
+[
+  {"name":"invoice.post","authorized":true,"available":false,"unavailableReason":"invoice_already_posted"},
+  {"name":"invoice.cancel","authorized":false,"available":false}
+]
+```
+
+Both endpoints use existing Bearer/current-user enforcement and no-store responses.
+Existing ContractError maps unknown resource/action/target-not-found to 404, malformed
+input to 400, forbidden/tenancy to existing 403 codes, module disabled to existing
+503 module_disabled, missing handler to 503 resource_action_handler_not_registered,
+unavailable to 409 resource_action_unavailable and business conflict to 409
+resource_action_conflict. Stable reason codes use errors[].code; no human-language
+message property is added. Unexpected provider/handler failures return safe 500
+resource_execution_failed.
+
+Metadata now includes parameter names/types/flags/defaults/constraints/enums/annotations.
+It retains action.authorized but never contextual available. OpenAPI derives concrete
+execution and availability paths, scope-specific target shapes and parameter schemas
+from these same frozen definitions, including required/default/nullability and exact
+numeric constraints. The existing exact multipleOf extension policy applies. This
+remains a .NET implementation extension outside shared erbas-contract v0.12.0.
+
+> Authorization controls visibility. Availability controls enabled state.
+
+Future Core FE discovers definitions/parameters via Metadata API, normally hides
+unauthorized actions, requests availability for the opened/selected target, disables
+unavailable actions with a localized explanation mapped from the stable reason, and
+enables available actions. Clicking opens a generic parameter dialog when needed,
+executes the action, then refreshes affected views. Backend checks all authority and
+availability again. No Angular component or frontend rendering is implemented here.
+
+Deferred action capabilities include arbitrary response payloads, reports/downloads,
+background jobs, command queues, query-wide bulk actions, action chaining, workflow/
+state-machine/rules engines, scripting and generic compensations. AI/tool derivation,
+frontend buttons/dialogs/themes, relation expansion and generic EF/schema generation
+remain separate work.
 
 ## Authority and business rules
 
@@ -785,7 +962,7 @@ RESOURCE-RUNTIME-001 [implemented]
 RESOURCE-API-001 [implemented]
     REST + Metadata API + OpenAPI
     ↓
-RESOURCE-ACTIONS-001
+RESOURCE-ACTIONS-001 [implemented]
     action availability and execution
     ↓
 ANGULAR-RESOURCE-RUNTIME-001
@@ -808,8 +985,8 @@ Later, optionally:
 RESOURCE-METADATA-001 implements semantic metadata, definition validation, the registry
 and DefinitionHash. RESOURCE-RUNTIME-001 implements generic backend CRUD through ports,
 authoritative guards, runtime validation and business hooks. RESOURCE-API-001 implements
-HTTP CRUD, explicit metadata projections/coherence and derived OpenAPI. Action availability/
-execution, frontend runtime, composable layout execution, overrides and theme resolution
+HTTP CRUD, explicit metadata projections/coherence and derived OpenAPI. RESOURCE-ACTIONS-001
+adds typed action inputs, authorization, target availability and handler execution. Frontend runtime, composable layout execution, overrides and theme resolution
 remain future phases. No generic EF/SQL repository, schema generation, automatic migrations,
 Angular/client code, relation expansion, reseller/branding or AI/tool schemas are added.
 Existing WMS APIs/persistence are not migrated or redesigned. Core FE shell extensions and
