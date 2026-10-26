@@ -288,7 +288,7 @@ public sealed class ResourceApiTests : IClassFixture<ResourceApiTestContext>
         try
         {
             await states.DisableAsync(WmsModule.Id);
-            using var discovery = await context.Send(HttpMethod.Get, ResourceEndpoints.MetadataPath, token: context.Writer); Assert.Empty((await Body(discovery)).EnumerateArray());
+            using var discovery = await context.Send(HttpMethod.Get, ResourceEndpoints.MetadataPath, token: context.Writer); Assert.DoesNotContain((await Body(discovery)).EnumerateArray(), resource => resource.GetProperty("moduleId").GetString() == WmsModule.Id);
             using var meta = await context.Send(HttpMethod.Get, Meta(), token: context.Writer, etag: tag); Assert.Equal(HttpStatusCode.OK, meta.StatusCode); Assert.False((await Body(meta)).GetProperty("moduleEnabled").GetBoolean());
             await Error(await context.Send(HttpMethod.Get, ResourceApiTestContext.Path(id: ResourceApiFixtures.FirstId), token: context.Writer), HttpStatusCode.ServiceUnavailable, "module_disabled"); Assert.Equal(0, context.Store.Calls);
         }

@@ -331,7 +331,7 @@ the supported version. `IModuleSource.GetModules()` supplies module instances.
 
 `BuiltInAssemblyModuleSource` confines existing exported-type reflection and
 construction to the explicitly selected built-in assemblies. It does not load
-external assemblies. The Host explicitly selects WMS and AI entry assemblies,
+external assemblies. The Host explicitly selects WMS, AI and Assets entry assemblies,
 referencing only their Module projects. It does not reference their
 Domain/Application/Infrastructure/Http projects directly. Framework assemblies
 remain independent of all business modules.
@@ -341,7 +341,7 @@ Future explicit sources enter the same registry/graph/runtime without a new load
 `AddModulesFromAssemblies`/`AddAlxarafeModules` convenience API wraps built-in
 composition in a source. `Build()` gathers the registry, resolves the graph,
 configures services in dependency order and registers the registry and runtime.
-The Host uses `ModuleBuilder` directly to add production WMS/AI and the optional
+The Host uses `ModuleBuilder` directly to add production WMS/AI/Assets and the optional
 conformance source before building once. All sources must participate before this build and before the Host's
 `builder.Build()`. A future external assembly source can enter at that point;
 no `AssemblyLoadContext` or external loader is implemented.
@@ -433,6 +433,6 @@ ERBAS_CONTRACT_DIR=/absolute/path/to/pinned-erbas-contract ./bin/check
 pagination including repeated keys and huge offsets, security precedence, retained
 unavailable state, idempotence, both atomic conflicts, ordinal dependency ordering,
 zero modules and internal failure classification. Composition tests prove the
-normal registry contains WMS and AI, and canonical modules need both explicit switches.
+normal registry contains WMS, AI and Assets, and canonical modules need both explicit switches.
 The gating test includes CORE module listing while both canonical descriptors
 are disabled. See [cleanup verification](verification/cleanup-001.md).

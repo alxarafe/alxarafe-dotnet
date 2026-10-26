@@ -3,6 +3,7 @@ using System.Reflection.PortableExecutable;
 using System.Xml.Linq;
 using Alxarafe.Host;
 using Alxarafe.Modules.Ai;
+using Alxarafe.Modules.Assets;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Modules.Wms.Application;
 using Alxarafe.Modules.Wms.Domain;
@@ -13,16 +14,17 @@ namespace Alxarafe.ArchitectureTests;
 public sealed class HostBoundaryTests
 {
     private const string ModulePrefix = "Alxarafe.Modules.";
-    private static readonly string[] EntryAssemblies = ["Alxarafe.Modules.Ai.Module", "Alxarafe.Modules.Wms.Module"];
+    private static readonly string[] EntryAssemblies = ["Alxarafe.Modules.Ai.Module", "Alxarafe.Modules.Assets.Module", "Alxarafe.Modules.Wms.Module"];
     private static readonly string[] EntryProjects =
     [
         "../Modules/Ai/Alxarafe.Modules.Ai.Module/Alxarafe.Modules.Ai.Module.csproj",
+        "../Modules/Assets/Alxarafe.Modules.Assets.Module/Alxarafe.Modules.Assets.Module.csproj",
         "../Modules/Wms/Alxarafe.Modules.Wms.Module/Alxarafe.Modules.Wms.Module.csproj"
     ];
-    private static readonly string[] AllowedModuleUsings = ["using Alxarafe.Modules.Ai;", "using Alxarafe.Modules.Wms;"];
+    private static readonly string[] AllowedModuleUsings = ["using Alxarafe.Modules.Ai;", "using Alxarafe.Modules.Assets;", "using Alxarafe.Modules.Wms;"];
     private static readonly string[] AllowedEntryTypeLines =
     [
-        "var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly, typeof(AiModule).Assembly);",
+        "var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly, typeof(AiModule).Assembly, typeof(AssetsModule).Assembly);",
         "AiModule.UseInvocationAudit(app);"
     ];
 
@@ -69,7 +71,7 @@ public sealed class HostBoundaryTests
         var types = metadata.TypeReferences.Select(handle => metadata.GetTypeReference(handle))
             .Select(type => $"{metadata.GetString(type.Namespace)}.{metadata.GetString(type.Name)}")
             .Where(name => name.StartsWith(ModulePrefix, StringComparison.Ordinal));
-        Assert.Equal(new[] { typeof(AiModule).FullName!, typeof(WmsModule).FullName! }, types.Order(StringComparer.Ordinal));
+        Assert.Equal(new[] { typeof(AiModule).FullName!, typeof(AssetsModule).FullName!, typeof(WmsModule).FullName! }, types.Order(StringComparer.Ordinal));
         foreach (var file in SourceFiles(Path.Combine(RepositoryRoot, "src/Alxarafe.Host")))
         {
             foreach (var line in File.ReadLines(file).Where(line => line.Contains(ModulePrefix, StringComparison.Ordinal)))
@@ -78,7 +80,7 @@ public sealed class HostBoundaryTests
                 Assert.Contains(line, AllowedModuleUsings);
             }
             foreach (var line in File.ReadLines(file).Where(line => line.Contains(nameof(AiModule), StringComparison.Ordinal)
-                || line.Contains(nameof(WmsModule), StringComparison.Ordinal)))
+                || line.Contains(nameof(AssetsModule), StringComparison.Ordinal) || line.Contains(nameof(WmsModule), StringComparison.Ordinal)))
             {
                 Assert.Equal("Program.cs", Path.GetFileName(file));
                 Assert.Contains(line, AllowedEntryTypeLines);

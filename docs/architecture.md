@@ -3,13 +3,15 @@
 ERBAS .NET is an API-only Core with independent modular/hexagonal boundaries.
 The reusable projects are Core, Modularity, AspNetCore, EntityFrameworkCore,
 Security, Security.AspNetCore, Security.EntityFrameworkCore and Host. Host is the
-composition root; it contains no business domain and references only the WMS and
-AI entry assemblies for explicit built-in composition. Framework projects never
+composition root; it contains no business domain and references only the WMS,
+AI and Assets entry assemblies for explicit built-in composition. Framework projects never
 reference business modules.
 
 ## Module ownership and composition
 
-Future modules own Domain, Application, Infrastructure, Http and Module boundaries.
+Modules own Domain, Application, Infrastructure, Http and Module responsibilities.
+The first Assets slice keeps its small module in one entry assembly, with explicit
+rules/adapters and no module HTTP endpoints; it adds no framework dependency on Assets.
 Domain/Application depend on neither HTTP, ORM, security adapters nor localization.
 Adapters implement application ports; endpoints remain thin. Modules must not
 access sibling private tables/repositories. Core contains only transversal concepts.
@@ -22,8 +24,9 @@ ModuleSource(s) -> ModuleRegistry (ModuleGraph validation/order) -> ModuleRuntim
 ```
 
 `ModuleBuilder` accepts explicit sources before one Build. BuiltInAssemblyModuleSource
-selects the explicit WMS and AI entry assemblies; no external plugin loader exists.
-Normal startup registers erbas.wms and erbas.ai. Testing plus explicit conformance
+selects the explicit WMS, AI and Assets entry assemblies; no external plugin loader exists.
+Normal startup registers erbas.wms, erbas.ai and erbas.assets.
+Assets owns its first persistent Resource Runtime slice; see [Assets](assets.md). Testing plus explicit conformance
 opt-in additionally registers Math/Statistics descriptors; they are not business
 dependencies and have no functional API. CORE-MODULE-001 formalizes explicit module
 release versions, persistence/configuration declarations and optional service/startup
@@ -215,7 +218,7 @@ best effort; it does not change functional audit or authorization. See
 ## Verification and deliberate limits
 
 Architecture tests assert framework isolation from business assemblies, Host's
-entry-only WMS/AI references, pure WMS domain/application boundaries and
+entry-only WMS/AI/Assets references, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.

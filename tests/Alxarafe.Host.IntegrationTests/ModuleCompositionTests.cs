@@ -3,6 +3,7 @@ using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai;
+using Alxarafe.Modules.Assets;
 using Alxarafe.Modules.Ai.Application;
 using Alxarafe.Modules.Ai.Http;
 using Alxarafe.Modules.Ai.Persistence;
@@ -30,7 +31,11 @@ public sealed class ModuleCompositionTests(TenantApplicationFactory factory) : I
             InventoryEndpoints.Warehouses, InventoryEndpoints.Warehouses + "/{id}", InventoryEndpoints.Locations, InventoryEndpoints.Locations + "/{id}",
             InventoryEndpoints.Items, InventoryEndpoints.Items + "/{id}", InventoryEndpoints.Movements, InventoryEndpoints.Movements + "/{id}", InventoryEndpoints.Inventory,
             ItemFamilyEndpoints.Path, ItemFamilyAssociationEndpoints.Path, ItemFamilyAssociationEndpoints.Path + "/{storageAttributeId}"];
-        Assert.All(document.GetProperty("paths").EnumerateObject(), path => Assert.Contains(path.Name, corePaths));
+        var resourcePaths = AssetResources.All.SelectMany(id => new[] { ResourceEndpoints.ResourcePath + "/" + id, ResourceEndpoints.ResourcePath + "/" + id + "/{id}" })
+            .Concat(new[] { ResourceActionEndpoints.Path + "/" + AssetResources.Asset + ResourceActionEndpoints.AvailabilitySegment,
+                ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Complete + ResourceActionEndpoints.ExecutionSegment,
+                ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Retire + ResourceActionEndpoints.ExecutionSegment });
+        Assert.All(document.GetProperty("paths").EnumerateObject(), path => Assert.Contains(path.Name, corePaths.Concat(resourcePaths)));
         await using var context = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
         await context.Database.OpenConnectionAsync();
         await using var command = context.Database.GetDbConnection().CreateCommand();
@@ -60,8 +65,8 @@ public sealed class ModuleCompositionTests(TenantApplicationFactory factory) : I
         var registry = application.Services.GetRequiredService<ModuleRegistry>();
         var runtime = application.Services.GetRequiredService<ModuleRuntime>();
         string[] expected = canonical
-            ? [AiModule.Id, ConformanceModuleSource.MathId, ConformanceModuleSource.StatisticsId, WmsModule.Id]
-            : [AiModule.Id, WmsModule.Id];
+            ? [AiModule.Id, AssetsModule.Id, ConformanceModuleSource.MathId, ConformanceModuleSource.StatisticsId, WmsModule.Id]
+            : [AiModule.Id, AssetsModule.Id, WmsModule.Id];
         Assert.Equal(expected, registry.Modules.Select(module => module.Descriptor.Id));
         Assert.Equal(ModuleGraph.Order(registry.Modules), runtime.Modules);
         Assert.Same(registry, runtime.Registry);

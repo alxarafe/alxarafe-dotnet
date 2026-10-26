@@ -1,3 +1,4 @@
+using Alxarafe.Modules.Assets;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Resources;
 using Microsoft.AspNetCore.Hosting;
@@ -12,14 +13,15 @@ public sealed class ResourceStartupTests(TenantApplicationFactory factory) : ICl
     private const string Version = "1.0.0";
 
     [Fact]
-    public void EmptyProductionCatalogAndTestOnlyProviderUseTheSameStartupBoundary()
+    public void ProductionAssetsAndTestOnlyProviderUseTheSameStartupBoundary()
     {
         using var bootstrap = factory.CreateClient();
-        Assert.Empty(factory.Services.GetRequiredService<ResourceRegistry>().All);
+        Assert.Equal(AssetResources.All.Order(StringComparer.Ordinal), factory.Services.GetRequiredService<ResourceRegistry>().All.Select(resource => resource.Id));
         using var host = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services => services.AddSingleton<IResourceDefinitionProvider>(new Provider(true))));
         using var client = host.CreateClient();
         var registry = host.Services.GetRequiredService<ResourceRegistry>();
-        Assert.Equal(ResourceId, Assert.Single(registry.All).Id);
+        Assert.Equal(AssetResources.All.Count + 1, registry.All.Count);
+        Assert.Equal(ResourceId, registry.Require(ResourceId).Id);
         Assert.Equal(WmsModule.Id, registry.Require(ResourceId).ModuleId);
     }
 

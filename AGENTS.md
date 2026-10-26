@@ -13,8 +13,8 @@ and tests; they must not depend on removed examples. `erbas.dev.math` and
 `erbas.dev.statistics` are exclusively conformance/testing descriptors, registered
 only by explicit validation composition, never business capabilities or functional
 dependencies. Normal composition includes WMS UoM, Storage Attributes, Item Families and the
-AI assistant module through the existing pipeline. Host may reference only the WMS
-and AI entry assemblies for explicit composition; framework projects remain
+AI assistant and Assets modules through the existing pipeline. Host may reference only the WMS,
+AI and Assets entry assemblies for explicit composition; framework projects remain
 independent of business modules. Further business capabilities require separately
 approved designs.
 

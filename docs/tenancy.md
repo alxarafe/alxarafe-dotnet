@@ -13,15 +13,17 @@ Control plane
                tenant_ai_settings, ai_usage_invocations, ai_usage_records
   Security DB: existing Identity users, credentials and permission claims
 
-Tenant A business DB: WMS catalogues, warehouses, locations, items, movements
+Tenant A business DB: WMS catalogues/inventory and Assets resources
 Tenant B business DB: independently migrated copies of those module schemas
 ```
 
 Identity remains in its existing separate Security database, which is part of
 the control plane. This task does not move existing authentication tables.
 There is no separate Catalog DbContext in this repository: UoM, Storage Attribute
-and Item Family catalogues are owned by WMS. `WmsDbContext` is currently the only
-ERP/business context. `PlatformDbContext`, `SecurityDbContext` and
+and Item Family catalogues are owned by WMS. `WmsDbContext` and the module-owned
+`AssetsDbContext` are business contexts in each independent tenant database.
+Assets owns six tables and its separate migration history; see [Assets](assets.md).
+`PlatformDbContext`, `SecurityDbContext` and
 `AiUsageDbContext` remain control-plane persistence.
 
 Business tables have no tenant discriminator columns or shared-table tenant
@@ -152,10 +154,10 @@ registry the control plane can start without a default business database.
 
 ### Current module-owned migration extension seam
 
-WMS is currently the only business module with persistence. Its
-`WmsModule.InitializeAsync` supplies a callback to `ITenantDatabaseMigrationRunner`;
-the callback owns construction of `WmsDbContext`, its configuration and EF
-migrations. `ModuleRuntime` calls the optional `IModuleInitializer.InitializeAsync`
+WMS and Assets are business modules with persistence. Their
+`WmsModule.InitializeAsync` and `AssetsModule.InitializeAsync` each supply a callback to
+`ITenantDatabaseMigrationRunner`; each callback owns construction/configuration
+of its module DbContext and its EF migrations. `ModuleRuntime` calls the optional `IModuleInitializer.InitializeAsync`
 hook in validated dependency order without selecting a business module by name. The neutral runner enumerates tenant
 targets and invokes the supplied callback; it contains no WMS branch, schema,
 DbContext or migration-history knowledge. `ITenantDatabaseResolver` represents

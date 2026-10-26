@@ -16,7 +16,8 @@ assistant over authorized READ tools and production WMS UoM, Storage
 Attribute and Item Family catalogues. WMS also provides a
 [warehouse inventory foundation](docs/wms-inventory.md) as a public .NET-specific
 extension, with persistent movements and current balances, outside shared
-WMS contract conformance. [AI READ primitives](docs/ai-read-primitives.md) are
+WMS contract conformance. An implementation-specific [Assets vertical slice](docs/assets.md)
+uses Resource Runtime for persistent resources and lifecycle actions. [AI READ primitives](docs/ai-read-primitives.md) are
 part of the published v0.12.0 contract implemented by this backend. Real-provider
 results remain observational evidence, separate from deterministic conformance.
 

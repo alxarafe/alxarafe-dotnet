@@ -5,6 +5,7 @@ using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Host;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai;
+using Alxarafe.Modules.Assets;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Resources;
 using Alxarafe.Resources.AspNetCore;
@@ -86,8 +87,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
     options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
 }).AddBearerToken(IdentityConstants.BearerScheme);
-// Production WMS/AI and explicit conformance sources share one registry/runtime.
-var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly, typeof(AiModule).Assembly);
+// Production WMS/AI/Assets and explicit conformance sources share one registry/runtime.
+var modules = new ModuleBuilder(builder.Services).AddModulesFromAssemblies(typeof(WmsModule).Assembly, typeof(AiModule).Assembly, typeof(AssetsModule).Assembly);
 if (builder.Environment.IsEnvironment(ConformanceModuleSource.EnvironmentName)
     && builder.Configuration.GetValue<bool>(ConformanceModuleSource.EnabledConfiguration))
     modules.AddSource(new ConformanceModuleSource());

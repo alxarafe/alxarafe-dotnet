@@ -146,7 +146,7 @@ public sealed class ResourceRuntimeIntegrationTests(TenantApplicationFactory fac
         accessor.HttpContext.Request.Host = new HostString("untrusted.example.test");
         try
         {
-            var probe = Assert.IsType<DatabaseProbe>(Assert.Single(scope.ServiceProvider.GetServices<IResourceRepository>()));
+            var probe = Assert.IsType<DatabaseProbe>(Assert.Single(scope.ServiceProvider.GetServices<IResourceRepository>(), repository => repository.ResourceId == ResourceId));
             await action(scope.ServiceProvider.GetRequiredService<ResourceRuntime>(), probe);
         }
         finally { accessor.HttpContext = null; }
