@@ -9,7 +9,7 @@ namespace Alxarafe.Resources.AspNetCore;
 
 public sealed record ResourceOperationDto(bool Declared, bool Authorized);
 public sealed record ResourceIdDto(string Field);
-public sealed record ResourceCapabilitiesDto(bool Filterable, bool Sortable, bool Searchable);
+public sealed record ResourceCapabilitiesDto(bool Filterable, bool Sortable, bool Searchable, IReadOnlyList<string> FilterOperators);
 public sealed record ResourceAnnotationDto(string Vocabulary, string Term, JsonElement Value);
 public sealed record ResourceConstraintsDto(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] JsonElement? Minimum = null,
@@ -76,7 +76,7 @@ public sealed partial class ResourceMetadataProjection(ResourceRegistry resource
     private static ResourceFieldDto Field(FieldDefinition field) => new(field.Name, Enum.GetName(field.Type)!.ToUpperInvariant(),
         field.Nullable, field.Required, field.ReadOnly, field.Immutable,
         field.DefaultValue is null ? null : ResourceTransport.Project(field.DefaultValue), Constraints(field),
-        new(field.Capabilities.Filterable, field.Capabilities.Sortable, field.Capabilities.Searchable),
+        new(field.Capabilities.Filterable, field.Capabilities.Sortable, field.Capabilities.Searchable, ResourceQuery.AllowedOperators(field).Select(ResourceTransport.OperatorName).ToArray()),
         field.EnumValues.Order(StringComparer.Ordinal).ToArray(), Annotations(field.Annotations));
     public static ResourceConstraintsDto Constraints(FieldDefinition field)
     {

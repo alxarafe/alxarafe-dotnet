@@ -46,6 +46,22 @@ if [[ "$contract_head" != "$contract_commit" ]] ||
     exit 2
 fi
 
+# Explicit development-only candidate verification never changes the published pin.
+run_contract_dir="$CONTRACT_DIR"
+if [[ -n "${ERBAS_CONTRACT_CANDIDATE_DIR:-}" ]]; then
+    candidate_dir="$(cd "$ERBAS_CONTRACT_CANDIDATE_DIR" && pwd -P)"
+    if [[ "$(git -C "$candidate_dir" rev-parse --show-toplevel)" != "$candidate_dir" ]] ||
+        [[ "$(git -C "$candidate_dir" remote get-url origin)" != "$contract_origin" ]] ||
+        ! grep -Fxq '  version: 0.13.0' "$candidate_dir/openapi/erbas.yaml" ||
+        [[ ! -x "$candidate_dir/bin/test" ]]; then
+        echo 'ERROR: invalid explicit v0.13.0 contract candidate checkout' >&2
+        exit 2
+    fi
+    echo "UNPUBLISHED_CONTRACT_CANDIDATE=$(git -C "$candidate_dir" rev-parse HEAD)"
+    git -C "$candidate_dir" status --short
+    run_contract_dir="$candidate_dir"
+fi
+
 source ./bin/validation-db
 
 # Always use a disposable CORE administrator, separate from module fixtures.
@@ -144,7 +160,7 @@ if [[ -z "$validation_network" || "$validation_network" == *$'\n'* ]]; then
     echo "ERROR: validation Host must have exactly one isolated Docker network" >&2
     exit 1
 fi
-"$CONTRACT_DIR/bin/test" --network "$validation_network" http://validation-app:8080
+"$run_contract_dir/bin/test" --network "$validation_network" http://validation-app:8080
 
 echo "==> Checking health endpoint from the validation network"
 docker compose exec -T validation-app curl --fail --silent --show-error http://localhost:8080/health >/dev/null

@@ -40,3 +40,6 @@ The [CI workflow](https://github.com/alxarafe/alxarafe-dotnet/actions/workflows/
 runs `bin/check`, including shared conformance. Its result is distinct from the
 declared release `v0.12.0`. Local and CI validation both verify and test
 that same release; historical reports retain their original revisions and results.
+
+[Generic resource contract candidate](generic-resource-contract.md) describes
+CRUD-CONTRACT-001, the unchanged published pin and explicit candidate validation.

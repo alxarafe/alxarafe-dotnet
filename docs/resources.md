@@ -1,5 +1,10 @@
 # Resource Platform
 
+The local [CRUD-CONTRACT-001 candidate](generic-resource-contract.md) now defines
+the shared generic protocol and explicit filterOperators metadata. The published
+pin remains v0.12.0; historical implementation/verification sections below retain
+their original scope and are not a candidate publication claim.
+
 RESOURCE-METADATA-001 implements the first Resource Platform foundation in
 `Alxarafe.Resources`. Backend metadata is the semantic authority; framework-specific
 representations are derived from it. This is a metadata model, validator and

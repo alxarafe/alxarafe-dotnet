@@ -180,18 +180,24 @@ public static class ResourceTransport
         }
         return new(offset, limit, filters, sorting, search);
     }
-    private static ResourceFilterOperator Operator(string value) => value switch
+    internal static string OperatorName(ResourceFilterOperator value) => value switch
     {
-        "eq" => ResourceFilterOperator.Equal,
-        "ne" => ResourceFilterOperator.NotEqual,
-        "lt" => ResourceFilterOperator.LessThan,
-        "lte" => ResourceFilterOperator.LessThanOrEqual,
-        "gt" => ResourceFilterOperator.GreaterThan,
-        "gte" => ResourceFilterOperator.GreaterThanOrEqual,
-        "contains" => ResourceFilterOperator.Contains,
-        "startsWith" => ResourceFilterOperator.StartsWith,
-        _ => throw new ResourceTransportException("filter.operator")
+        ResourceFilterOperator.Equal => "eq",
+        ResourceFilterOperator.NotEqual => "ne",
+        ResourceFilterOperator.LessThan => "lt",
+        ResourceFilterOperator.LessThanOrEqual => "lte",
+        ResourceFilterOperator.GreaterThan => "gt",
+        ResourceFilterOperator.GreaterThanOrEqual => "gte",
+        ResourceFilterOperator.Contains => "contains",
+        ResourceFilterOperator.StartsWith => "startsWith",
+        _ => throw new InvalidOperationException("Invalid filter operator.")
     };
+    private static ResourceFilterOperator Operator(string value)
+    {
+        foreach (var operation in Enum.GetValues<ResourceFilterOperator>())
+            if (OperatorName(operation) == value) return operation;
+        throw new ResourceTransportException("filter.operator");
+    }
 }
 
 public sealed class ResourceRecordDto

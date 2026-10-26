@@ -48,7 +48,7 @@ public sealed partial class ResourceOpenApiTransformer
             var operation = new OpenApiOperation
             {
                 OperationId = operationId,
-                Description = "Implementation-specific Resource Action projection. Authorization and contextual availability are rechecked on execution; handlers own business atomicity.",
+                Description = "Generic Resource Runtime candidate action projection. Authorization and contextual availability are rechecked on execution; handlers own business atomicity.",
                 Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] }],
                 RequestBody = new OpenApiRequestBody { Required = true, Content = new Dictionary<string, OpenApiMediaType> { [MediaTypeNames.Application.Json] = new() { Schema = body } } },
                 Responses = new OpenApiResponses()

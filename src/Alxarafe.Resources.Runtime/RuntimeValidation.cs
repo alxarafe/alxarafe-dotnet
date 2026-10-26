@@ -78,12 +78,11 @@ internal static class RuntimeValidation
             var field = filter?.Field is { } name ? fields.GetValueOrDefault(name) : null;
             if (filter is null || field is null || !field.Capabilities.Filterable || !Enum.IsDefined(filter.Operator))
                 Reject(definition.Id, "filters", ResourceInputError.InvalidQuery);
-            bool text = field!.Type is ScalarType.String or ScalarType.Text;
-            bool comparison = text || NumericDomain.Intrinsic(field.Type) is not null || field.Type is ScalarType.Date or ScalarType.Time or ScalarType.DateTime;
             bool fragment = filter!.Operator is ResourceFilterOperator.Contains or ResourceFilterOperator.StartsWith;
-            if ((fragment && (!text || filter.Value is not TextValue part || !ResourceValueValidator.IsText(part.Value)))
-                || (!fragment && !ResourceValueValidator.IsValid(field, filter.Value))
-                || (filter.Operator is not (ResourceFilterOperator.Equal or ResourceFilterOperator.NotEqual) && (filter.Value is NullValue || (!fragment && !comparison))))
+            if ((fragment && (filter.Value is not TextValue part || !ResourceValueValidator.IsText(part.Value)))
+                || (!fragment && !ResourceValueValidator.IsValid(field!, filter.Value))
+                || !ResourceQuery.AllowedOperators(field!).Contains(filter.Operator)
+                || (filter.Operator is not (ResourceFilterOperator.Equal or ResourceFilterOperator.NotEqual) && filter.Value is NullValue))
                 Reject(definition.Id, "filters." + filter.Field, ResourceInputError.InvalidQuery);
         }
         var sorted = new HashSet<string>(StringComparer.Ordinal);

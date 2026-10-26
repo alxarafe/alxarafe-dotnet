@@ -10,6 +10,18 @@ public sealed class ResourceQuery
     public const int DefaultLimit = 50;
     public const int MaximumLimit = 100;
     public const int MaximumSearchLength = 512;
+    public static IReadOnlyList<ResourceFilterOperator> AllowedOperators(FieldDefinition field)
+    {
+        if (!field.Capabilities.Filterable) return Array.Empty<ResourceFilterOperator>();
+        bool text = field.Type is ScalarType.String or ScalarType.Text;
+        bool ordered = text || NumericDomain.Intrinsic(field.Type) is not null || field.Type is ScalarType.Date or ScalarType.Time or ScalarType.DateTime;
+        return Array.AsReadOnly(Enum.GetValues<ResourceFilterOperator>().Where(operation => operation switch
+        {
+            ResourceFilterOperator.Equal or ResourceFilterOperator.NotEqual => true,
+            ResourceFilterOperator.Contains or ResourceFilterOperator.StartsWith => text,
+            _ => ordered
+        }).ToArray());
+    }
     public long Offset { get; }
     public int Limit { get; }
     public IReadOnlyList<ResourceFilter> Filters { get; }

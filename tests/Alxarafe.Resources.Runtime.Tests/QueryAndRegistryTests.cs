@@ -7,6 +7,39 @@ namespace Alxarafe.Resources.Runtime.Tests;
 
 public sealed class QueryAndRegistryTests
 {
+    [Theory]
+    [InlineData(ScalarType.Boolean, 2)]
+    [InlineData(ScalarType.Uuid, 2)]
+    [InlineData(ScalarType.Enum, 2)]
+    [InlineData(ScalarType.String, 8)]
+    [InlineData(ScalarType.Text, 8)]
+    [InlineData(ScalarType.Int32, 6)]
+    [InlineData(ScalarType.Decimal, 6)]
+    [InlineData(ScalarType.Date, 6)]
+    [InlineData(ScalarType.DateTime, 6)]
+    public void PublicOperatorCatalogMatchesExistingTypedQueryPolicy(ScalarType type, int count)
+    {
+        Assert.Equal(count, ResourceQuery.AllowedOperators(new("field", type, capabilities: new(Filterable: true))).Count);
+        Assert.Empty(ResourceQuery.AllowedOperators(new("field", type)));
+    }
+
+    [Fact]
+    public async Task OperatorMetadataDoesNotChangeExistingQueryIssuePaths()
+    {
+        var fixture = new Fixture();
+        foreach (var operation in new[] { ResourceFilterOperator.LessThan, ResourceFilterOperator.Contains })
+        {
+            ScalarValue value = operation == ResourceFilterOperator.Contains ? new TextValue("true") : new BooleanValue(true);
+            var failure = await Assert.ThrowsAsync<ResourceRuntimeException>(() => fixture.Runtime.ListAsync(Fixture.ResourceId,
+                new(filters: [new("active", operation, value)])));
+            Assert.Equal("filters.active", Assert.Single(failure.Issues).Path);
+        }
+        var unknown = await Assert.ThrowsAsync<ResourceRuntimeException>(() => fixture.Runtime.ListAsync(Fixture.ResourceId,
+            new(filters: [new("active", (ResourceFilterOperator)int.MaxValue, new BooleanValue(true))])));
+        Assert.Equal("filters", Assert.Single(unknown.Issues).Path);
+        Assert.Equal(0, fixture.Repository.Calls);
+    }
+
     [Fact]
     public async Task RegistrationCannotBindARepositoryUnderAnIdentityItNeverValidated()
     {

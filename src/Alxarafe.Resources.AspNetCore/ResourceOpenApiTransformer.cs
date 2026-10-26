@@ -29,7 +29,7 @@ public sealed partial class ResourceOpenApiTransformer(ResourceRegistry resource
                 var projection = new OpenApiOperation
                 {
                     OperationId = resource.Id + "." + Enum.GetName(operation)!.ToLowerInvariant(),
-                    Description = "Implementation-specific Resource API derived from Resource Metadata. Runtime authorization and tenant/module guards apply.",
+                    Description = "Generic Resource Runtime candidate projection derived from metadata; published adoption remains separately pinned. Resource protocol guards apply.",
                     Parameters = [],
                     Responses = new OpenApiResponses(),
                     Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] }]
@@ -55,7 +55,7 @@ public sealed partial class ResourceOpenApiTransformer(ResourceRegistry resource
                     Content = operation == ResourceOperation.Delete ? null : new Dictionary<string, OpenApiMediaType>
                     { [MediaTypeNames.Application.Json] = new() { Schema = operation == ResourceOperation.List ? Page(resource) : Record(resource, null) } }
                 });
-                foreach (string error in new[] { "400", "401", "403", "404", "405", "500", "503" })
+                foreach (string error in new[] { "400", "401", "403", "404", "405", "409", "500", "503" })
                     projection.Responses.Add(error, new OpenApiResponse
                     {
                         Description = "Existing ContractError envelope; runtime/transport failure.",
