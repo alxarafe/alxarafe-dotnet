@@ -260,3 +260,8 @@ on Asset. Existing Resource actions provide transactional assignment operations;
 generic Resource CRUD exposes history read-only. Module PostgreSQL constraints
 protect temporal integrity. No Core/Runtime extension is needed; see
 [assignment history](assets-assignments.md).
+
+ASSET-005 exercises the existing ResourceQuery protocol through module-local
+PostgreSQL translation, including exact typed JSONB predicates, literal Asset
+search and deterministic offset windows. It introduces no Runtime/Core or
+physical schema extension; see [Asset register queries](assets-queries.md).

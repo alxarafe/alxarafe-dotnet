@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using Alxarafe.Resources;
 using Alxarafe.Resources.Runtime;
@@ -52,7 +53,7 @@ internal static class AssetsPersistence
         {
             var parameter = Expression.Parameter(typeof(T));
             var property = Expression.Property(parameter, Property(filter.Field));
-            object? raw = filter.Value switch { UuidValue uuid => uuid.Value, TextValue text => text.Value, BooleanValue boolean => boolean.Value, DateTimeValue instant => instant.Value.ToUniversalTime(), _ => null };
+            object? raw = filter.Value switch { UuidValue uuid => uuid.Value, TextValue text => text.Value, BooleanValue boolean => boolean.Value, DateTimeValue instant => instant.Value.ToUniversalTime(), DateValue date => date.Value, NumericValue number => Numeric(property.Type, number.Value), _ => null };
             Expression value = raw is null ? Expression.Constant(null, property.Type) : Expression.Convert(Expression.Constant(raw), property.Type);
             Expression body;
             if (filter.Operator is ResourceFilterOperator.Contains or ResourceFilterOperator.StartsWith)
@@ -75,6 +76,19 @@ internal static class AssetsPersistence
             }
             source = source.Where(Expression.Lambda<Func<T, bool>>(body, parameter));
         }
+        if (query.Search is { } search)
+        {
+            QueryText(AssetResources.Asset, "search", search);
+            // Only Asset opts into search. Other resources fail Runtime validation.
+            var parameter = Expression.Parameter(typeof(T));
+            Expression Match(string field)
+            {
+                var property = Expression.Property(parameter, Property(field));
+                return Expression.AndAlso(Expression.NotEqual(property, Expression.Constant(null, typeof(string))),
+                    Expression.Call(property, nameof(string.Contains), Type.EmptyTypes, Expression.Constant(search)));
+            }
+            source = source.Where(Expression.Lambda<Func<T, bool>>(Expression.OrElse(Match(AssetFields.Name), Match(AssetFields.AssetTag)), parameter));
+        }
         long total = await source.LongCountAsync(ct);
         var sorting = query.Sorting.ToList();
         if (!sorting.Any(sort => sort.Field == AssetFields.Id)) sorting.Add(new(AssetFields.Id));
@@ -91,6 +105,19 @@ internal static class AssetsPersistence
         }
         var rows = query.Offset > int.MaxValue ? [] : await source.Skip((int)query.Offset).Take(query.Limit).ToListAsync(ct);
         return new(rows.Select(record), query.Offset, query.Limit, total);
+    }
+    internal static void QueryText(string resource, string field, string value)
+    {
+        if (value.Contains(char.MinValue, StringComparison.Ordinal))
+            throw new ResourceRuntimeException(resource, ResourceRuntimeError.ValidationFailed,
+                [new(field, ResourceInputError.InvalidQuery, "Query text cannot contain NUL.")]);
+    }
+    private static object Numeric(Type property, ResourceNumber value)
+    {
+        var type = Nullable.GetUnderlyingType(property) ?? property;
+        // Existing static Asset numeric columns are byte/int/decimal. Dynamic
+        // arbitrary-precision numbers take the JSONB path, never CLR decimal.
+        return Convert.ChangeType(value.CanonicalText, type, CultureInfo.InvariantCulture);
     }
     private static string Property(string field) => char.ToUpperInvariant(field[0]) + field[1..];
 }

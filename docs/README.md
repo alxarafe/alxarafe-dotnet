@@ -14,6 +14,7 @@
 | [WMS-003 verification](verification/wms-003-dotnet.md) | Item Families, atomic N:M associations and published v0.8.0 adoption |
 | [WMS-002 verification](verification/wms-002-dotnet.md) | Storage Attributes, published v0.7.0 adoption, migrations, architecture and live conformance |
 | [WMS-001N verification](verification/wms-001-dotnet.md) | Production UoM, v0.6.0 adoption, architecture and validation evidence |
+| [Asset register queries](assets-queries.md) | ASSET-005: PostgreSQL filtering, ordering, offset windows, search and typed JSONB lookup |
 | [Asset assignments](assets-assignments.md) | ASSET-004: canonical custody history, atomic actions, PostgreSQL temporal integrity and permissions |
 | [Dynamic Asset fields](assets-dynamic-fields.md) | ASSET-003: canonical typed values, stable JSONB, active requirements, safe definition evolution and historical semantics |
 | [Assets vertical slice](assets.md) | ASSET-002: static persistent resources through Resource Runtime, lifecycle, permissions, tenant storage and limitations |

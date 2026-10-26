@@ -13,18 +13,18 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
         Catalogue(AssetResources.Location), Catalogue(AssetResources.Status),
         AssetDynamicDefinitions.Definition(), AssetDynamicDefinitions.Value(), AssetAssignmentDefinitions.Resource(),
         Definition(AssetResources.Asset,
-            [new(AssetFields.Name, ScalarType.String, required: true, constraints: new TextConstraints(1, AssetLimits.NameLength), capabilities: new(true, true)),
+            [new(AssetFields.Name, ScalarType.String, required: true, constraints: new TextConstraints(1, AssetLimits.NameLength), capabilities: new(true, true, true)),
                 new(AssetFields.AssetTypeId, ScalarType.Uuid, required: true, immutable: true, capabilities: new(true)),
-                new(AssetFields.AssetTag, ScalarType.String, nullable: true, constraints: new TextConstraints(1, AssetLimits.NameLength)),
+                new(AssetFields.AssetTag, ScalarType.String, nullable: true, constraints: new TextConstraints(1, AssetLimits.NameLength), capabilities: new(true, true, true)),
                 new(AssetFields.SerialNumber, ScalarType.String, nullable: true),
                 new(AssetFields.ManufacturerId, ScalarType.Uuid, nullable: true, capabilities: new(true)),
                 new(AssetFields.AssetModelId, ScalarType.Uuid, nullable: true, capabilities: new(true)),
                 new(AssetFields.LocationId, ScalarType.Uuid, nullable: true, capabilities: new(true)),
                 new(AssetFields.StatusId, ScalarType.Uuid, readOnly: true, capabilities: new(true)),
                 new(AssetFields.Lifecycle, ScalarType.Enum, readOnly: true, enumValues: [AssetLifecycle.Draft, AssetLifecycle.Ready, AssetLifecycle.Retired], capabilities: new(true)),
-                new(AssetFields.PurchaseDate, ScalarType.Date, nullable: true),
-                new(AssetFields.PurchasePrice, ScalarType.Decimal, nullable: true, constraints: new DecimalConstraints(AssetLimits.PricePrecision, AssetLimits.PriceScale, new NumericConstraints(Minimum: ResourceNumber.Zero))),
-                new(AssetFields.Condition, ScalarType.UInt8, nullable: true, constraints: new NumericConstraints(ResourceNumber.Zero, ResourceNumber.Parse(AssetLimits.MaximumCondition.ToString(System.Globalization.CultureInfo.InvariantCulture)))),
+                new(AssetFields.PurchaseDate, ScalarType.Date, nullable: true, capabilities: new(true, true)),
+                new(AssetFields.PurchasePrice, ScalarType.Decimal, nullable: true, constraints: new DecimalConstraints(AssetLimits.PricePrecision, AssetLimits.PriceScale, new NumericConstraints(Minimum: ResourceNumber.Zero)), capabilities: new(true, true)),
+                new(AssetFields.Condition, ScalarType.UInt8, nullable: true, constraints: new NumericConstraints(ResourceNumber.Zero, ResourceNumber.Parse(AssetLimits.MaximumCondition.ToString(System.Globalization.CultureInfo.InvariantCulture))), capabilities: new(true, true)),
                 new(AssetFields.Notes, ScalarType.Text, nullable: true)], AssetsPermissions.Maintain,
             [new("assetType", RelationKind.ManyToOne, AssetResources.Type, AssetFields.AssetTypeId, AssetFields.Id, AssetFields.Name, true),
                 new("manufacturer", RelationKind.ManyToOne, AssetResources.Manufacturer, AssetFields.ManufacturerId, AssetFields.Id, AssetFields.Name),
@@ -49,8 +49,8 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
         return new(id, AssetsModule.Version, AssetsModule.Id, new(AssetFields.Id), new FieldDefinition[]
         {
             new(AssetFields.Id, ScalarType.Uuid, readOnly: true, immutable: true, capabilities: new(true, true)),
-            new(AssetFields.CreatedAt, ScalarType.DateTime, readOnly: true, capabilities: new(Sortable: true)),
-            new(AssetFields.UpdatedAt, ScalarType.DateTime, readOnly: true)
+            new(AssetFields.CreatedAt, ScalarType.DateTime, readOnly: true, capabilities: new(true, true)),
+            new(AssetFields.UpdatedAt, ScalarType.DateTime, readOnly: true, capabilities: new(true, true))
         }.Concat(fields), operations, new(operations.Select(operation => new OperationSecurityRule(operation,
             operation is ResourceOperation.Get or ResourceOperation.List ? [AssetsPermissions.Read] : [AssetsPermissions.Read, write]))), relations, actions);
     }

@@ -28,7 +28,7 @@ internal static class AssetDynamicDefinitions
             new(AssetFields.AssetId, ScalarType.Uuid, required: true, immutable: true, capabilities: new(true)),
             new(AssetFields.FieldDefinitionId, ScalarType.Uuid, required: true, immutable: true, capabilities: new(true)),
             new(AssetFields.AssetTypeId, ScalarType.Uuid, readOnly: true, capabilities: new(true))
-        }.Concat(AssetDynamicSchema.Types.Select(type => new FieldDefinition(AssetDynamicSchema.Slot(type), type))),
+        }.Concat(AssetDynamicSchema.Types.Select(type => new FieldDefinition(AssetDynamicSchema.Slot(type), type, capabilities: new(Filterable: true)))),
         AssetsPermissions.Maintain,
         [new("asset", RelationKind.ManyToOne, AssetResources.Asset, AssetFields.AssetId, AssetFields.Id, AssetFields.Name, true),
             new("fieldDefinition", RelationKind.ManyToOne, AssetResources.FieldDefinition, AssetFields.FieldDefinitionId, AssetFields.Id, AssetFields.Name, true)]);

@@ -9,7 +9,9 @@ public sealed class AssetFieldValueRepository(IDbContextFactory<AssetsDbContext>
     public async Task<ResourcePage> ListAsync(ResourceQuery query, CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
-        return await AssetsPersistence.Page(db.FieldValues.AsNoTracking().Include(row => row.Definition), query, AssetDynamicRecords.Value, cancellationToken);
+        var source = AssetDynamicQueries.Apply(db, query);
+        var ordinary = new ResourceQuery(query.Offset, query.Limit, query.Filters.Where(filter => !AssetDynamicQueries.IsSlot(filter.Field)), query.Sorting, query.Search);
+        return await AssetsPersistence.Page(source, ordinary, AssetDynamicRecords.Value, cancellationToken);
     }
     public async Task<ResourceRecord?> GetAsync(ResourceIdentifier identifier, CancellationToken cancellationToken = default)
     {

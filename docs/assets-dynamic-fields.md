@@ -210,9 +210,10 @@ Verification completed on 2026-10-26:
   documentation link checks passed. No shared semantic/Runtime/Core source,
   shared contract, shared Bruno collection or lockfile was changed.
 
-Value filtering is limited to ownership identifiers; querying arbitrary dynamic
-values by content, pattern/allowed-set/date-bound configuration and bulk value
-replacement remain future scope. No premature Core extraction is justified:
+The ASSET-003 verification above is historical. [ASSET-005](assets-queries.md)
+now supports typed value-content filtering on the existing resource.
+Pattern/allowed-set/date-bound configuration and bulk value replacement remain
+future scope. No premature Core extraction is justified:
 the module still supplies lifecycle,
 ownership, history and evolution policies. A later review can assess whether
 the observed pattern warrants a generic polymorphic representation or dynamic
