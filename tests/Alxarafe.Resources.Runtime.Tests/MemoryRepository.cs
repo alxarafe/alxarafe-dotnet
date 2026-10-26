@@ -12,6 +12,7 @@ internal sealed class MemoryRepository(string resourceId) : IResourceRepository
     internal ResourceRecord? LastValues { get; private set; }
     internal ResourceQuery? LastQuery { get; private set; }
     internal bool Fail { get; set; }
+    internal bool Conflict { get; set; }
     internal bool BadResult { get; set; }
     public Task<ResourcePage> ListAsync(ResourceQuery query, CancellationToken cancellationToken = default)
     {
@@ -55,6 +56,7 @@ internal sealed class MemoryRepository(string resourceId) : IResourceRepository
     private void Call()
     {
         Calls++;
+        if (Conflict) throw new ResourceConflictException(Fixture.ConflictReason);
         if (Fail) throw new InvalidOperationException("SQL password=secret connection-string must not escape");
     }
 }

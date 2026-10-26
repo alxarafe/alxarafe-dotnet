@@ -112,7 +112,7 @@ public sealed class ResourceRuntimeTests
             _ => new TextValue("changed")
         };
         var failure = await Assert.ThrowsAsync<ResourceRuntimeException>(() => fixture.Runtime.UpdateAsync(Fixture.ResourceId, Fixture.Id, Fixture.Record((field, value))));
-        Assert.Equal(ResourceRuntimeError.ValidationFailed, failure.Code);
+        Assert.Equal(field == "fixed" ? ResourceRuntimeError.Conflict : ResourceRuntimeError.ValidationFailed, failure.Code);
         Assert.Equal(0, fixture.Repository.Calls);
     }
 
@@ -190,6 +190,49 @@ public sealed class ResourceRuntimeTests
         Assert.Equal(ResourceRuntimeError.OperationNotSupported, (await Assert.ThrowsAsync<ResourceRuntimeException>(() => fixture.Runtime.DeleteAsync(Fixture.ResourceId, Fixture.Id))).Code);
         Assert.Equal(0, fixture.Tenant.Calls); Assert.Equal(0, fixture.Authorization.Calls); Assert.Equal(0, fixture.Repository.Calls);
     }
+
+    [Fact]
+    public async Task InvalidImmutableValueRemainsInputValidationRatherThanConflict()
+    {
+        var fixture = new Fixture();
+        var failure = await Assert.ThrowsAsync<ResourceRuntimeException>(() => fixture.Runtime.UpdateAsync(Fixture.ResourceId,
+            Fixture.Id, Fixture.Record(("fixed", new BooleanValue(true)))));
+        Assert.Equal(ResourceRuntimeError.ValidationFailed, failure.Code);
+        Assert.Equal(0, fixture.Repository.Calls);
+    }
+
+    private sealed class ConflictValidator : IResourceOperationValidator
+    {
+        public string ResourceId => Fixture.ResourceId;
+        public string Id => "conflict";
+        public Task<IReadOnlyList<ResourceIssue>> ValidateAsync(ResourceOperationContext context, CancellationToken cancellationToken = default)
+            => throw new ResourceConflictException(Fixture.ConflictReason);
+    }
+
+    [Theory]
+    [InlineData(ResourceOperation.Create)]
+    [InlineData(ResourceOperation.Update)]
+    [InlineData(ResourceOperation.Delete)]
+    public async Task ExplicitRepositoryAndValidatorConflictsPreserveReasonAndState(ResourceOperation operation)
+    {
+        foreach (bool validator in new[] { false, true })
+        {
+            var fixture = new Fixture(delete: true, validators: validator ? [new ConflictValidator()] : []);
+            fixture.Repository.Conflict = !validator;
+            var failure = await Assert.ThrowsAsync<ResourceRuntimeException>(() => Invoke(fixture, operation));
+            Assert.Equal(ResourceRuntimeError.Conflict, failure.Code);
+            Assert.Equal(Fixture.ConflictReason, failure.ReasonCode);
+            Assert.Equal(0, fixture.Repository.Mutations);
+            Assert.Equal(Fixture.Persisted.Values, fixture.Repository.Stored!.Values);
+        }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Not a technical code")]
+    [InlineData("private SQL password=secret")]
+    public void InvalidConflictReasonIsRejected(string reason)
+        => Assert.Throws<ArgumentException>(() => new ResourceConflictException(reason));
 
     [Fact]
     public async Task BusinessValidatorsAreOrderedAndCanBlockMutations()

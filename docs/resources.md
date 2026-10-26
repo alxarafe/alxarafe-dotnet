@@ -501,6 +501,7 @@ Runtime diagnostic message text is deliberately not added to the HTTP contract.
 | ResourceNotFound | 404 `resource_not_found` |
 | OperationNotSupported | 405 `resource_operation_not_supported`, with `Allow` |
 | ValidationFailed / invalid transport | 400 `invalid_request` with issue codes/paths |
+| Conflict | 409 `resource_conflict`, stable reason in `errors[].code` and optional field paths |
 | Forbidden | 403 `forbidden` |
 | TenantRequired | Existing authoritative tenant denial code, normally 403 |
 | ModuleDisabled | Existing 503 `module_disabled` |
@@ -1161,3 +1162,41 @@ remain future phases. No generic EF/SQL repository, schema generation, automatic
 Angular/client code, relation expansion, reseller/branding or AI/tool schemas are added.
 Existing WMS APIs/persistence are not migrated or redesigned. Core FE shell extensions and
 the AI floating assistant remain separate work, not Resource Metadata functionality.
+
+
+## RESOURCE-CONFLICT-001: explicit domain conflicts
+
+Repositories and operation validators may throw `ResourceConflictException` for
+a valid request that conflicts with current state or integrity. It carries a
+stable reason code and optional `ResourceIssue` paths; it carries no HTTP status,
+database exception or human message. Codes reuse the existing action reason
+grammar and length bound. Runtime translates it to `Conflict`; ResourceEndpoints
+returns 409 `resource_conflict` in the common error envelope. Adapters must roll
+back failed mutations. Unexpected exceptions still become safe execution failures.
+
+Handlers may throw the same exception or retain `ResourceActionOutcome(Conflict,
+reason)`. Both use the existing action conflict projection (409
+`resource_action_conflict`); existing action clients retain their envelope.
+Returned validator issues still mean input validation (400), including existing
+BusinessRule issues: no blanket conversion to conflict is performed.
+
+Compatibility: attempts to supply an immutable field after CREATE now return
+409 `resource_conflict` with `immutable_field` and the field path, including an
+identical supplied value. ID/read-only writes, malformed JSON, wrong types,
+constraints and missing required input remain 400; missing resources remain
+404. Immutable input is rejected before repository access as before. This
+implementation-specific Resource API change does not change shared OpenAPI,
+Bruno or the pinned contract revision. No business module concepts are present
+in this mechanism.
+
+
+Verification (2026-10-26): Docker `dotnet format whitespace` on the new conflict
+type, focused Runtime tests (103), `./bin/test`, and authoritative `./bin/check`
+all passed. The complete suite passed 939 tests (176 architecture, 510 Host
+integration, 150 metadata, 103 Runtime), with no build warnings. Full verification
+used an isolated clean published v0.12.0 checkout supplied through
+`ERBAS_CONTRACT_DIR`; shared conformance, local Bruno suites, PostgreSQL
+persistence, log secrecy and validation database/container cleanup passed.
+The original contract repository was unchanged. Diff review found no module
+branches or credentials; existing secret-like test strings are synthetic failure
+fixtures. This verification establishes the runtime change, not Assets support.

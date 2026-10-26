@@ -24,11 +24,12 @@ public sealed class ResourceActionRuntime(ResourceRegistry resources, ModuleStat
         ResourceActionOutcome result;
         try { result = await handler.ExecuteAsync(new(context, values), cancellationToken); }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (ResourceConflictException) { throw; }
         catch (Exception) { throw new ResourceRuntimeException(resourceId, ResourceRuntimeError.ExecutionFailed); }
         if (result is null || !Enum.IsDefined(result.Kind) || (result.Kind != ResourceActionOutcomeKind.Conflict && result.ReasonCode is not null)
             || (result.Kind == ResourceActionOutcomeKind.Conflict && !ResourceActionReason.Valid(result.ReasonCode))) throw new InvalidOperationException("Invalid action outcome.");
         if (result.Kind == ResourceActionOutcomeKind.NotFound) throw new ResourceRuntimeException(resourceId, ResourceRuntimeError.ResourceNotFound);
-        if (result.Kind == ResourceActionOutcomeKind.Conflict) throw new ResourceRuntimeException(resourceId, ResourceRuntimeError.ActionConflict, reasonCode: result.ReasonCode);
+        if (result.Kind == ResourceActionOutcomeKind.Conflict) throw new ResourceConflictException(result.ReasonCode!);
         return true;
     }, cancellationToken);
 
@@ -107,6 +108,8 @@ public sealed class ResourceActionRuntime(ResourceRegistry resources, ModuleStat
         try { ct.ThrowIfCancellationRequested(); return await operation(); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw new OperationCanceledException(ct); }
         catch (ResourceRuntimeException) { throw; }
+        catch (ResourceConflictException conflict)
+        { throw new ResourceRuntimeException(id, ResourceRuntimeError.ActionConflict, conflict.Issues, conflict.ReasonCode); }
         catch (TenantAccessException failure) when (!failure.ConfigurationFailure) { throw new ResourceRuntimeException(id, ResourceRuntimeError.TenantRequired); }
         catch (Exception) { throw new ResourceRuntimeException(id, ResourceRuntimeError.ExecutionFailed); }
     }

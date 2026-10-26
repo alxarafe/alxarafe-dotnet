@@ -26,8 +26,9 @@ internal static class RuntimeValidation
             if (!fields.TryGetValue(pair.Key, out var field)) Reject(definition.Id, pair.Key, ResourceInputError.UnknownField);
             if (!create && pair.Key == definition.IdDefinition.Field) Reject(definition.Id, pair.Key, ResourceInputError.IdentifierMutation);
             if (field!.ReadOnly) Reject(definition.Id, pair.Key, ResourceInputError.ReadOnly);
-            if (!create && field.Immutable) Reject(definition.Id, pair.Key, ResourceInputError.Immutable);
             if (!ResourceValueValidator.IsValid(field, pair.Value)) Reject(definition.Id, pair.Key, ResourceInputError.InvalidValue);
+            if (!create && field.Immutable) throw new ResourceConflictException(ResourceConflictException.ImmutableField,
+                [new(pair.Key, ResourceInputError.Immutable, "Field is immutable after creation.")]);
             values.Add(pair.Key, pair.Value);
         }
         if (create)

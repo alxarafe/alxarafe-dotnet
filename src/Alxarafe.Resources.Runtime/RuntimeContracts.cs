@@ -20,7 +20,7 @@ public enum ResourceRuntimeError
 {
     ResourceNotFound, OperationNotSupported, RepositoryNotRegistered, ValidationFailed,
     Forbidden, TenantRequired, ModuleDisabled, ExecutionFailed, InvalidRepositoryResult,
-    ActionNotFound, ActionHandlerNotRegistered, ActionUnavailable, ActionConflict
+    ActionNotFound, ActionHandlerNotRegistered, ActionUnavailable, ActionConflict, Conflict
 }
 public enum ResourceInputError { UnknownField, Required, InvalidValue, ReadOnly, Immutable, IdentifierMutation, InvalidQuery, BusinessRule }
 public sealed record ResourceIssue(string Path, ResourceInputError Code, string Message);

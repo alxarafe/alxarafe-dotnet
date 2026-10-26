@@ -20,10 +20,11 @@ public sealed class ResourceActionTests
         public string ActionName { get; set; } = action;
         internal int Calls;
         internal bool Fail;
+        internal bool Conflict;
         internal ResourceActionExecutionContext? Received;
         internal ResourceActionOutcome Result = new(ResourceActionOutcomeKind.Success);
         public Task<ResourceActionOutcome> ExecuteAsync(ResourceActionExecutionContext context, CancellationToken cancellationToken = default)
-        { Calls++; Received = context; if (Fail) throw new InvalidOperationException("secret SQL credential"); return Task.FromResult(Result); }
+        { Calls++; Received = context; if (Conflict) throw new ResourceConflictException(Reason); if (Fail) throw new InvalidOperationException("secret SQL credential"); return Task.FromResult(Result); }
     }
     private sealed class Availability : IResourceActionAvailabilityProvider
     {
@@ -62,6 +63,14 @@ public sealed class ResourceActionTests
     }
     private static async Task<ResourceRuntimeException> Error(ResourceRuntimeError code, Func<Task> action)
     { var failure = await Assert.ThrowsAsync<ResourceRuntimeException>(action); Assert.Equal(code, failure.Code); Assert.DoesNotContain("secret", failure.ToString(), StringComparison.Ordinal); return failure; }
+    [Fact]
+    public async Task HandlerCanUseTheSameExplicitConflictAsRepositories()
+    {
+        var h = new Harness(); h.PostHandler.Conflict = true;
+        var failure = await Error(ResourceRuntimeError.ActionConflict, () => h.Runtime.ExecuteAsync(Fixture.ResourceId, Post, Entity, Input(("reason", new TextValue("valid")))));
+        Assert.Equal(Reason, failure.ReasonCode);
+    }
+
     [Fact]
     public async Task ActionAuthorityIsIndependentOfCrudAndDefaultingPreservesExplicitNull()
     {

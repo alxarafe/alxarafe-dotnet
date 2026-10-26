@@ -148,12 +148,38 @@ public sealed class ResourceApiTests : IClassFixture<ResourceApiTestContext>
     [InlineData("[]")]
     [InlineData("{")]
     [InlineData("{\"id\":\"035a2161-c936-42dc-8b4b-d3cf5d1953a6\"}")]
-    [InlineData("{\"fixed\":\"changed\"}")]
     [InlineData("{\"active\":null}")]
+    [InlineData("{\"fixed\":true}")]
     public async Task InvalidPatchIsRejectedWithoutRepositoryRead(string json)
     {
         await Error(await context.Send(HttpMethod.Patch, ResourceApiTestContext.Path(id: ResourceApiFixtures.FirstId), json, context.Writer), HttpStatusCode.BadRequest, ResourceEndpoints.InvalidRequest);
         Assert.Equal(0, context.Store.Calls);
+    }
+
+    [Fact]
+    public async Task ImmutableMutationIsAConflictBeforeRepositoryAccess()
+    {
+        using var response = await context.Send(HttpMethod.Patch, ResourceApiTestContext.Path(id: ResourceApiFixtures.FirstId), "{\"fixed\":\"changed\"}", context.Writer);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var body = await Body(response);
+        Assert.Equal(ResourceEndpoints.Conflict, body.GetProperty("code").GetString());
+        var detail = body.GetProperty("errors")[0];
+        Assert.Equal(ResourceConflictException.ImmutableField, detail.GetProperty("code").GetString());
+        Assert.Equal("/fixed", detail.GetProperty("path").GetString());
+        Assert.Equal(0, context.Store.Calls);
+    }
+
+    [Fact]
+    public async Task ExplicitDomainConflictUsesCommonEnvelopeAndPreservesState()
+    {
+        using var response = await context.Send(HttpMethod.Patch, ResourceApiTestContext.Path(id: ResourceApiFixtures.FirstId), JsonSerializer.Serialize(new { name = ResourceApiFixtures.LockedName }), context.Writer);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var body = await Body(response);
+        Assert.Equal(ResourceEndpoints.Conflict, body.GetProperty("code").GetString());
+        Assert.Equal(ResourceApiFixtures.ConflictReason, body.GetProperty("errors")[0].GetProperty("code").GetString());
+        Assert.Equal(0, context.Store.Mutations);
+        using var read = await context.Send(HttpMethod.Get, ResourceApiTestContext.Path(id: ResourceApiFixtures.FirstId), token: context.Reader);
+        Assert.Equal("Water", (await Body(read)).GetProperty("name").GetString());
     }
 
     [Fact]

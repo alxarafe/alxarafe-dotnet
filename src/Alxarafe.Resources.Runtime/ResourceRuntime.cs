@@ -80,6 +80,8 @@ public sealed class ResourceRuntime(ResourceRegistry resources, ModuleStateServi
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw new OperationCanceledException(cancellationToken); }
         catch (ResourceRuntimeException) { throw; }
+        catch (ResourceConflictException conflict)
+        { throw new ResourceRuntimeException(resourceId, ResourceRuntimeError.Conflict, conflict.Issues, conflict.ReasonCode); }
         catch (TenantAccessException failure) when (!failure.ConfigurationFailure)
         { throw new ResourceRuntimeException(resourceId, ResourceRuntimeError.TenantRequired); }
         catch (Exception)

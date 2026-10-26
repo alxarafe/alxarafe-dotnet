@@ -8,6 +8,7 @@ namespace Alxarafe.Resources.Runtime.Tests;
 internal sealed class Fixture
 {
     internal const string ResourceId = "fixture.customer";
+    internal const string ConflictReason = "record_locked";
     internal const string OtherId = "fixture.other";
     internal const string ModuleId = "fixture.module";
     internal const string Version = "1.0.0";

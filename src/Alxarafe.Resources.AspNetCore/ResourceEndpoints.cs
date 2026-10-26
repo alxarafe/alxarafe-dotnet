@@ -18,6 +18,7 @@ public static class ResourceEndpoints
     public const string InvalidRequest = "invalid_request";
     public const string NotFound = "resource_not_found";
     public const string NotSupported = "resource_operation_not_supported";
+    public const string Conflict = "resource_conflict";
     public const string ExecutionFailed = "resource_execution_failed";
     public const string RepositoryMissing = "resource_repository_not_registered";
 
@@ -148,6 +149,7 @@ public static class ResourceEndpoints
             ResourceRuntimeError.ActionNotFound => (StatusCodes.Status404NotFound, "resource_action_not_found"),
             ResourceRuntimeError.ActionHandlerNotRegistered => (StatusCodes.Status503ServiceUnavailable, "resource_action_handler_not_registered"),
             ResourceRuntimeError.ActionUnavailable => (StatusCodes.Status409Conflict, "resource_action_unavailable"),
+            ResourceRuntimeError.Conflict => (StatusCodes.Status409Conflict, Conflict),
             ResourceRuntimeError.ActionConflict => (StatusCodes.Status409Conflict, "resource_action_conflict"),
             ResourceRuntimeError.ResourceNotFound => (StatusCodes.Status404NotFound, NotFound),
             ResourceRuntimeError.OperationNotSupported => (StatusCodes.Status405MethodNotAllowed, NotSupported),
@@ -164,8 +166,11 @@ public static class ResourceEndpoints
             http.Response.Headers.Allow = string.Join(", ", definition.Operations.Select(operation => operation switch
             { ResourceOperation.List or ResourceOperation.Get => HttpMethods.Get, ResourceOperation.Create => HttpMethods.Post, ResourceOperation.Update => HttpMethods.Patch, _ => HttpMethods.Delete }).Distinct(StringComparer.Ordinal));
         }
-        if (failure.ReasonCode is { } reason && failure.Code is ResourceRuntimeError.ActionUnavailable or ResourceRuntimeError.ActionConflict)
-            return Json(new ContractError(code) { Errors = [new(reason, Resource: failure.ResourceId)] }, status);
+        if (failure.ReasonCode is { } reason && failure.Code is ResourceRuntimeError.Conflict or ResourceRuntimeError.ActionUnavailable or ResourceRuntimeError.ActionConflict)
+            return Json(new ContractError(code) { Errors = failure.Issues.Count == 0
+                ? [new(reason, Resource: failure.ResourceId)]
+                : failure.Issues.Select(issue => new ContractErrorDetail(reason, Resource: failure.ResourceId,
+                    Path: "/" + issue.Path.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal))).ToArray() }, status);
         return failure.Issues.Count == 0 ? Error(http, status, code) : Json(new ContractError(code)
         {
             Errors = failure.Issues.Select(issue => new ContractErrorDetail(JsonNamingPolicy.SnakeCaseLower.ConvertName(Enum.GetName(issue.Code)!), Resource: failure.ResourceId,

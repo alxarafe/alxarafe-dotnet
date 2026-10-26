@@ -10,6 +10,8 @@ namespace Alxarafe.Host.IntegrationTests;
 internal static class ResourceApiFixtures
 {
     internal const string Customer = "fixture.api-customer";
+    internal const string LockedName = "LOCKED";
+    internal const string ConflictReason = "record_locked";
     internal const string Country = "fixture.api-country";
     internal const string Read = "wms.inventory.read";
     internal const string Write = "wms.items.write";
@@ -65,6 +67,7 @@ internal static class ResourceApiFixtures
             string owner = await Owner(cancellationToken);
             var key = (owner, ResourceId, Id(identifier));
             if (!store.Records.TryGetValue(key, out var current)) return null;
+            if (patch.Values.GetValueOrDefault("name") == new TextValue(LockedName)) throw new ResourceConflictException(ConflictReason);
             var values = current.Values.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
             foreach (var pair in patch.Values) values[pair.Key] = pair.Value;
             var record = new ResourceRecord(values); store.Records[key] = record; Interlocked.Increment(ref store.Mutations); return record;
