@@ -1,4 +1,8 @@
-# Assets: first persistent Resource Runtime slice
+# Assets: persistent Resource Runtime module
+
+The current module extends its static foundation with [ASSET-003 dynamic fields](assets-dynamic-fields.md).
+That page documents the typed-slot API, stable JSONB storage, lifecycle and evolution rules.
+The ASSET-002 scope and verification below remain historical foundation evidence.
 
 ASSET-002 is a completed, validated implementation-specific slice, based on the ASSET-001 design
 at erbas-contract commit `eb8227c`. The approved ASSET-002 scope deliberately
@@ -91,7 +95,8 @@ Neither action accepts arbitrary fields, lifecycle/status/type overrides or extr
 arguments. Invalid transitions return 409; absent targets/actions return 404.
 There is no reactivate. Retired assets remain readable and cannot be patched,
 deleted or completed/retired again. No direct status/lifecycle write bypass exists.
-Unassigned DRAFT/READY assets may be deleted; repeated deletion returns 404.
+Unassigned DRAFT/READY assets without dynamic values may be deleted; repeated
+deletion returns 404. ASSET-003 protects referenced values from parent deletion.
 
 Assignments/people are not implemented in this six-resource slice. There is no
 public assignment field/action; API-created assets are unassigned. The retirement
@@ -144,7 +149,7 @@ Unexpected failures remain safely classified; no database text is returned.
 ## Persistence, seed and queries
 
 The module uses the same centrally resolved independent business database for
-each tenant as other business modules, with six `assets_*` tables and separate
+each tenant as other business modules, with the six static `assets_*` tables plus ASSET-003's two dynamic-field tables and separate
 `__AssetsMigrationsHistory`. It opens registered active tenant databases before
 migration through ITenantDatabaseMigrationRunner. It never creates a production
 database or falls back to a global Assets connection. No tenant discriminator
@@ -202,11 +207,11 @@ failed assertion, warning or runtime exception was suppressed to obtain a pass.
 The earlier generic conflict limitation was resolved independently in
 RESOURCE-CONFLICT-001; no further generic runtime mechanism was needed.
 
-ASSET-003 remains a proposal for dynamic definitions/values, runtime type and
-constraint reuse, evolution, inactive history and optional/required policies.
+[ASSET-003](assets-dynamic-fields.md) implements dynamic definitions/values and
+their explicit lifecycle, evolution and historical-value policy.
 ASSET-004 adds people/assignments and further business actions/integrity.
-ASSET-005 broadens seed and coverage. No such task has started. A later
+ASSET-005 broadens seed and coverage. Neither ASSET-004 nor ASSET-005 has started. A later
 cross-stack review decides whether behavior belongs in the shared contract;
 Core extraction requires separate evidence and approval. Frontend, full ITAM,
-dynamic fields, generic relation expansion and automatic select/search with
+generic relation expansion and automatic select/search with
 global/tenant/user settings remain out of scope.

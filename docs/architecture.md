@@ -245,3 +245,11 @@ remain outside scope. Physical module loading and production Identity provisioni
 separate future concerns. Historical experiment data is preserved in existing
 installations without startup access or automated purge; new installations create
 no retired business schema. See [cleanup evidence](verification/cleanup-001.md).
+
+
+ASSET-003 keeps configurable field definitions and JSONB values inside the Assets
+tenant adapter. It reuses shared scalar/constraint semantics and canonical public
+parse/project functions; its five optional typed API slots adapt the fixed
+resource schema without adding a polymorphic property to Runtime. Definitions
+remain tenant data, not global registry contributions. See [dynamic Asset
+fields](assets-dynamic-fields.md) for integrity, evolution and extraction limits.

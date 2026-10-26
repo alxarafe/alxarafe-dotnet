@@ -17,12 +17,14 @@ public sealed class AssetActionHandler(string actionName, IDbContextFactory<Asse
         AssetRules.Writable(row);
         if (ActionName == AssetActions.Complete)
         {
+            await AssetDynamicFields.RequireComplete(db, row, cancellationToken);
             AssetRules.Complete(row, context.Context.Definition);
             await AssetRepository.ValidateReferences(db, row, AssetsRecords.Asset(row), cancellationToken);
         }
         else if (ActionName == AssetActions.Retire)
         {
             var status = await db.Statuses.SingleAsync(status => status.Id == row.StatusId, cancellationToken);
+            await AssetDynamicFields.RequireComplete(db, row, cancellationToken);
             AssetRules.Retire(row, status);
             row.StatusId = (await db.Statuses.SingleAsync(status => status.Code == AssetStatusCodes.Retired, cancellationToken)).Id;
         }

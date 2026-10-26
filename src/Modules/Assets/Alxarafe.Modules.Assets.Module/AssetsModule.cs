@@ -18,6 +18,8 @@ public sealed class AssetsModule : IAlxarafeModule, IModuleServiceContributor, I
         services.AddSingleton<IResourceDefinitionProvider, AssetsDefinitions>();
         services.AddSingleton<IDbContextFactory<AssetsDbContext>, TenantAssetsDbContextFactory>();
         services.AddScoped<IResourceRepository, AssetRepository>();
+        services.AddScoped<IResourceRepository, AssetFieldDefinitionRepository>();
+        services.AddScoped<IResourceRepository, AssetFieldValueRepository>();
         services.AddScoped<IResourceRepository, AssetCatalogueRepository<AssetTypeRow>>();
         services.AddScoped<IResourceRepository, AssetCatalogueRepository<ManufacturerRow>>();
         services.AddScoped<IResourceRepository, AssetCatalogueRepository<AssetModelRow>>();

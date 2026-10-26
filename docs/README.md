@@ -14,6 +14,7 @@
 | [WMS-003 verification](verification/wms-003-dotnet.md) | Item Families, atomic N:M associations and published v0.8.0 adoption |
 | [WMS-002 verification](verification/wms-002-dotnet.md) | Storage Attributes, published v0.7.0 adoption, migrations, architecture and live conformance |
 | [WMS-001N verification](verification/wms-001-dotnet.md) | Production UoM, v0.6.0 adoption, architecture and validation evidence |
+| [Dynamic Asset fields](assets-dynamic-fields.md) | ASSET-003: canonical typed values, stable JSONB, active requirements, safe definition evolution and historical semantics |
 | [Assets vertical slice](assets.md) | ASSET-002: static persistent resources through Resource Runtime, lifecycle, permissions, tenant storage and limitations |
 | [Usage](usage.md) | Docker development, full validation, networking, isolation and cleanup |
 | [Resource Platform](resources.md) | Semantic metadata, canonical hashes, generic execution, authoritative guards, REST/Metadata API, authorized contextual actions, neutral form layout and derived OpenAPI |

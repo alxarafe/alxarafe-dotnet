@@ -66,7 +66,9 @@ public sealed class AssetsTestContext : IAsyncLifetime
         {
             await using var db = await Database(secondary);
             Guid[] Ids(string resource) => created.GetValueOrDefault((resource, secondary))?.ToArray() ?? [];
-            var ids = Ids(AssetResources.Asset); await db.Assets.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
+            var ids = Ids(AssetResources.FieldValue); await db.FieldValues.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
+            ids = Ids(AssetResources.FieldDefinition); await db.FieldDefinitions.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
+            ids = Ids(AssetResources.Asset); await db.Assets.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
             ids = Ids(AssetResources.Model); await db.Models.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
             ids = Ids(AssetResources.Type); await db.Types.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
             ids = Ids(AssetResources.Manufacturer); await db.Manufacturers.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();

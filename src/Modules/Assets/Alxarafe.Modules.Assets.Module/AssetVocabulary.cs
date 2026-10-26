@@ -21,6 +21,23 @@ public static class AssetFields
     public const string PurchasePrice = "purchasePrice";
     public const string Condition = "condition";
     public const string Notes = "notes";
+    public const string FieldType = "fieldType";
+    public const string Required = "required";
+    public const string DisplayOrder = "displayOrder";
+    public const string MinimumLength = "minimumLength";
+    public const string MaximumLength = "maximumLength";
+    public const string Minimum = "minimum";
+    public const string Maximum = "maximum";
+    public const string Precision = "precision";
+    public const string Scale = "scale";
+    public const string ValueField = "valueField";
+    public const string AssetId = "assetId";
+    public const string FieldDefinitionId = "fieldDefinitionId";
+    public const string StringValue = "stringValue";
+    public const string Int32Value = "int32Value";
+    public const string DecimalValue = "decimalValue";
+    public const string BooleanValue = "booleanValue";
+    public const string DateValue = "dateValue";
 }
 
 public static class AssetResources
@@ -31,7 +48,9 @@ public static class AssetResources
     public const string Model = "assets.asset-model";
     public const string Location = "assets.location";
     public const string Status = "assets.asset-status";
-    public static readonly IReadOnlyList<string> All = Array.AsReadOnly(new[] { Asset, Type, Manufacturer, Model, Location, Status });
+    public const string FieldDefinition = "assets.asset-field-definition";
+    public const string FieldValue = "assets.asset-field-value";
+    public static readonly IReadOnlyList<string> All = Array.AsReadOnly(new[] { Asset, Type, Manufacturer, Model, Location, Status, FieldDefinition, FieldValue });
 }
 
 public static class AssetLifecycle
@@ -75,4 +94,9 @@ public static class AssetFailures
     public const string Duplicate = "assets_duplicate";
     public const string Inactive = "assets_inactive_reference";
     public const string ReservedStatus = "assets_reserved_status";
+    public const string FieldTypeMismatch = "assets_field_type_mismatch";
+    public const string InactiveField = "assets_inactive_field";
+    public const string IncompatibleDefinition = "assets_incompatible_definition";
+    public const string RequiredFields = "assets_required_fields_incomplete";
+    public const string RequiredValue = "assets_required_value";
 }

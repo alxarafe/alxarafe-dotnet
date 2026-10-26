@@ -11,6 +11,7 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
         Catalogue(AssetResources.Model, [new(AssetFields.ManufacturerId, ScalarType.Uuid, required: true, immutable: true, capabilities: new(true))],
             [new("manufacturer", RelationKind.ManyToOne, AssetResources.Manufacturer, AssetFields.ManufacturerId, AssetFields.Id, AssetFields.Name, true)]),
         Catalogue(AssetResources.Location), Catalogue(AssetResources.Status),
+        AssetDynamicDefinitions.Definition(), AssetDynamicDefinitions.Value(),
         Definition(AssetResources.Asset,
             [new(AssetFields.Name, ScalarType.String, required: true, constraints: new TextConstraints(1, AssetLimits.NameLength), capabilities: new(true, true)),
                 new(AssetFields.AssetTypeId, ScalarType.Uuid, required: true, immutable: true, capabilities: new(true)),
@@ -41,7 +42,7 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
             new(AssetFields.Active, ScalarType.Boolean, defaultValue: new BooleanValue(true), capabilities: new(true))
         }.Concat(extra ?? []), id is AssetResources.Type or AssetResources.Status ? AssetsPermissions.SchemaManage : AssetsPermissions.Maintain, relations);
 
-    private static ResourceDefinition Definition(string id, IEnumerable<FieldDefinition> fields, string write,
+    internal static ResourceDefinition Definition(string id, IEnumerable<FieldDefinition> fields, string write,
         IEnumerable<RelationDefinition>? relations = null, IEnumerable<ActionDefinition>? actions = null)
     {
         var operations = Enum.GetValues<ResourceOperation>();

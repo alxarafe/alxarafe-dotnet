@@ -55,7 +55,8 @@ public sealed class AssetCatalogueRepository<T>(IDbContextFactory<AssetsDbContex
         if (row is AssetStatusRow && AssetStatusCodes.Reserved.Contains(row.Code, StringComparer.Ordinal)) throw new ResourceConflictException(AssetFailures.ReservedStatus);
         bool referenced = row switch
         {
-            AssetTypeRow => await db.Assets.AnyAsync(asset => asset.AssetTypeId == row.Id, cancellationToken),
+            AssetTypeRow => await db.Assets.AnyAsync(asset => asset.AssetTypeId == row.Id, cancellationToken)
+                || await db.FieldDefinitions.AnyAsync(field => field.AssetTypeId == row.Id, cancellationToken),
             ManufacturerRow => await db.Models.AnyAsync(model => model.ManufacturerId == row.Id, cancellationToken) || await db.Assets.AnyAsync(asset => asset.ManufacturerId == row.Id, cancellationToken),
             AssetModelRow => await db.Assets.AnyAsync(asset => asset.AssetModelId == row.Id, cancellationToken),
             AssetLocationRow => await db.Assets.AnyAsync(asset => asset.LocationId == row.Id, cancellationToken),

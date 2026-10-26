@@ -43,6 +43,7 @@ public sealed class AssetRepository(IDbContextFactory<AssetsDbContext> contexts)
         AssetsRecords.Patch(row, patch);
         await ValidateReferences(db, row, previous, cancellationToken);
         await UniqueTag(db, row, cancellationToken);
+        if (row.Lifecycle == AssetLifecycle.Ready) await AssetDynamicFields.RequireComplete(db, row, cancellationToken);
         row.UpdatedAt = AssetsPersistence.Now();
         await AssetsPersistence.Save(db, cancellationToken); await transaction.CommitAsync(cancellationToken);
         return AssetsRecords.Asset(row);
@@ -56,6 +57,7 @@ public sealed class AssetRepository(IDbContextFactory<AssetsDbContext> contexts)
         AssetRules.Writable(row);
         var status = await db.Statuses.SingleAsync(status => status.Id == row.StatusId, cancellationToken);
         if (status.Code == AssetStatusCodes.Assigned) throw new ResourceConflictException(AssetFailures.InvalidTransition);
+        if (await db.FieldValues.AnyAsync(value => value.AssetId == row.Id, cancellationToken)) throw new ResourceConflictException(AssetFailures.Referenced);
         db.Assets.Remove(row); await AssetsPersistence.Save(db, cancellationToken); await transaction.CommitAsync(cancellationToken);
         return true;
     }

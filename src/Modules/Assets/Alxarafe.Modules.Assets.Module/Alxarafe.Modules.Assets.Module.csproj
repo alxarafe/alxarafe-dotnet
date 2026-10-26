@@ -4,6 +4,7 @@
         <ProjectReference Include="../../../Alxarafe.Core/Alxarafe.Core.csproj" />
         <ProjectReference Include="../../../Alxarafe.Modularity/Alxarafe.Modularity.csproj" />
         <ProjectReference Include="../../../Alxarafe.Resources.Runtime/Alxarafe.Resources.Runtime.csproj" />
+        <ProjectReference Include="../../../Alxarafe.Resources.AspNetCore/Alxarafe.Resources.AspNetCore.csproj" />
         <ProjectReference Include="../../../Alxarafe.Security/Alxarafe.Security.csproj" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     </ItemGroup>
