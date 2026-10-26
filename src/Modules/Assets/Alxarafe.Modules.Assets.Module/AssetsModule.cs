@@ -18,6 +18,7 @@ public sealed class AssetsModule : IAlxarafeModule, IModuleServiceContributor, I
         services.AddSingleton<IResourceDefinitionProvider, AssetsDefinitions>();
         services.AddSingleton<IDbContextFactory<AssetsDbContext>, TenantAssetsDbContextFactory>();
         services.AddScoped<IResourceRepository, AssetRepository>();
+        services.AddScoped<IResourceRepository, AssetAssignmentRepository>();
         services.AddScoped<IResourceRepository, AssetFieldDefinitionRepository>();
         services.AddScoped<IResourceRepository, AssetFieldValueRepository>();
         services.AddScoped<IResourceRepository, AssetCatalogueRepository<AssetTypeRow>>();
@@ -28,6 +29,8 @@ public sealed class AssetsModule : IAlxarafeModule, IModuleServiceContributor, I
         foreach (string resource in AssetResources.All) services.AddSingleton(new ResourceRepositoryBinding(resource, ResourceRepositoryScope.Tenant));
         foreach (string action in new[] { AssetActions.Complete, AssetActions.Retire })
             services.AddScoped<IResourceActionHandler>(provider => new AssetActionHandler(action, provider.GetRequiredService<IDbContextFactory<AssetsDbContext>>()));
+        foreach (string action in new[] { AssetActions.Assign, AssetActions.Unassign, AssetActions.Transfer })
+            services.AddScoped<IResourceActionHandler>(provider => new AssetAssignmentActionHandler(action, provider.GetRequiredService<IDbContextFactory<AssetsDbContext>>()));
     }
     public async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
     {

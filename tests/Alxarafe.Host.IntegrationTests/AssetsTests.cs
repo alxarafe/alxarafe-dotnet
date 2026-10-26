@@ -58,7 +58,7 @@ public sealed class AssetsTests(AssetsTestContext context) : IClassFixture<Asset
         Assert.Equal(5, metadata.GetProperty("relations").GetArrayLength());
         await using var db = await context.Database();
         Assert.False(db.Database.HasPendingModelChanges());
-        Assert.Equal(2, (await db.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.Equal(3, (await db.Database.GetAppliedMigrationsAsync()).Count());
         Assert.DoesNotContain(db.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.Name == "TenantId");
     }
 

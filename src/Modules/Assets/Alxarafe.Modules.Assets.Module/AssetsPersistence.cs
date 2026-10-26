@@ -25,6 +25,8 @@ internal static class AssetsPersistence
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException failure) when (failure.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         { throw new ResourceConflictException(AssetFailures.Duplicate); }
+        catch (DbUpdateException failure) when (failure.InnerException is PostgresException { SqlState: PostgresErrorCodes.ExclusionViolation })
+        { throw new ResourceConflictException(AssetFailures.AssignmentOverlap); }
         catch (DbUpdateException failure) when (failure.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
         { throw new ResourceConflictException(AssetFailures.Referenced); }
     }
@@ -50,7 +52,7 @@ internal static class AssetsPersistence
         {
             var parameter = Expression.Parameter(typeof(T));
             var property = Expression.Property(parameter, Property(filter.Field));
-            object? raw = filter.Value switch { UuidValue uuid => uuid.Value, TextValue text => text.Value, BooleanValue boolean => boolean.Value, _ => null };
+            object? raw = filter.Value switch { UuidValue uuid => uuid.Value, TextValue text => text.Value, BooleanValue boolean => boolean.Value, DateTimeValue instant => instant.Value.ToUniversalTime(), _ => null };
             Expression value = raw is null ? Expression.Constant(null, property.Type) : Expression.Convert(Expression.Constant(raw), property.Type);
             Expression body;
             if (filter.Operator is ResourceFilterOperator.Contains or ResourceFilterOperator.StartsWith)
@@ -60,14 +62,15 @@ internal static class AssetsPersistence
                 body = filter.Operator == ResourceFilterOperator.Equal ? Expression.Equal(property, value) : Expression.NotEqual(property, value);
             else
             {
-                var comparison = Expression.Call(typeof(string), nameof(string.Compare), Type.EmptyTypes, property, value);
-                var zero = Expression.Constant(0);
+                bool text = property.Type == typeof(string);
+                Expression comparison = text ? Expression.Call(typeof(string), nameof(string.Compare), Type.EmptyTypes, property, value) : property;
+                Expression bound = text ? Expression.Constant(0) : value;
                 body = filter.Operator switch
                 {
-                    ResourceFilterOperator.LessThan => Expression.LessThan(comparison, zero),
-                    ResourceFilterOperator.LessThanOrEqual => Expression.LessThanOrEqual(comparison, zero),
-                    ResourceFilterOperator.GreaterThan => Expression.GreaterThan(comparison, zero),
-                    _ => Expression.GreaterThanOrEqual(comparison, zero)
+                    ResourceFilterOperator.LessThan => Expression.LessThan(comparison, bound),
+                    ResourceFilterOperator.LessThanOrEqual => Expression.LessThanOrEqual(comparison, bound),
+                    ResourceFilterOperator.GreaterThan => Expression.GreaterThan(comparison, bound),
+                    _ => Expression.GreaterThanOrEqual(comparison, bound)
                 };
             }
             source = source.Where(Expression.Lambda<Func<T, bool>>(body, parameter));

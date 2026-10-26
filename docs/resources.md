@@ -27,7 +27,7 @@ are separate runtime values. Registration, invalid-definition/unknown-resource
 failures, constraints, structural relation resolution and action execution are covered
 by behavior tests. This is a usable generic infrastructure boundary, not a production
 ERP module or universal persistence engine. Production resource contribution/adapters
-remain module-owned; [Assets](assets.md) contributes the first eight production resources.
+remain module-owned; [Assets](assets.md) contributes the first nine production resources.
 
 ## Boundary and composition
 
@@ -49,7 +49,7 @@ Register providers through ordinary typed DI during composition. The Host eagerl
 constructs `ResourceRegistry` immediately after building services, before database
 initialization and HTTP. Invalid definitions prevent startup, including when a
 provider is supplied only in validation composition. The normal application currently
-has the eight Assets resources in its catalog. Metadata endpoints project this catalog; there is no
+has the nine Assets resources in its catalog. Metadata endpoints project this catalog; there is no
 resource administration endpoint.
 
 The registry validates local definitions, collects all resources, validates relation

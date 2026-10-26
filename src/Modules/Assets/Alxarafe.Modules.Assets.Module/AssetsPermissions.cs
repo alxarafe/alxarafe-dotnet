@@ -9,7 +9,8 @@ public static class AssetsPermissions
     public const string Maintain = "assets.maintain";
     public const string SchemaManage = "assets.schema.manage";
     public const string Sensitive = "assets.actions.sensitive";
-    public static readonly IReadOnlyList<string> All = Array.AsReadOnly(new[] { Read, Maintain, SchemaManage, Sensitive });
+    public const string Assignments = "assets.assignments.manage";
+    public static readonly IReadOnlyList<string> All = Array.AsReadOnly(new[] { Read, Maintain, SchemaManage, Sensitive, Assignments });
 
     internal static void Configure(IServiceCollection services) => services.AddAuthorization(options =>
     {

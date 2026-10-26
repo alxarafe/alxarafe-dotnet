@@ -34,7 +34,10 @@ public sealed class ModuleCompositionTests(TenantApplicationFactory factory) : I
         var resourcePaths = AssetResources.All.SelectMany(id => new[] { ResourceEndpoints.ResourcePath + "/" + id, ResourceEndpoints.ResourcePath + "/" + id + "/{id}" })
             .Concat(new[] { ResourceActionEndpoints.Path + "/" + AssetResources.Asset + ResourceActionEndpoints.AvailabilitySegment,
                 ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Complete + ResourceActionEndpoints.ExecutionSegment,
-                ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Retire + ResourceActionEndpoints.ExecutionSegment });
+                ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Retire + ResourceActionEndpoints.ExecutionSegment,
+                ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Assign + ResourceActionEndpoints.ExecutionSegment,
+                ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Unassign + ResourceActionEndpoints.ExecutionSegment,
+                ResourceActionEndpoints.Path + "/" + AssetResources.Asset + "/" + AssetActions.Transfer + ResourceActionEndpoints.ExecutionSegment });
         Assert.All(document.GetProperty("paths").EnumerateObject(), path => Assert.Contains(path.Name, corePaths.Concat(resourcePaths)));
         await using var context = await factory.Services.GetRequiredService<IDbContextFactory<PlatformDbContext>>().CreateDbContextAsync();
         await context.Database.OpenConnectionAsync();

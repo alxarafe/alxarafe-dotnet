@@ -59,7 +59,8 @@ public sealed class AssetCatalogueRepository<T>(IDbContextFactory<AssetsDbContex
                 || await db.FieldDefinitions.AnyAsync(field => field.AssetTypeId == row.Id, cancellationToken),
             ManufacturerRow => await db.Models.AnyAsync(model => model.ManufacturerId == row.Id, cancellationToken) || await db.Assets.AnyAsync(asset => asset.ManufacturerId == row.Id, cancellationToken),
             AssetModelRow => await db.Assets.AnyAsync(asset => asset.AssetModelId == row.Id, cancellationToken),
-            AssetLocationRow => await db.Assets.AnyAsync(asset => asset.LocationId == row.Id, cancellationToken),
+            AssetLocationRow => await db.Assets.AnyAsync(asset => asset.LocationId == row.Id, cancellationToken)
+                || await db.Assignments.AnyAsync(assignment => assignment.TargetId == row.Id, cancellationToken),
             _ => await db.Assets.AnyAsync(asset => asset.StatusId == row.Id, cancellationToken)
         };
         if (referenced) throw new ResourceConflictException(AssetFailures.Referenced);

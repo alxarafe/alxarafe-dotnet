@@ -14,6 +14,19 @@ public static class AssetsStorage
     public const string Locations = "assets_locations";
     public const string Statuses = "assets_statuses";
     public const string AssetTypeIdentityKey = "AK_assets_assets_id_assetTypeId";
+    public const string Assignments = "assets_assignments";
+    public const string CurrentAssignmentIndex = "IX_assets_assignments_current";
+    public const string AssignmentChronologyIndex = "IX_assets_assignments_chronology";
+    public const string AssignmentPeriodCheck = "assets_assignment_valid_period";
+    public const string AssignmentClosureCheck = "assets_assignment_closure_reason";
+    public const string AssignmentTargetCheck = "assets_assignment_target_type";
+    public const string AssignmentOverlapConstraint = "assets_assignment_no_overlap";
+    public const string AssignmentAssetForeignKey = "FK_assets_assignments_asset";
+    public const string AssignmentTargetForeignKey = "FK_assets_assignments_target";
+    public const string AssignmentGiSTSchema = "public";
+    public const string AssignmentGiSTExtension = "btree_gist";
+    public const string AssignmentUuidOperatorClass = "gist_uuid_ops";
+    public const string AssignmentRangeBounds = "[)";
     public const string FieldDefinitions = "assets_field_definitions";
     public const string FieldValues = "assets_field_values";
     public const string ValueAssetForeignKey = "FK_assets_field_values_asset";
@@ -37,7 +50,8 @@ public sealed class AssetsDbContext(DbContextOptions<AssetsDbContext> options) :
     public DbSet<AssetStatusRow> Statuses => Set<AssetStatusRow>();
     public DbSet<AssetFieldDefinitionRow> FieldDefinitions => Set<AssetFieldDefinitionRow>();
     public DbSet<AssetFieldValueRow> FieldValues => Set<AssetFieldValueRow>();
-    protected override void OnModelCreating(ModelBuilder modelBuilder) => Migrations.DynamicAssetFields.ConfigureModel(modelBuilder);
+    public DbSet<AssetAssignmentRow> Assignments => Set<AssetAssignmentRow>();
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => Migrations.AssetAssignments.ConfigureModel(modelBuilder);
 }
 
 public sealed class TenantAssetsDbContextFactory(ITenantDatabaseResolver resolver) : IDbContextFactory<AssetsDbContext>

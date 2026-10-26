@@ -179,8 +179,8 @@ Inactive history here means preserving current stored values, not a full tempora
 audit/version log of every earlier edit.
 
 Later tasks may add more canonical types/constraints, references, batched values,
-annotation transport and richer diagnostics after evidence and approval. ASSET-004
-still owns assignments and further business actions. Procurement, depreciation,
+annotation transport and richer diagnostics after evidence and approval. Assignments are now implemented separately in [ASSET-004](assets-assignments.md);
+further business actions remain future work. Procurement, depreciation,
 inventory discovery, maintenance, attachments, UI, global/tenant/user editor
 selection and a general schema migration framework remain excluded.
 

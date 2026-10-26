@@ -38,6 +38,15 @@ public static class AssetFields
     public const string DecimalValue = "decimalValue";
     public const string BooleanValue = "booleanValue";
     public const string DateValue = "dateValue";
+    public const string TenantId = "tenantId";
+    public const string TargetType = "targetType";
+    public const string TargetId = "targetId";
+    public const string TargetResourceId = "targetResourceId";
+    public const string StartedAt = "startedAt";
+    public const string EndedAt = "endedAt";
+    public const string Reason = "reason";
+    public const string StartReason = "startReason";
+    public const string EndReason = "endReason";
 }
 
 public static class AssetResources
@@ -50,7 +59,8 @@ public static class AssetResources
     public const string Status = "assets.asset-status";
     public const string FieldDefinition = "assets.asset-field-definition";
     public const string FieldValue = "assets.asset-field-value";
-    public static readonly IReadOnlyList<string> All = Array.AsReadOnly(new[] { Asset, Type, Manufacturer, Model, Location, Status, FieldDefinition, FieldValue });
+    public const string Assignment = "assets.asset-assignment";
+    public static readonly IReadOnlyList<string> All = Array.AsReadOnly(new[] { Asset, Type, Manufacturer, Model, Location, Status, FieldDefinition, FieldValue, Assignment });
 }
 
 public static class AssetLifecycle
@@ -64,6 +74,9 @@ public static class AssetActions
 {
     public const string Complete = "complete";
     public const string Retire = "retire";
+    public const string Assign = "assign";
+    public const string Unassign = "unassign";
+    public const string Transfer = "transfer";
 }
 
 public static class AssetStatusCodes
@@ -99,4 +112,9 @@ public static class AssetFailures
     public const string IncompatibleDefinition = "assets_incompatible_definition";
     public const string RequiredFields = "assets_required_fields_incomplete";
     public const string RequiredValue = "assets_required_value";
+    public const string AlreadyAssigned = "assets_already_assigned";
+    public const string NotAssigned = "assets_not_assigned";
+    public const string AssignmentOverlap = "assets_assignment_overlap";
+    public const string AssignmentChronology = "assets_assignment_chronology";
+    public const string SameAssignmentTarget = "assets_same_assignment_target";
 }

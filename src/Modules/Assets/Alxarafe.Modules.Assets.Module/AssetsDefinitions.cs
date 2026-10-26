@@ -11,7 +11,7 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
         Catalogue(AssetResources.Model, [new(AssetFields.ManufacturerId, ScalarType.Uuid, required: true, immutable: true, capabilities: new(true))],
             [new("manufacturer", RelationKind.ManyToOne, AssetResources.Manufacturer, AssetFields.ManufacturerId, AssetFields.Id, AssetFields.Name, true)]),
         Catalogue(AssetResources.Location), Catalogue(AssetResources.Status),
-        AssetDynamicDefinitions.Definition(), AssetDynamicDefinitions.Value(),
+        AssetDynamicDefinitions.Definition(), AssetDynamicDefinitions.Value(), AssetAssignmentDefinitions.Resource(),
         Definition(AssetResources.Asset,
             [new(AssetFields.Name, ScalarType.String, required: true, constraints: new TextConstraints(1, AssetLimits.NameLength), capabilities: new(true, true)),
                 new(AssetFields.AssetTypeId, ScalarType.Uuid, required: true, immutable: true, capabilities: new(true)),
@@ -31,7 +31,7 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
                 new("assetModel", RelationKind.ManyToOne, AssetResources.Model, AssetFields.AssetModelId, AssetFields.Id, AssetFields.Name),
                 new("location", RelationKind.ManyToOne, AssetResources.Location, AssetFields.LocationId, AssetFields.Id, AssetFields.Name),
                 new("status", RelationKind.ManyToOne, AssetResources.Status, AssetFields.StatusId, AssetFields.Id, AssetFields.Name, true)],
-            [new(AssetActions.Complete, ActionScope.Entity, AssetsPermissions.Maintain), new(AssetActions.Retire, ActionScope.Entity, AssetsPermissions.Sensitive)])
+            new ActionDefinition[] { new(AssetActions.Complete, ActionScope.Entity, AssetsPermissions.Maintain), new(AssetActions.Retire, ActionScope.Entity, AssetsPermissions.Sensitive) }.Concat(AssetAssignmentDefinitions.Actions))
     ];
 
     private static ResourceDefinition Catalogue(string id, IEnumerable<FieldDefinition>? extra = null, IEnumerable<RelationDefinition>? relations = null) =>

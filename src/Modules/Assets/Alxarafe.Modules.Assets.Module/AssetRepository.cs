@@ -58,6 +58,7 @@ public sealed class AssetRepository(IDbContextFactory<AssetsDbContext> contexts)
         var status = await db.Statuses.SingleAsync(status => status.Id == row.StatusId, cancellationToken);
         if (status.Code == AssetStatusCodes.Assigned) throw new ResourceConflictException(AssetFailures.InvalidTransition);
         if (await db.FieldValues.AnyAsync(value => value.AssetId == row.Id, cancellationToken)) throw new ResourceConflictException(AssetFailures.Referenced);
+        if (await db.Assignments.AnyAsync(assignment => assignment.AssetId == row.Id, cancellationToken)) throw new ResourceConflictException(AssetFailures.Referenced);
         db.Assets.Remove(row); await AssetsPersistence.Save(db, cancellationToken); await transaction.CommitAsync(cancellationToken);
         return true;
     }

@@ -6,5 +6,5 @@ namespace Alxarafe.Modules.Assets.Migrations;
 [DbContext(typeof(AssetsDbContext))]
 public sealed class AssetsDbContextModelSnapshot : ModelSnapshot
 {
-    protected override void BuildModel(ModelBuilder modelBuilder) => DynamicAssetFields.ConfigureModel(modelBuilder);
+    protected override void BuildModel(ModelBuilder modelBuilder) => AssetAssignments.ConfigureModel(modelBuilder);
 }

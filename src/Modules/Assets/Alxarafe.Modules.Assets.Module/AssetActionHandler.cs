@@ -23,6 +23,8 @@ public sealed class AssetActionHandler(string actionName, IDbContextFactory<Asse
         }
         else if (ActionName == AssetActions.Retire)
         {
+            if (await db.Assignments.AnyAsync(assignment => assignment.AssetId == id && assignment.EndedAt == null, cancellationToken))
+                throw new ResourceConflictException(AssetFailures.AlreadyAssigned);
             var status = await db.Statuses.SingleAsync(status => status.Id == row.StatusId, cancellationToken);
             await AssetDynamicFields.RequireComplete(db, row, cancellationToken);
             AssetRules.Retire(row, status);

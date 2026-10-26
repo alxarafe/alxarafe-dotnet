@@ -28,6 +28,7 @@ public sealed class AssetsTestContext : IAsyncLifetime
     private readonly List<Guid> users = [];
     private readonly string tenantB = "assets-" + Guid.NewGuid().ToString("N");
     private readonly ConcurrentDictionary<(string Resource, bool Secondary), ConcurrentBag<Guid>> created = new();
+    internal string Custody { get; private set; } = "";
     internal string Full { get; private set; } = "";
     internal string Writer { get; private set; } = "";
     internal string Reader { get; private set; } = "";
@@ -51,6 +52,7 @@ public sealed class AssetsTestContext : IAsyncLifetime
         }
         await Host.Services.GetRequiredService<AssetsModule>().InitializeAsync(Host.Services);
         Full = await User(AssetsPermissions.All, DevelopmentTenantBootstrap.TenantId); FullUser = users[^1];
+        Custody = await User([AssetsPermissions.Read, AssetsPermissions.Assignments], DevelopmentTenantBootstrap.TenantId);
         Writer = await User([AssetsPermissions.Read, AssetsPermissions.Maintain], DevelopmentTenantBootstrap.TenantId);
         Reader = await User([AssetsPermissions.Read], DevelopmentTenantBootstrap.TenantId);
         Schema = await User([AssetsPermissions.Read, AssetsPermissions.SchemaManage], DevelopmentTenantBootstrap.TenantId);
@@ -66,6 +68,8 @@ public sealed class AssetsTestContext : IAsyncLifetime
         {
             await using var db = await Database(secondary);
             Guid[] Ids(string resource) => created.GetValueOrDefault((resource, secondary))?.ToArray() ?? [];
+            var ownedAssets = Ids(AssetResources.Asset);
+            await db.Assignments.Where(row => ownedAssets.Contains(row.AssetId)).ExecuteDeleteAsync();
             var ids = Ids(AssetResources.FieldValue); await db.FieldValues.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
             ids = Ids(AssetResources.FieldDefinition); await db.FieldDefinitions.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();
             ids = Ids(AssetResources.Asset); await db.Assets.Where(row => ids.Contains(row.Id)).ExecuteDeleteAsync();

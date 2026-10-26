@@ -253,3 +253,10 @@ parse/project functions; its five optional typed API slots adapt the fixed
 resource schema without adding a polymorphic property to Runtime. Definitions
 remain tenant data, not global registry contributions. See [dynamic Asset
 fields](assets-dynamic-fields.md) for integrity, evolution and extraction limits.
+
+ASSET-004 keeps custody history in module-owned `AssetAssignment` records.
+Current custody is derived from the open history record, never a mutable field
+on Asset. Existing Resource actions provide transactional assignment operations;
+generic Resource CRUD exposes history read-only. Module PostgreSQL constraints
+protect temporal integrity. No Core/Runtime extension is needed; see
+[assignment history](assets-assignments.md).

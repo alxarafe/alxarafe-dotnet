@@ -1,6 +1,7 @@
 # Assets: persistent Resource Runtime module
 
-The current module extends its static foundation with [ASSET-003 dynamic fields](assets-dynamic-fields.md).
+The current module extends its static foundation with [ASSET-003 dynamic fields](assets-dynamic-fields.md)
+and [ASSET-004 assignment history](assets-assignments.md).
 That page documents the typed-slot API, stable JSONB storage, lifecycle and evolution rules.
 The ASSET-002 scope and verification below remain historical foundation evidence.
 

@@ -35,7 +35,22 @@ public sealed class AssetDynamicMigrationTests(AssetsTestContext context) : ICla
             Assert.Equal(asset.Name, (await db.Assets.SingleAsync()).Name); Assert.False(db.Database.HasPendingModelChanges());
             await db.GetService<IMigrator>().MigrateAsync(initial); db.ChangeTracker.Clear();
             Assert.Equal(asset.Id, (await db.Assets.SingleAsync()).Id);
-            await db.Database.MigrateAsync(); Assert.Equal(2, (await db.Database.GetAppliedMigrationsAsync()).Count());
+            await db.Database.MigrateAsync(); Assert.Equal(3, (await db.Database.GetAppliedMigrationsAsync()).Count());
+            var location = new AssetLocationRow { Id = Guid.NewGuid(), Code = "CUSTODY", Name = "Historical target", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            db.Locations.Add(location); await db.SaveChangesAsync();
+            var assignment = new AssetAssignmentRow
+            {
+                Id = Guid.NewGuid(),
+                AssetId = asset.Id,
+                TargetId = location.Id,
+                StartedAt = DateTimeOffset.UtcNow,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            };
+            db.Assignments.Add(assignment); await db.SaveChangesAsync();
+            await Assert.ThrowsAsync<PostgresException>(() => db.GetService<IMigrator>().MigrateAsync(initial));
+            db.ChangeTracker.Clear(); Assert.Equal(assignment.Id, (await db.Assignments.SingleAsync()).Id);
+            Assert.Equal(3, (await db.Database.GetAppliedMigrationsAsync()).Count());
         }
         finally
         {
