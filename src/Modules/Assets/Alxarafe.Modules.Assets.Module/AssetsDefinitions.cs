@@ -31,7 +31,7 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
                 new("assetModel", RelationKind.ManyToOne, AssetResources.Model, AssetFields.AssetModelId, AssetFields.Id, AssetFields.Name),
                 new("location", RelationKind.ManyToOne, AssetResources.Location, AssetFields.LocationId, AssetFields.Id, AssetFields.Name),
                 new("status", RelationKind.ManyToOne, AssetResources.Status, AssetFields.StatusId, AssetFields.Id, AssetFields.Name, true)],
-            new ActionDefinition[] { new(AssetActions.Complete, ActionScope.Entity, AssetsPermissions.Maintain), new(AssetActions.Retire, ActionScope.Entity, AssetsPermissions.Sensitive) }.Concat(AssetAssignmentDefinitions.Actions))
+            new ActionDefinition[] { new(AssetActions.Complete, ActionScope.Entity, AssetsPermissions.Maintain), new(AssetActions.Retire, ActionScope.Entity, AssetsPermissions.Sensitive) }.Concat(AssetAssignmentDefinitions.Actions), presentation: AssetPresentation.Definition)
     ];
 
     private static ResourceDefinition Catalogue(string id, IEnumerable<FieldDefinition>? extra = null, IEnumerable<RelationDefinition>? relations = null) =>
@@ -43,7 +43,7 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
         }.Concat(extra ?? []), id is AssetResources.Type or AssetResources.Status ? AssetsPermissions.SchemaManage : AssetsPermissions.Maintain, relations);
 
     internal static ResourceDefinition Definition(string id, IEnumerable<FieldDefinition> fields, string write,
-        IEnumerable<RelationDefinition>? relations = null, IEnumerable<ActionDefinition>? actions = null)
+        IEnumerable<RelationDefinition>? relations = null, IEnumerable<ActionDefinition>? actions = null, ResourcePresentationDefinition? presentation = null)
     {
         var operations = Enum.GetValues<ResourceOperation>();
         return new(id, AssetsModule.Version, AssetsModule.Id, new(AssetFields.Id), new FieldDefinition[]
@@ -52,6 +52,6 @@ public sealed class AssetsDefinitions : IResourceDefinitionProvider
             new(AssetFields.CreatedAt, ScalarType.DateTime, readOnly: true, capabilities: new(true, true)),
             new(AssetFields.UpdatedAt, ScalarType.DateTime, readOnly: true, capabilities: new(true, true))
         }.Concat(fields), operations, new(operations.Select(operation => new OperationSecurityRule(operation,
-            operation is ResourceOperation.Get or ResourceOperation.List ? [AssetsPermissions.Read] : [AssetsPermissions.Read, write]))), relations, actions);
+            operation is ResourceOperation.Get or ResourceOperation.List ? [AssetsPermissions.Read] : [AssetsPermissions.Read, write]))), relations, actions, presentation: presentation);
     }
 }

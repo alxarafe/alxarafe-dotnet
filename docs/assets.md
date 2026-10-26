@@ -218,3 +218,23 @@ cross-stack review decides whether behavior belongs in the shared contract;
 Core extraction requires separate evidence and approval. Frontend, full ITAM,
 generic relation expansion and automatic select/search with
 global/tenant/user settings remain out of scope.
+
+## Static Asset presentation
+
+CLIENT-RUNTIME-002 adds only a v0.13.0 presentation declaration on `assets.asset`:
+General (identity, equipment and state), Purchase and notes, Location and custody,
+and Audit. Existing actions are placed at form, tab and section level; notes and
+audit use existing collapse metadata. All visible static fields are placed, as
+required by the current definition validator. Physical/base location remains
+distinct from assignment history. No fields, permissions, validation, persistence
+or lifecycle behavior changed.
+
+Field presentation is static in v0.13.0; CRUD capabilities, actions and navigation
+are effective per user/context. Field-level authorization is outside this version.
+Layout is rendering metadata, never authorization.
+
+The presentation-only backend change passed focused metadata/Assets tests and both
+full checks (published v0.12.0 and explicitly selected unchanged v0.13.0 candidate):
+1,094 native tests, live conformance, persistence/log-secrecy and database/container
+cleanup. Both profiles receive identical fields/layout; effective operations/actions
+and ETags differ. No contract or published dependency pin changed.
