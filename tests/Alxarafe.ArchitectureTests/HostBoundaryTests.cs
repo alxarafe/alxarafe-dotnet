@@ -33,7 +33,7 @@ public sealed class HostBoundaryTests
     {
         Type[] markers =
         [
-            typeof(Alxarafe.Core.AssemblyMarker), typeof(Alxarafe.Modularity.ModuleRuntime),
+            typeof(Alxarafe.Core.AssemblyMarker), typeof(Alxarafe.Navigation.NavigationRegistry), typeof(Alxarafe.Modularity.ModuleRuntime),
             typeof(Alxarafe.AspNetCore.IHttpModule), typeof(Alxarafe.EntityFrameworkCore.AssemblyMarker),
             typeof(Alxarafe.Security.PermissionDefinition), typeof(Alxarafe.Security.AspNetCore.PermissionRequirement),
             typeof(Alxarafe.Security.EntityFrameworkCore.SecurityDbContext)

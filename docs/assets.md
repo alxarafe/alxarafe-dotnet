@@ -4,6 +4,7 @@ The current module extends its static foundation with [ASSET-003 dynamic fields]
 [ASSET-004 assignment history](assets-assignments.md), and
 [ASSET-005 register queries](assets-queries.md).
 These pages document dynamic values, custody history and register queries.
+Assets also contributes a curated [application navigation](navigation.md) group.
 The ASSET-002 scope and verification below remain historical foundation evidence.
 
 ASSET-002 is a completed, validated implementation-specific slice, based on the ASSET-001 design

@@ -265,3 +265,8 @@ ASSET-005 exercises the existing ResourceQuery protocol through module-local
 PostgreSQL translation, including exact typed JSONB predicates, literal Asset
 search and deterministic offset windows. It introduces no Runtime/Core or
 physical schema extension; see [Asset register queries](assets-queries.md).
+
+Application navigation is separate from ResourceDefinition. `Alxarafe.Navigation`
+collects module-owned declarations and resolves effective trees using existing
+authority/context services. Resource targets reference, rather than duplicate,
+resource metadata; see [navigation](navigation.md).

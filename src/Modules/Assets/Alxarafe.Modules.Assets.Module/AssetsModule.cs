@@ -1,4 +1,5 @@
 using Alxarafe.Core;
+using Alxarafe.Navigation;
 using Alxarafe.Modularity;
 using Alxarafe.Resources;
 using Alxarafe.Resources.Runtime;
@@ -15,6 +16,7 @@ public sealed class AssetsModule : IAlxarafeModule, IModuleServiceContributor, I
     public void ConfigureServices(IServiceCollection services)
     {
         AssetsPermissions.Configure(services);
+        services.AddSingleton<INavigationDefinitionProvider, AssetsNavigation>();
         services.AddSingleton<IResourceDefinitionProvider, AssetsDefinitions>();
         services.AddSingleton<IDbContextFactory<AssetsDbContext>, TenantAssetsDbContextFactory>();
         services.AddScoped<IResourceRepository, AssetRepository>();

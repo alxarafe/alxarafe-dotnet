@@ -43,3 +43,6 @@ that same release; historical reports retain their original revisions and result
 
 [Generic resource contract candidate](generic-resource-contract.md) describes
 CRUD-CONTRACT-001, the unchanged published pin and explicit candidate validation.
+
+[Effective navigation](navigation.md) documents module contributions, authorization,
+localization and private conditional caching for NAVIGATION-CONTRACT-001.

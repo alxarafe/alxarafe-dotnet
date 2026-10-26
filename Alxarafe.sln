@@ -54,6 +54,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Resources.AspNetCo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Modules.Assets.Module", "src/Modules/Assets/Alxarafe.Modules.Assets.Module/Alxarafe.Modules.Assets.Module.csproj", "{10000000-0000-0000-0000-000000000050}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alxarafe.Navigation", "src/Alxarafe.Navigation/Alxarafe.Navigation.csproj", "{8D328069-7119-4DC9-8810-C0AD456F4DF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -144,6 +146,10 @@ Global
 		{10000000-0000-0000-0000-000000000044}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10000000-0000-0000-0000-000000000044}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10000000-0000-0000-0000-000000000044}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D328069-7119-4DC9-8810-C0AD456F4DF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D328069-7119-4DC9-8810-C0AD456F4DF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D328069-7119-4DC9-8810-C0AD456F4DF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D328069-7119-4DC9-8810-C0AD456F4DF9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

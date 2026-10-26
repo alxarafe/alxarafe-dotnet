@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><RootNamespace>Alxarafe.Modules.Assets</RootNamespace></PropertyGroup>
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <ProjectReference Include="../../../Alxarafe.Core/Alxarafe.Core.csproj" />
@@ -8,4 +9,4 @@
         <ProjectReference Include="../../../Alxarafe.Security/Alxarafe.Security.csproj" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     </ItemGroup>
-</Project>
+<ItemGroup><ProjectReference Include="../../../Alxarafe.Navigation/Alxarafe.Navigation.csproj" /></ItemGroup></Project>

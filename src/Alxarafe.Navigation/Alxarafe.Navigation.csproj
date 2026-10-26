@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../Alxarafe.Resources.Runtime/Alxarafe.Resources.Runtime.csproj" />
+    <ProjectReference Include="../Alxarafe.AspNetCore/Alxarafe.AspNetCore.csproj" />
+    <ProjectReference Include="../Alxarafe.Security.AspNetCore/Alxarafe.Security.AspNetCore.csproj" />
+  </ItemGroup>
+</Project>

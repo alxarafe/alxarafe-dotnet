@@ -270,6 +270,7 @@ public sealed class ModulesApiTests(TenantApplicationFactory factory) : IClassFi
         {
             services.RemoveAll<ModuleRegistry>();
             services.RemoveAll<ModuleRuntime>();
+            services.RemoveAll<Alxarafe.Navigation.INavigationDefinitionProvider>();
             services.RemoveAll<Alxarafe.Resources.IResourceDefinitionProvider>();
             services.RemoveAll<Alxarafe.Resources.Runtime.ResourceRepositoryBinding>();
             services.RemoveAll<Alxarafe.Resources.Runtime.IResourceRepository>();

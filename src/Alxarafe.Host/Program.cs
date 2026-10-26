@@ -1,3 +1,4 @@
+using Alxarafe.Navigation;
 using System.Globalization;
 using Alxarafe.AspNetCore;
 using Alxarafe.Core;
@@ -93,6 +94,8 @@ if (builder.Environment.IsEnvironment(ConformanceModuleSource.EnvironmentName)
     && builder.Configuration.GetValue<bool>(ConformanceModuleSource.EnabledConfiguration))
     modules.AddSource(new ConformanceModuleSource());
 modules.Build();
+builder.Services.AddSingleton<NavigationRegistry>();
+builder.Services.AddScoped<NavigationService>();
 builder.Services.AddSingleton<ResourceRegistry>();
 builder.Services.AddSingleton<ResourceRepositoryCatalog>();
 builder.Services.AddScoped<ResourceRepositoryRegistry>();
@@ -145,6 +148,7 @@ var app = builder.Build();
 // Validate/freeze typed resource contributions before persistence initialization or HTTP.
 _ = app.Services.GetRequiredService<ResourceRegistry>();
 _ = app.Services.GetRequiredService<ResourceRepositoryCatalog>();
+_ = app.Services.GetRequiredService<NavigationRegistry>();
 using (var resourceScope = app.Services.CreateScope())
 {
     _ = resourceScope.ServiceProvider.GetRequiredService<ResourceRepositoryRegistry>();
@@ -182,6 +186,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     ResponseWriter = (context, _) => context.Response.WriteAsJsonAsync(new { status = "ok" })
 }).AllowAnonymous();
 app.MapAlxarafeModuleEndpoints();
+NavigationEndpoints.Map(app);
 ResourceEndpoints.Map(app);
 ResourceActionEndpoints.Map(app);
 app.Run();
