@@ -18,7 +18,7 @@ Attribute and Item Family catalogues. WMS also provides a
 extension, with persistent movements and current balances, outside shared
 WMS contract conformance. An implementation-specific [Assets vertical slice](docs/assets.md)
 uses Resource Runtime for persistent resources and lifecycle actions. [AI READ primitives](docs/ai-read-primitives.md) are
-part of the published v0.12.0 contract implemented by this backend. Real-provider
+part of the published v0.13.0 contract implemented by this backend. Real-provider
 results remain observational evidence, separate from deterministic conformance.
 
 The [tenancy foundation](docs/tenancy.md) separates Platform/Identity control-plane
@@ -67,12 +67,15 @@ tests, build, runtime and isolated shared API proxies; its
 records WEB-002 integration separately. Client CI does not perform backend
 shared-conformance validation.
 
-[contract.revision](contract.revision) declares published `v0.12.0`. Local and CI
+[contract.revision](contract.revision) declares published `v0.13.0`. Local and CI
 `./bin/check` verify the supplied checkout's origin, cleanliness, release-tag
 target and matching HEAD, then require shared conformance. Coverage includes HTTP
 liveness, login, basic CORE user administration, paged collections, dependency-safe
 CORE module administration, capability discovery and synchronous READ invocation,
-and provider-neutral AI assistant invocation over effective READ capabilities.
+provider-neutral AI assistant invocation over effective READ capabilities,
+[Generic Resource Runtime](docs/generic-resource-contract.md) and
+[effective navigation](docs/navigation.md). Generic CRUD and navigation now use
+the published immutable contract directly; the former candidate opt-in is removed.
 See [historical verification](docs/verification/users-001-collections-001.md) and
 [AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.8.0/docs/core/auth-001.md).
 AUTH-002, USERS-001, COLLECTIONS-001, CORE-CAP-001, CORE-CAP-002 and AI-001 are implemented.

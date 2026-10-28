@@ -1,9 +1,11 @@
 # Resource Platform
 
-The local [CRUD-CONTRACT-001 candidate](generic-resource-contract.md) now defines
-the shared generic protocol and explicit filterOperators metadata. The published
-pin remains v0.12.0; historical implementation/verification sections below retain
-their original scope and are not a candidate publication claim.
+The backend formally adopts published immutable
+[erbas-contract v0.13.0](generic-resource-contract.md), including the shared generic
+protocol, explicit filterOperators metadata and separate effective navigation.
+Authoritative local and CI checks use the published tag directly. Historical
+implementation/verification sections below retain their original scope and pins;
+they do not describe the current adoption state.
 
 RESOURCE-METADATA-001 implements the first Resource Platform foundation in
 `Alxarafe.Resources`. Backend metadata is the semantic authority; framework-specific

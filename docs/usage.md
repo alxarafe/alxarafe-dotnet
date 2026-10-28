@@ -5,12 +5,12 @@
 Docker and Docker Compose are required; host .NET, Bruno, Node and PostgreSQL are not.
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.12.0-checkout ./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.13.0-checkout ./bin/check
 ```
 
 The checkout must have the expected origin, no tracked/nonignored changes, HEAD and
-v0.12.0 tag object at 070990bef7bc0aa8ca8876c6b112d4edc6cf99d7, resolving to commit
-0d3d1c1cd81cc39b9d9eb8840381c415cb909363. bin/check never modifies it.
+v0.13.0 tag object at 919684db4f607a575397576b87577cd9582e1f86, resolving to commit
+29bd8de3e5c5772fea5096ab2c60abc6a10e55f7. bin/check never modifies it.
 CI uses the same authority and pinned release. Check executes restore/build/native
 architecture and integration tests, clean migrations, isolated Host startup, full
 shared Bruno, local Core Bruno (three requests), OpenAPI/persistence/secrecy checks
@@ -158,7 +158,7 @@ See the [effective access matrix](wms-inventory.md#development-identities).
 ## API and diagnostics
 
 Health is public process liveness, independent of database/modules. Auth login,
-current identity, user/module administration, WMS catalogues, contextual capability discovery, synchronous READ invocation and AI assistant invocation implement v0.12.0.
+current identity, user/module administration, WMS catalogues, contextual capability discovery, synchronous READ invocation and AI assistant invocation implement v0.13.0.
 POST /api/auth/register remains .NET-specific; portable clients must not depend on it.
 The WMS read discovery permissions map explicitly to the CORE administrator policy. Authentication/authorization
 precede parsing/lookup and functional gating. Local OpenAPI is available at
@@ -205,7 +205,7 @@ IDs. Responses are closed JSON with `Cache-Control: no-store`; only 401 carries 
 Bearer challenge.
 
 AI-API-001 exposes effective module READ primitives through a neutral controlled
-router under published v0.12.0. Existing capabilities retain CORE-CAP-002 execution;
+router under published v0.13.0. Existing capabilities retain CORE-CAP-002 execution;
 primitives have distinct typed provenance. See [design and validation](ai-read-primitives.md).
 The server exposes only authorized READ tools. It re-evaluates module state and
 permissions before every call, enforces finite turn/tool budgets and fails safely

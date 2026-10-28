@@ -1,10 +1,11 @@
 # Effective application navigation (NAVIGATION-CONTRACT-001)
 
-The unpublished v0.13.0 candidate now contains two separate protocols: Generic
-Resource Runtime CRUD and effective application navigation. The backend/CI pin
-remains published v0.12.0. No candidate publication/adoption or frontend change
-is claimed. The shared navigation specification is `docs/core/navigation-001.md`
-in erbas-contract.
+The backend formally adopts published immutable erbas-contract v0.13.0, including
+the separate Generic Resource Runtime CRUD and effective application navigation
+protocols. Local and CI checks verify the published tag's immutable identity and
+run its shared conformance directly. No candidate opt-in or frontend change is
+required. The shared navigation specification is `docs/core/navigation-001.md`
+in the supplied published contract checkout.
 
 ## Composition and boundaries
 
@@ -86,11 +87,14 @@ This is curated presentation, not a second schema registry or an ITAM feature.
 Tests also contribute synthetic local routes, icons, tied ordering and platform
 entries to prove the generic mechanism without adding production placeholder pages.
 No client code, route registry, workflow, dynamic-field composition, bulk UI,
-record-version protocol, SignalR or SSE is introduced. The normal published and
-explicit candidate check commands remain those documented in
-[generic resource contract validation](generic-resource-contract.md).
+record-version protocol, SignalR or SSE is introduced. The authoritative published
+check is documented in [generic resource contract validation](generic-resource-contract.md#validation).
 
-## Verification
+## Historical preparation verification
+
+The following evidence predates formal published v0.13.0 adoption. Its references
+to the old pin and candidate opt-in describe those historical runs; that opt-in
+has since been removed from `bin/check`.
 
 - Focused Docker integration/architecture validation exercised navigation and
   existing Assets behavior; full validation is the final authority.

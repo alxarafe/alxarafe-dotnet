@@ -1,7 +1,7 @@
 # AI providers: configuration, capabilities and validation
 
 This is the canonical reference for provider/model configuration and the scope
-of ERBAS provider support. The public API remains `erbas-contract v0.12.0`.
+of ERBAS provider support. The public API remains `erbas-contract v0.13.0`.
 [Local assistant testing](ai-assistant-testing.md) covers login, synthetic data
 and deliberate end-to-end requests. Real-provider observations are distinct from
 deterministic repository/conformance validation and do not guarantee answer quality.

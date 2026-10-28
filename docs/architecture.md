@@ -54,9 +54,11 @@ EF/UI runtime is introduced. See [backend execution](resources.md#generic-backen
 
 RESOURCE-API-001 adds the inward-facing `Alxarafe.Resources.AspNetCore` adapter for
 generic CRUD, explicit metadata/effective capabilities and OpenAPI derived from the
-frozen registry. Resources and Runtime remain ASP.NET-independent. These endpoints
-are .NET implementation extensions outside shared v0.12.0; see the
-[Resource HTTP boundary](resources.md#http-resource-api-and-metadata-projection).
+frozen registry. Resources and Runtime remain ASP.NET-independent. Generic HTTP
+behavior follows CRUD-CONTRACT-001 in adopted published v0.13.0; module resource
+implementations and derived OpenAPI remain backend-owned. See the
+[Resource HTTP boundary](resources.md#http-resource-api-and-metadata-projection)
+and [published contract adoption](generic-resource-contract.md).
 
 RESOURCE-ACTIONS-001 extends the same boundaries with typed semantic action parameters,
 scoped handler/availability composition and guarded execution. Actions reuse authoritative
@@ -168,7 +170,7 @@ CORE-CAP-002 execution; primitives use a controlled router with authoritative
 persisted identity resolution at discovery and before each execution. The AI orchestrator never
 references WMS/persistence or accepts arbitrary HTTP. Successful typed identities
 are returned in ordered `toolsUsed`; input is untrusted and budgets remain finite.
-See [AI-API-001 design](ai-read-primitives.md), including the published v0.12.0
+See [AI-API-001 design](ai-read-primitives.md), including the published v0.13.0
 response extension and deterministic conformance validation.
 
 Infrastructure resolves `AI:Provider` behind `IAiModelClient`. Groq and local
@@ -222,7 +224,7 @@ entry-only WMS/AI/Assets references, pure WMS domain/application boundaries and
 resource ownership. Native integration uses real PostgreSQL and Identity; test-only
 HTTP probes certify canonical gating, permission precedence, current-user state,
 localized ProblemDetails and unchanged routes/migrations. Probes never enter Host.
-Shared conformance uses the pinned v0.12.0 checkout. Local Bruno
+Shared conformance uses the pinned v0.13.0 checkout. Local Bruno
 covers Core Health and Identity registration/localization. ./bin/check remains the
 single authority, with only its two temporary databases removed on success/failure.
 
