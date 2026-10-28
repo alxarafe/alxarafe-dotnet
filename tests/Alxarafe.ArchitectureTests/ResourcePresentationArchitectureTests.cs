@@ -12,7 +12,7 @@ public sealed class ResourcePresentationArchitectureTests
     [Fact]
     public void LayoutContractsAreImmutableSemanticTypesWithoutFrameworkOrUntypedPayloads()
     {
-        Type[] types = [typeof(ResourcePresentationDefinition), typeof(ResourceFormDefinition), typeof(ResourceFormBehavior), typeof(ResourceFormTab), typeof(ResourceFormSection), typeof(ResourceFormFieldGroup)];
+        Type[] types = [typeof(ResourceContextPresentationDefinition), typeof(ResourceListPresentationDefinition), typeof(ResourceListColumn), typeof(ResourcePresentationDefinition), typeof(ResourceFormDefinition), typeof(ResourceFormBehavior), typeof(ResourceFormTab), typeof(ResourceFormSection), typeof(ResourceFormFieldGroup)];
         foreach (var type in types)
         {
             Assert.Equal(typeof(ResourceDefinition).Assembly, type.Assembly);
@@ -24,6 +24,18 @@ public sealed class ResourcePresentationArchitectureTests
         Assert.DoesNotContain(typeof(ResourceFormDefinition).Assembly.GetReferencedAssemblies(), reference => reference.Name!.Contains("AspNetCore", StringComparison.Ordinal) || reference.Name.Contains("EntityFramework", StringComparison.Ordinal) || reference.Name.Contains("Modules.", StringComparison.Ordinal));
     }
     [Fact]
+    public void PresentationFrameworkNeverBranchesOnAssetsOrOtherBusinessResourceIdentities()
+    {
+        foreach (string project in new[] { "Alxarafe.Resources", "Alxarafe.Resources.Runtime", "Alxarafe.Resources.AspNetCore" })
+            foreach (string file in Directory.GetFiles(Path.Combine(HostBoundaryTests.RepositoryRoot, "src", project), "*.cs"))
+            {
+                string source = File.ReadAllText(file);
+                Assert.DoesNotContain("\"assets.", source, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("AssetResources", source, StringComparison.Ordinal);
+                Assert.DoesNotContain("AssetFields", source, StringComparison.Ordinal);
+            }
+    }
+    [Fact]
     public void CrudAndActionsDoNotReadOrInterpretLayout()
     {
         string directory = Path.Combine(HostBoundaryTests.RepositoryRoot, "src/Alxarafe.Resources.Runtime");
@@ -31,6 +43,7 @@ public sealed class ResourcePresentationArchitectureTests
         {
             string source = File.ReadAllText(file);
             Assert.DoesNotContain(".Presentation", source, StringComparison.Ordinal);
+            Assert.DoesNotContain(".ContextualPresentation", source, StringComparison.Ordinal);
             Assert.DoesNotContain(nameof(ResourceFormDefinition), source, StringComparison.Ordinal);
         }
         Assert.Equal(typeof(ResourceRuntime).Assembly, typeof(ResourceActionRuntime).Assembly);

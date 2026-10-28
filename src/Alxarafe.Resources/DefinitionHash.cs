@@ -9,13 +9,14 @@ namespace Alxarafe.Resources;
 internal static partial class DefinitionHash
 {
     private const string CanonicalFormat = "erbas.resource-definition.v3";
+    private const string ContextualCanonicalFormat = "erbas.resource-definition.v4";
     internal static string Compute(ResourceDefinition resource, IReadOnlyDictionary<string, AnnotationTerm> terms)
     {
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream))
         {
             writer.WriteStartObject();
-            writer.WriteString("format", CanonicalFormat);
+            writer.WriteString("format", resource.ContextualPresentation is null ? CanonicalFormat : ContextualCanonicalFormat);
             writer.WriteString("id", resource.Id);
             writer.WriteString("version", resource.Version);
             writer.WriteString("moduleId", resource.ModuleId);
@@ -68,6 +69,7 @@ internal static partial class DefinitionHash
             }
             writer.WriteEndArray();
             Presentation(writer, resource.Presentation);
+            if (resource.ContextualPresentation is { } contextual) ContextualPresentation(writer, contextual);
             Annotations(writer, resource.Annotations, terms);
             writer.WriteEndObject();
         }

@@ -75,7 +75,8 @@ CORE module administration, capability discovery and synchronous READ invocation
 provider-neutral AI assistant invocation over effective READ capabilities,
 [Generic Resource Runtime](docs/generic-resource-contract.md) and
 [effective navigation](docs/navigation.md). Generic CRUD and navigation now use
-the published immutable contract directly; the former candidate opt-in is removed.
+the published immutable contract directly. Separate [candidate development checks](docs/usage.md#additional-candidate-verification)
+never replace published conformance or change the adopted release.
 See [historical verification](docs/verification/users-001-collections-001.md) and
 [AUTH-001](https://github.com/alxarafe/erbas-contract/blob/v0.8.0/docs/core/auth-001.md).
 AUTH-002, USERS-001, COLLECTIONS-001, CORE-CAP-001, CORE-CAP-002 and AI-001 are implemented.

@@ -3,10 +3,10 @@ using Alxarafe.AspNetCore;
 using Alxarafe.EntityFrameworkCore;
 using Alxarafe.Modularity;
 using Alxarafe.Modules.Ai;
-using Alxarafe.Modules.Assets;
 using Alxarafe.Modules.Ai.Application;
 using Alxarafe.Modules.Ai.Http;
 using Alxarafe.Modules.Ai.Persistence;
+using Alxarafe.Modules.Assets;
 using Alxarafe.Modules.Wms;
 using Alxarafe.Modules.Wms.Http;
 using Alxarafe.Modules.Wms.Infrastructure;
@@ -27,7 +27,8 @@ public sealed class ModuleCompositionTests(TenantApplicationFactory factory) : I
         using var client = factory.CreateClient();
         var document = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/openapi/v1.json");
         string[] corePaths = ["/health", "/api/auth/login", "/api/auth/register", "/api/auth/me",
-            "/api/users", "/api/users/{id}", Alxarafe.Navigation.NavigationEndpoints.Path, ResourceEndpoints.MetadataPath, ResourceEndpoints.MetadataPath + "/{resource}", "/api/modules", "/api/modules/{id}", CapabilityEndpoints.Path, CapabilityEndpoints.Path + "/{capabilityId}", CapabilityEndpoints.Path + "/{capabilityId}/invocations", AiAssistantEndpoints.Path, UomEndpoints.Path, StorageAttributeEndpoints.Path,
+            "/api/users", "/api/users/{id}", Alxarafe.Navigation.NavigationEndpoints.Path, ResourceEndpoints.MetadataPath, ResourceEndpoints.MetadataPath + "/{resource}",
+            ResourceEndpoints.MetadataPath + "/{resource}" + ResourceEndpoints.PresentationSuffix, "/api/modules", "/api/modules/{id}", CapabilityEndpoints.Path, CapabilityEndpoints.Path + "/{capabilityId}", CapabilityEndpoints.Path + "/{capabilityId}/invocations", AiAssistantEndpoints.Path, UomEndpoints.Path, StorageAttributeEndpoints.Path,
             InventoryEndpoints.Warehouses, InventoryEndpoints.Warehouses + "/{id}", InventoryEndpoints.Locations, InventoryEndpoints.Locations + "/{id}",
             InventoryEndpoints.Items, InventoryEndpoints.Items + "/{id}", InventoryEndpoints.Movements, InventoryEndpoints.Movements + "/{id}", InventoryEndpoints.Inventory,
             ItemFamilyEndpoints.Path, ItemFamilyAssociationEndpoints.Path, ItemFamilyAssociationEndpoints.Path + "/{storageAttributeId}"];

@@ -68,8 +68,16 @@ atomicity. See [Resource Actions](resources.md#executable-resource-actions).
 RESOURCE-UI-METADATA-001 adds immutable neutral form tabs/sections/field groups,
 strict placement validation and unsaved-change policy to semantic Resources. HTTP
 projects explicit presentation DTOs; Runtime does not interpret layout. Canonical
-hash v3 and existing ETags cover presentation changes. See
+hash v3 and existing ETags cover legacy presentation changes. See
 [form metadata](resources.md#presentation-neutral-form-metadata).
+
+RESOURCE-PRESENTATION-001 adds optional LIST/CREATE/EDIT/VIEW declarations to the
+same frozen definition. It reuses the form primitives and projects a separate
+metadata endpoint, preserving closed v0.13.0 metadata shapes. Definitions with
+contextual declarations use canonical hash v4 in the same hash pipeline; legacy
+definitions retain v3. Runtime and authorization do not interpret layout. See
+[contextual presentation](resource-presentation-001.md) for the unpublished
+candidate identity and Assets declaration.
 
 Platform owns module_states and __PlatformMigrationsHistory through EF Core.
 Security owns Identity separately. Development uses alxarafe/alxarafe_security;

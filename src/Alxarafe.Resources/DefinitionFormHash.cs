@@ -9,11 +9,17 @@ internal static partial class DefinitionHash
         writer.WritePropertyName("presentation");
         if (presentation is null) { writer.WriteNullValue(); return; }
         writer.WriteStartObject();
-        writer.WriteStartObject("form");
-        writer.WriteString("unsavedChanges", Enum.GetName(presentation.Form.Behavior.UnsavedChanges));
-        References(writer, "actions", presentation.Form.Actions);
+        writer.WritePropertyName("form");
+        Form(writer, presentation.Form);
+        writer.WriteEndObject();
+    }
+    private static void Form(Utf8JsonWriter writer, ResourceFormDefinition form)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("unsavedChanges", Enum.GetName(form.Behavior.UnsavedChanges));
+        References(writer, "actions", form.Actions);
         writer.WriteStartArray("tabs");
-        foreach (var tab in presentation.Form.Tabs)
+        foreach (var tab in form.Tabs)
         {
             writer.WriteStartObject();
             writer.WriteString("id", tab.Id); writer.WriteString("label", tab.Label);
@@ -41,6 +47,23 @@ internal static partial class DefinitionHash
         }
         writer.WriteEndArray();
         writer.WriteEndObject();
+    }
+    private static void ContextualPresentation(Utf8JsonWriter writer, ResourceContextPresentationDefinition contextual)
+    {
+        writer.WriteStartObject("contextualPresentation");
+        if (contextual.List is { } list)
+        {
+            writer.WriteStartObject("list");
+            writer.WriteStartArray("columns");
+            foreach (var column in list.Columns)
+            {
+                writer.WriteStartObject(); writer.WriteString("field", column.Field); writer.WriteString("label", column.Label); writer.WriteEndObject();
+            }
+            writer.WriteEndArray(); References(writer, "actions", list.Actions); writer.WriteEndObject();
+        }
+        if (contextual.Create is { } create) { writer.WritePropertyName("create"); Form(writer, create); }
+        if (contextual.Edit is { } edit) { writer.WritePropertyName("edit"); Form(writer, edit); }
+        if (contextual.View is { } view) { writer.WritePropertyName("view"); Form(writer, view); }
         writer.WriteEndObject();
     }
     private static void References(Utf8JsonWriter writer, string property, IReadOnlyList<string> references)

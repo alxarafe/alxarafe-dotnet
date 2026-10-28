@@ -85,6 +85,7 @@ public sealed record ActionDefinition
 public sealed record ResourceDefinition
 {
     public ResourcePresentationDefinition? Presentation { get; }
+    public ResourceContextPresentationDefinition? ContextualPresentation { get; }
     public string Id { get; }
     public string Version { get; }
     public string ModuleId { get; }
@@ -99,9 +100,10 @@ public sealed record ResourceDefinition
     public ResourceDefinition(string id, string version, string moduleId, IdDefinition idDefinition,
         IEnumerable<FieldDefinition> fields, IEnumerable<ResourceOperation> operations, ResourceSecurity security,
         IEnumerable<RelationDefinition>? relations = null, IEnumerable<ActionDefinition>? actions = null,
-        IEnumerable<Annotation>? annotations = null, ResourcePresentationDefinition? presentation = null)
+        IEnumerable<Annotation>? annotations = null, ResourcePresentationDefinition? presentation = null,
+        ResourceContextPresentationDefinition? contextualPresentation = null)
     {
-        Presentation = presentation;
+        Presentation = presentation; ContextualPresentation = contextualPresentation;
         Id = id; Version = version; ModuleId = moduleId; IdDefinition = idDefinition;
         Fields = Snapshot.Of(fields); Operations = Snapshot.Of(operations); Security = security;
         Relations = Snapshot.Of(relations); Actions = Snapshot.Of(actions); Annotations = Snapshot.Of(annotations);

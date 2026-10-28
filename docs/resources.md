@@ -177,7 +177,9 @@ invalid defaults/constraints/security/annotations and unresolved relations fail 
 The exception contains no business execution, HTTP response or authorization decision.
 
 Each validated resource gets a lowercase SHA-256 DefinitionHash from a deliberate
-UTF-8 JSON semantic projection marked `erbas.resource-definition.v3`. It includes
+UTF-8 JSON semantic projection marked `erbas.resource-definition.v3` for legacy
+definitions, or `erbas.resource-definition.v4` when contextual declarations are
+present. The same hash pipeline includes
 identity/version/owner/ID field, fields and effective constraints/defaults/capabilities,
 relations, operations/security, actions/parameters, presentation and typed annotations (including used term
 shapes/targets). It includes no CLR type/assembly name, provider implementation,
@@ -206,6 +208,14 @@ Golden-vector tests pin the canonical format; insertion order, current culture a
 provider identity cannot alter equivalent hashes. Semantic field, constraint,
 permission, action, relation, version and annotation changes alter hashes. Changes
 to the canonical projection require deliberate format/version review.
+
+RESOURCE-PRESENTATION-001 preserves the legacy v3 bytes/golden vector for definitions
+without contexts. A present contextual declaration, even an empty one, selects v4
+and includes ordered LIST columns/actions and CREATE/EDIT/VIEW forms in the same
+canonical projection. Context changes therefore invalidate both detailed metadata
+and contextual presentation identity; no independent layout hash is introduced.
+See [contextual presentation](resource-presentation-001.md) for the separate
+endpoint, absent-versus-empty behavior and exact unpublished candidate validation.
 
 ### Future frontend metadata cache coherence
 

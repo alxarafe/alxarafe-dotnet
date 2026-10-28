@@ -31,13 +31,41 @@ initially enabled state through the normal pipeline. Shared conformance
 changes/restores module states. Canonical descriptors expose no business or
 mathematical endpoints.
 
-Shared conformance executes the sole published collection: **590 requests / 2587
-named checks**, including the earlier UoM, Storage Attribute and Item Family
-coverage plus CORE capability discovery, synchronous READ invocation and AI
-assistant invocation. All three WMS catalogues and associations start empty
+Shared conformance executes the sole published collection, including UoM,
+Storage Attribute and Item Family coverage, CORE capability discovery, synchronous
+READ/AI assistant invocation, Generic Resource Runtime and effective navigation.
+The optional candidate check below additionally verifies contextual presentation.
+All three WMS catalogues and associations start empty
 in the disposable validation database. Post-conformance SQL verifies retained data and enabled state.
 See [AI-001 evidence](verification/ai-001-dotnet.md) and
 [WMS-003 evidence](verification/wms-003-dotnet.md); earlier verification reports remain historical.
+
+## Additional candidate verification
+
+`contract.revision` and CI remain pinned to published immutable **v0.13.0**.
+Development can explicitly validate an unpublished candidate in addition to it:
+
+```bash
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.13.0-checkout \
+ERBAS_CONTRACT_CANDIDATE_DIR=/absolute/path/to/clean-candidate-checkout \
+ERBAS_CONTRACT_CANDIDATE_COMMIT=9919ad3725e50d63e7a19befbe0d81b4d91df0cc \
+./bin/check
+```
+
+Both candidate variables are required together. The candidate must be an official
+`alxarafe/erbas-contract` repository root, clean of tracked/nonignored changes,
+with executable `bin/test` and HEAD exactly equal to the supplied full commit SHA.
+There is no fetch, branch following, checkout modification, hardcoded candidate
+version or remote mutable dependency in CI. A branch name is not accepted as a SHA.
+
+The native suite runs first. Published shared conformance always runs before the
+candidate. The check then stops the validation Host and recreates all four test
+databases before running the candidate's single shared collection, local Bruno,
+OpenAPI, persistence and sensitive-log checks again. Cleanup is mandatory on
+success or failure. Logs distinguish `PUBLISHED_CONTRACT_CONFORMANCE` from
+`UNPUBLISHED_CONTRACT_CANDIDATE` and `CANDIDATE_CONFORMANCE` with the exact SHA.
+A candidate result is development evidence, not publication or formal adoption.
+See [RESOURCE-PRESENTATION-001](resource-presentation-001.md).
 
 ## WMS unit of measure
 

@@ -6,6 +6,13 @@ namespace Alxarafe.Modules.Assets;
 // their existing definitions/handlers; placement never grants an operation.
 internal static class AssetPresentation
 {
+    internal static ResourceContextPresentationDefinition Contextual => new(
+        list: new([new(AssetFields.Name), new(AssetFields.AssetTypeId), new(AssetFields.AssetTag),
+            new(AssetFields.Lifecycle), new(AssetFields.Condition), new(AssetFields.LocationId)]),
+        create: new([new("general", [new("identity", [new("identity", [AssetFields.AssetTypeId, AssetFields.Name], "Identity")], "Identification")], "General")]),
+        edit: Definition.Form,
+        view: Definition.Form);
+
     internal static ResourcePresentationDefinition Definition => new(new(
     [new("general",
         [new("identity", [new("identity", [AssetFields.Name, AssetFields.AssetTypeId], "Identity"),

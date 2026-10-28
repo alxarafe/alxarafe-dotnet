@@ -40,8 +40,12 @@ ERBAS_CONTRACT_DIR=/path/to/clean/v0.13.0 ./bin/check
 The check verifies repository root, expected GitHub origin, exact annotated tag
 object, target commit, matching HEAD, cleanliness and runner entrypoint. It invokes
 that checkout's sole shared conformance collection directly on the isolated
-validation network. The former v0.13.0 candidate override has been removed; there
-is no second candidate path. CI checks out the same published tag.
+validation network. The former v0.13.0-specific candidate override remains removed.
+CI checks out the same published tag. Optional [candidate development verification](usage.md#additional-candidate-verification)
+now runs an additional exact-SHA check after published conformance, on fresh
+validation databases; it cannot substitute for the published checkout.
+[RESOURCE-PRESENTATION-001](resource-presentation-001.md) uses that separate path
+without claiming adoption of unpublished v0.14.0.
 
 Native tests, shared generic CRUD/navigation conformance, local Bruno, persistence,
 log secrecy, architecture and disposable database/container cleanup remain

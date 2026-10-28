@@ -20,6 +20,7 @@
 | [Assets vertical slice](assets.md) | ASSET-002: static persistent resources through Resource Runtime, lifecycle, permissions, tenant storage and limitations |
 | [Usage](usage.md) | Docker development, full validation, networking, isolation and cleanup |
 | [Resource Platform](resources.md) | Semantic metadata, canonical hashes, generic execution, authoritative guards, REST/Metadata API, authorized contextual actions, neutral form layout and derived OpenAPI |
+| [Contextual resource presentation](resource-presentation-001.md) | RESOURCE-PRESENTATION-001: separate static LIST/CREATE/EDIT/VIEW declarations, Assets two-phase flow and exact unpublished candidate verification |
 | [Architecture](architecture.md) | Module boundaries and composition |
 | [API internationalization](i18n.md) | English fallback, native request negotiation and module-owned validation resources |
 | [I18N-001 verification](verification/i18n-001.md) | Historical native/HTTP totals and conformance before experimental-module removal |
@@ -44,7 +45,9 @@ that same release; historical reports retain their original revisions and result
 [Generic resource contract adoption](generic-resource-contract.md) records formal
 published v0.13.0 adoption, immutable identity and direct shared conformance for
 Generic Resource Runtime and effective navigation. Historical candidate evidence
-retains its original revisions and results; the candidate opt-in is removed.
+retains its original revisions and results. The old v0.13.0-specific override remains
+removed; [explicit candidate verification](usage.md#additional-candidate-verification)
+is additive to published conformance and does not change the adopted release.
 
 [Effective navigation](navigation.md) documents module contributions, authorization,
 localization and private conditional caching for NAVIGATION-CONTRACT-001.

@@ -46,6 +46,30 @@ if [[ "$contract_head" != "$contract_commit" ]] ||
     exit 2
 fi
 
+# Optional development verification is additive and bound to an explicitly supplied SHA.
+# Never fetch, follow a branch, or replace the published checkout/conformance.
+candidate_dir="${ERBAS_CONTRACT_CANDIDATE_DIR:-}"
+candidate_commit="${ERBAS_CONTRACT_CANDIDATE_COMMIT:-}"
+if [[ -n "$candidate_dir" || -n "$candidate_commit" ]]; then
+    if [[ ! -d "$candidate_dir" || ! "$candidate_commit" =~ ^[0-9a-f]{40}$ ]]; then
+        echo 'ERROR: candidate verification requires an explicit checkout and full commit SHA' >&2
+        exit 2
+    fi
+    candidate_dir="$(cd "$candidate_dir" && pwd -P)"
+    candidate_origin="$(git -C "$candidate_dir" remote get-url origin)"
+    case "$candidate_origin" in
+        git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
+        *) echo 'ERROR: unexpected candidate contract origin' >&2; exit 2 ;;
+    esac
+    if [[ "$(git -C "$candidate_dir" rev-parse --show-toplevel)" != "$candidate_dir" ]] ||
+        [[ "$(git -C "$candidate_dir" rev-parse HEAD)" != "$candidate_commit" ]] ||
+        [[ -n "$(GIT_OPTIONAL_LOCKS=0 git -C "$candidate_dir" status --porcelain=v1 --untracked-files=all)" ]] ||
+        [[ ! -x "$candidate_dir/bin/test" ]]; then
+        echo 'ERROR: candidate checkout must be clean, at the exact supplied SHA, with its public runner' >&2
+        exit 2
+    fi
+fi
+
 source ./bin/validation-db
 
 # Always use a disposable CORE administrator, separate from module fixtures.
@@ -93,11 +117,14 @@ validation_db_create
 echo "==> Running .NET restore, build, and tests"
 ./bin/test --prepared
 
-echo "==> Starting isolated validation Host"
-docker compose up -d --wait --wait-timeout 120 validation-app
+run_conformance() {
+    local selected_contract_dir="$1"
+    local validation_container validation_network openapi app_logs
+    echo "==> Starting isolated validation Host"
+    docker compose up -d --wait --wait-timeout 120 validation-app
 
-echo "==> Verifying the pinned shared HTTP contract"
-docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v ON_ERROR_STOP=1 <<'SQL'
+    echo "==> Verifying the pinned shared HTTP contract"
+    docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
     IF to_regclass('public.ai_usage_records') IS NULL
        OR to_regclass('public.ai_usage_invocations') IS NULL
@@ -114,7 +141,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 SQL
-docker compose exec -T postgres psql -U alxarafe -d "$validation_business_db" -v ON_ERROR_STOP=1 <<'SQL'
+    docker compose exec -T postgres psql -U alxarafe -d "$validation_business_db" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
     IF to_regclass('public.tenants') IS NOT NULL
        OR to_regclass('public.ai_usage_records') IS NOT NULL
@@ -137,44 +164,44 @@ DO $$ BEGIN
     END IF;
 END $$;
 SQL
-echo 'WMS_FRESH_INSTALL=passed HISTORIES=separate CATALOGUE=empty'
-validation_container=$(docker compose ps --quiet validation-app)
-validation_network=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' "$validation_container")
-if [[ -z "$validation_network" || "$validation_network" == *$'\n'* ]]; then
-    echo "ERROR: validation Host must have exactly one isolated Docker network" >&2
-    exit 1
-fi
-"$CONTRACT_DIR/bin/test" --network "$validation_network" http://validation-app:8080
+    echo 'WMS_FRESH_INSTALL=passed HISTORIES=separate CATALOGUE=empty'
+    validation_container=$(docker compose ps --quiet validation-app)
+    validation_network=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' "$validation_container")
+    if [[ -z "$validation_network" || "$validation_network" == *$'\n'* ]]; then
+        echo "ERROR: validation Host must have exactly one isolated Docker network" >&2
+        exit 1
+    fi
+    "$selected_contract_dir/bin/test" --network "$validation_network" http://validation-app:8080
 
-echo "==> Checking health endpoint from the validation network"
-docker compose exec -T validation-app curl --fail --silent --show-error http://localhost:8080/health >/dev/null
+    echo "==> Checking health endpoint from the validation network"
+    docker compose exec -T validation-app curl --fail --silent --show-error http://localhost:8080/health >/dev/null
 
-echo "==> Checking OpenAPI from the validation network"
-openapi="$(docker compose exec -T validation-app curl --fail --silent --show-error http://localhost:8080/openapi/v1.json)"
-grep -Fq '"/api/auth/register"' <<<"$openapi"
-grep -Fq '"/api/auth/login"' <<<"$openapi"
-grep -Fq '"/api/auth/me"' <<<"$openapi"
-grep -Fq '"/api/users"' <<<"$openapi"
-grep -Fq '"/api/users/{id}"' <<<"$openapi"
-grep -Fq '"/api/modules"' <<<"$openapi"
-grep -Fq '"/api/modules/{id}"' <<<"$openapi"
-grep -Fq '"/api/ai/assistant/invocations"' <<<"$openapi"
-grep -Fq '"/api/wms/uoms"' <<<"$openapi"
-grep -Fq '"/api/wms/storage-attributes"' <<<"$openapi"
-grep -Fq '"/api/wms/item-families"' <<<"$openapi"
-grep -Fq '"/api/wms/item-families/{familyId}/storage-attributes"' <<<"$openapi"
-grep -Fq '"/api/wms/item-families/{familyId}/storage-attributes/{storageAttributeId}"' <<<"$openapi"
+    echo "==> Checking OpenAPI from the validation network"
+    openapi="$(docker compose exec -T validation-app curl --fail --silent --show-error http://localhost:8080/openapi/v1.json)"
+    grep -Fq '"/api/auth/register"' <<<"$openapi"
+    grep -Fq '"/api/auth/login"' <<<"$openapi"
+    grep -Fq '"/api/auth/me"' <<<"$openapi"
+    grep -Fq '"/api/users"' <<<"$openapi"
+    grep -Fq '"/api/users/{id}"' <<<"$openapi"
+    grep -Fq '"/api/modules"' <<<"$openapi"
+    grep -Fq '"/api/modules/{id}"' <<<"$openapi"
+    grep -Fq '"/api/ai/assistant/invocations"' <<<"$openapi"
+    grep -Fq '"/api/wms/uoms"' <<<"$openapi"
+    grep -Fq '"/api/wms/storage-attributes"' <<<"$openapi"
+    grep -Fq '"/api/wms/item-families"' <<<"$openapi"
+    grep -Fq '"/api/wms/item-families/{familyId}/storage-attributes"' <<<"$openapi"
+    grep -Fq '"/api/wms/item-families/{familyId}/storage-attributes/{storageAttributeId}"' <<<"$openapi"
 
-echo "==> Running platform and module Bruno suites"
-./bin/bruno --prepared
+    echo "==> Running platform and module Bruno suites"
+    ./bin/bruno --prepared
 
-echo "==> Verifying persisted data in PostgreSQL"
-docker compose exec -T postgres psql -U alxarafe -d "$validation_security_db" -tAc \
-    "SELECT 1 FROM information_schema.tables WHERE table_name = 'AspNetUsers'" | grep -Fxq '1'
-docker compose exec -T postgres psql -U alxarafe -d "$validation_security_db" -tAc \
-    "SELECT COUNT(*) FROM \"AspNetUsers\"" | awk '{ if ($1 < 1) exit 1 }'
+    echo "==> Verifying persisted data in PostgreSQL"
+    docker compose exec -T postgres psql -U alxarafe -d "$validation_security_db" -tAc \
+        "SELECT 1 FROM information_schema.tables WHERE table_name = 'AspNetUsers'" | grep -Fxq '1'
+    docker compose exec -T postgres psql -U alxarafe -d "$validation_security_db" -tAc \
+        "SELECT COUNT(*) FROM \"AspNetUsers\"" | awk '{ if ($1 < 1) exit 1 }'
 
-docker compose exec -T -e ERBAS_TEST_PASSWORD postgres psql -U alxarafe -d "$validation_security_db" -v ON_ERROR_STOP=1 <<'SQL'
+    docker compose exec -T -e ERBAS_TEST_PASSWORD postgres psql -U alxarafe -d "$validation_security_db" -v ON_ERROR_STOP=1 <<'SQL'
 \getenv validation_password ERBAS_TEST_PASSWORD
 SELECT set_config('erbas.validation_password', :'validation_password', false) \g /dev/null
 DO $$ BEGIN
@@ -194,8 +221,8 @@ DO $$ BEGIN
     END IF;
 END $$;
 SQL
-echo 'POST_CONFORMANCE_DATABASE=passed CORE_ADMIN=separate-from-module-permissions'
-docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v ON_ERROR_STOP=1 <<'SQL'
+    echo 'POST_CONFORMANCE_DATABASE=passed CORE_ADMIN=separate-from-module-permissions'
+    docker compose exec -T postgres psql -U alxarafe -d "$validation_platform_db" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM module_states WHERE module_id = 'erbas.wms' AND enabled)
        OR NOT EXISTS (SELECT 1 FROM module_states WHERE module_id = 'erbas.ai' AND enabled)
@@ -205,7 +232,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 SQL
-docker compose exec -T postgres psql -U alxarafe -d "$validation_business_db" -v ON_ERROR_STOP=1 <<'SQL'
+    docker compose exec -T postgres psql -U alxarafe -d "$validation_business_db" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM wms_uoms)
        OR NOT EXISTS (SELECT 1 FROM wms_storage_attributes)
@@ -220,22 +247,42 @@ DO $$ BEGIN
     END IF;
 END $$;
 SQL
-echo 'POST_CONFORMANCE_WMS_AI=passed PERSISTENCE=retained MIGRATIONS=separate'
+    echo 'POST_CONFORMANCE_WMS_AI=passed PERSISTENCE=retained MIGRATIONS=separate'
 
-for assertions in api-tests/modules/*/assert-persistence.sh; do
-    [[ ! -f "$assertions" ]] || bash "$assertions"
-done
+    for assertions in api-tests/modules/*/assert-persistence.sh; do
+        [[ ! -f "$assertions" ]] || bash "$assertions"
+    done
 
-echo "==> Checking validation application logs for known sensitive values"
-app_logs="$(docker compose logs --no-color validation-app)"
-if grep -Fq "$ERBAS_TEST_PASSWORD" <<<"$app_logs" || \
-   grep -Fq 'Password123' <<<"$app_logs" || \
-   grep -Eiq 'password[[:space:]]*=' <<<"$app_logs" || \
-   grep -Eiq 'accessToken|AQAAAA[A-Za-z0-9+/=]{50,}|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' <<<"$app_logs"; then
-    echo "ERROR: a password or bearer token marker was written to application logs" >&2
-    exit 1
+    echo "==> Checking validation application logs for known sensitive values"
+    app_logs="$(docker compose logs --no-color validation-app)"
+    if grep -Fq "$ERBAS_TEST_PASSWORD" <<<"$app_logs" || \
+       grep -Fq 'Password123' <<<"$app_logs" || \
+       grep -Eiq 'password[[:space:]]*=' <<<"$app_logs" || \
+       grep -Eiq 'accessToken|AQAAAA[A-Za-z0-9+/=]{50,}|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' <<<"$app_logs"; then
+        echo "ERROR: a password or bearer token marker was written to application logs" >&2
+        exit 1
+    fi
+    echo 'LOG_SECRECY=passed'
+}
+
+echo "==> Published contract $contract_revision at $contract_commit"
+run_conformance "$CONTRACT_DIR"
+echo "PUBLISHED_CONTRACT_CONFORMANCE=$contract_revision SHA=$contract_commit passed"
+if [[ -n "$candidate_dir" ]]; then
+    # The collection mutates catalogues: candidate verification gets a fresh Host/database set.
+    validation_host_stop
+    previous_validation_host="$(docker compose ps --all --quiet validation-app)"
+    if [[ -n "$previous_validation_host" ]]; then
+        echo 'ERROR: published validation Host must be removed before candidate verification' >&2
+        exit 1
+    fi
+    validation_db_drop
+    validation_db_removed
+    validation_db_create
+    echo "UNPUBLISHED_CONTRACT_CANDIDATE=$candidate_commit"
+    run_conformance "$candidate_dir"
+    echo "CANDIDATE_CONFORMANCE=$candidate_commit passed"
 fi
-echo 'LOG_SECRECY=passed'
 
 echo
 echo "VALIDATION PASS: Compose, .NET, API, Bruno, PostgreSQL, and architecture checks completed"

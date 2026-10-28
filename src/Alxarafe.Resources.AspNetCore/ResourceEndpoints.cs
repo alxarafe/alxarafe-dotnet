@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Net.Http.Headers;
 
 namespace Alxarafe.Resources.AspNetCore;
 
@@ -15,6 +16,8 @@ public static class ResourceEndpoints
 {
     public const string ResourcePath = "/api/resources";
     public const string MetadataPath = "/api/meta/resources";
+    public const string PresentationSuffix = "/presentation";
+    private const string MetadataCacheControl = "private, no-cache";
     public const string InvalidRequest = "invalid_request";
     public const string NotFound = "resource_not_found";
     public const string NotSupported = "resource_operation_not_supported";
@@ -32,6 +35,8 @@ public static class ResourceEndpoints
         crud.MapDelete("/{resource}/{id}", (HttpContext http, string resource, string id) => Execute(http, resource, ResourceOperation.Delete, id)).ExcludeFromDescription();
         var metadata = endpoints.MapGroup(MetadataPath).RequireAuthorization().WithSharedContractErrors().WithTags("Resource metadata implementation-specific");
         metadata.MapGet("", (Func<HttpContext, Task<IResult>>)Discover).Produces<IReadOnlyList<ResourceSummaryDto>>().Produces<ContractError>(StatusCodes.Status401Unauthorized);
+        metadata.MapGet("/{resource}" + PresentationSuffix, ContextPresentation).Produces<ResourceContextPresentationDto>().Produces(StatusCodes.Status304NotModified)
+            .Produces<ContractError>(StatusCodes.Status400BadRequest).Produces<ContractError>(StatusCodes.Status404NotFound).Produces<ContractError>(StatusCodes.Status401Unauthorized);
         metadata.MapGet("/{resource}", Metadata).Produces<ResourceMetadataDto>().Produces(StatusCodes.Status304NotModified)
             .Produces<ContractError>(StatusCodes.Status404NotFound).Produces<ContractError>(StatusCodes.Status401Unauthorized);
     }
@@ -85,7 +90,7 @@ public static class ResourceEndpoints
                 if (item.ModuleEnabled) summaries.Add(new(item.Id, item.Version, item.ModuleId, item.DefinitionHash, item.Operations,
                     MetadataPath + "/" + Uri.EscapeDataString(item.Id)));
             }
-            http.Response.Headers.CacheControl = "private, no-cache";
+            http.Response.Headers.CacheControl = MetadataCacheControl;
             http.Response.Headers.Vary = "Authorization";
             return Json(summaries);
         }
@@ -102,8 +107,32 @@ public static class ResourceEndpoints
             var definition = Lookup(http, resource);
             var item = await http.RequestServices.GetRequiredService<ResourceMetadataProjection>().ProjectAsync(definition, http.RequestAborted);
             string etag = ResourceMetadataProjection.ETag(item);
-            http.Response.Headers.CacheControl = "private, no-cache";
+            http.Response.Headers.CacheControl = MetadataCacheControl;
             http.Response.Headers.Vary = "Authorization";
+            http.Response.Headers.ETag = etag;
+            var conditions = http.Request.GetTypedHeaders().IfNoneMatch;
+            if (conditions?.Any(condition => condition.Tag.Value == "*" || condition.Tag.Value == etag) == true)
+                return Results.StatusCode(StatusCodes.Status304NotModified);
+            return Json(item);
+        }
+        catch (ResourceRuntimeException failure) { return await RuntimeError(http, failure); }
+        catch (ResourceTransportException failure) { return Error(http, StatusCodes.Status400BadRequest, InvalidRequest, resource, failure.Path); }
+        catch (FormatException) { return Error(http, StatusCodes.Status400BadRequest, InvalidRequest); }
+        catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested) { throw; }
+        catch (Exception) { return Error(http, StatusCodes.Status500InternalServerError, ExecutionFailed); }
+    }
+
+    private static async Task<IResult> ContextPresentation(HttpContext http, string resource)
+    {
+        try
+        {
+            if (http.Request.Query.Count != 0) throw new ResourceTransportException("query");
+            var definition = Lookup(http, resource);
+            var item = http.RequestServices.GetRequiredService<ResourceMetadataProjection>().ContextPresentation(definition);
+            // This representation is static: its existing structural identity covers every declaration.
+            string etag = '"' + item.DefinitionHash + '"';
+            http.Response.Headers.CacheControl = MetadataCacheControl;
+            http.Response.Headers.Vary = HeaderNames.Authorization;
             http.Response.Headers.ETag = etag;
             var conditions = http.Request.GetTypedHeaders().IfNoneMatch;
             if (conditions?.Any(condition => condition.Tag.Value == "*" || condition.Tag.Value == etag) == true)
@@ -167,10 +196,13 @@ public static class ResourceEndpoints
             { ResourceOperation.List or ResourceOperation.Get => HttpMethods.Get, ResourceOperation.Create => HttpMethods.Post, ResourceOperation.Update => HttpMethods.Patch, _ => HttpMethods.Delete }).Distinct(StringComparer.Ordinal));
         }
         if (failure.ReasonCode is { } reason && failure.Code is ResourceRuntimeError.Conflict or ResourceRuntimeError.ActionUnavailable or ResourceRuntimeError.ActionConflict)
-            return Json(new ContractError(code) { Errors = failure.Issues.Count == 0
+            return Json(new ContractError(code)
+            {
+                Errors = failure.Issues.Count == 0
                 ? [new(reason, Resource: failure.ResourceId)]
                 : failure.Issues.Select(issue => new ContractErrorDetail(reason, Resource: failure.ResourceId,
-                    Path: "/" + issue.Path.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal))).ToArray() }, status);
+                    Path: "/" + issue.Path.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal))).ToArray()
+            }, status);
         return failure.Issues.Count == 0 ? Error(http, status, code) : Json(new ContractError(code)
         {
             Errors = failure.Issues.Select(issue => new ContractErrorDetail(JsonNamingPolicy.SnakeCaseLower.ConvertName(Enum.GetName(issue.Code)!), Resource: failure.ResourceId,

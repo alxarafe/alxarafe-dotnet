@@ -100,7 +100,10 @@ GitHub origin, tracked/nonignored cleanliness, release tag object
 files, and invokes public `bin/test` on the existing validation Docker network.
 Never assume a sibling path, fetch, pull, checkout or modify the supplied contract,
 or copy its OpenAPI/Bruno into this backend. Local and CI validation must use the
-same published release and fail when shared conformance fails.
+same published release and fail when shared conformance fails. Optional development
+verification may additionally use an explicit clean candidate checkout and full SHA;
+it must never replace published conformance or change the pin. See
+`docs/usage.md#additional-candidate-verification`.
 
 Development publishes API container port 8080 only on
 `127.0.0.1:${ERBAS_DOTNET_PORT:-48081}`; follow
