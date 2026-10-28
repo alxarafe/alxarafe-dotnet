@@ -1,6 +1,6 @@
 # Effective application navigation (NAVIGATION-CONTRACT-001)
 
-The backend formally adopts published immutable erbas-contract v0.13.0, including
+The backend formally adopts published immutable erbas-contract v0.14.0, including
 the separate Generic Resource Runtime CRUD and effective application navigation
 protocols. Local and CI checks verify the published tag's immutable identity and
 run its shared conformance directly. No candidate opt-in or frontend change is

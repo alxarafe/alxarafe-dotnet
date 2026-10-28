@@ -243,7 +243,7 @@ independent business databases. `bin/test` and `bin/check` supply explicit mappi
 control-plane tables are absent from business storage. In Testing, the central
 resolver rejects every business target outside the two fixed validation databases,
 even if a registry reference/mapping is supplied. The workflow then runs the unchanged
-published v0.13.0 conformance and local Bruno suites.
+published v0.14.0 conformance and local Bruno suites.
 
 Existing native fixtures explicitly arrange data outside HTTP through a test-only
 resolver. Every HTTP call delegates to the production membership resolver; there

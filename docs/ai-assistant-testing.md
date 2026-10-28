@@ -103,7 +103,7 @@ not paste it into logs, screenshots, issues or commits.
 
 ## Verify the capability catalogue
 
-The capability catalogue below remains capability-only. AI-API-001 under published v0.13.0
+The capability catalogue below remains capability-only. AI-API-001 under published v0.14.0
 also provides a separate internal registry of authorized READ primitives, with no
 new public catalogue endpoint. AI invoke grants no business permissions. See
 [primitives, published contract and differential evaluation](ai-read-primitives.md).

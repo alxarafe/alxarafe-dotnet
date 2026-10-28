@@ -1,14 +1,15 @@
 # Published Generic Resource Runtime contract adoption
 
-The backend formally adopts published immutable erbas-contract **v0.13.0** through
+The backend formally adopts published immutable erbas-contract **v0.14.0** through
 `contract.revision`, `bin/check` and the matching CI checkout. This release contains
 CRUD-CONTRACT-001 Generic Resource Runtime and NAVIGATION-CONTRACT-001 effective
-application navigation. The normative protocol and cross-stack review are
+application navigation, plus RESOURCE-PRESENTATION-001 contextual presentation.
+The normative protocol and cross-stack review are
 `docs/core/resources-001.md`, `docs/core/navigation-001.md` and
 `docs/core/resources-portability.md` in the explicitly supplied contract checkout.
 
-- Annotated tag object: `919684db4f607a575397576b87577cd9582e1f86`.
-- Target commit: `29bd8de3e5c5772fea5096ab2c60abc6a10e55f7`.
+- Annotated tag object: `22191afb8ab477fef319093b8c212264f4019816`.
+- Target commit: `9919ad3725e50d63e7a19befbe0d81b4d91df0cc`.
 
 This adoption changes only the published pin, validation selection and related
 status documentation. It does not change Assets, Runtime, navigation, permissions,
@@ -34,7 +35,7 @@ persistence, record concurrency or client code is changed.
 Authoritative validation requires a clean checkout of the exact published release:
 
 ```bash
-ERBAS_CONTRACT_DIR=/path/to/clean/v0.13.0 ./bin/check
+ERBAS_CONTRACT_DIR=/path/to/clean/v0.14.0 ./bin/check
 ```
 
 The check verifies repository root, expected GitHub origin, exact annotated tag
@@ -42,10 +43,11 @@ object, target commit, matching HEAD, cleanliness and runner entrypoint. It invo
 that checkout's sole shared conformance collection directly on the isolated
 validation network. The former v0.13.0-specific candidate override remains removed.
 CI checks out the same published tag. Optional [candidate development verification](usage.md#additional-candidate-verification)
-now runs an additional exact-SHA check after published conformance, on fresh
+can run an additional future exact-SHA check after published conformance, on fresh
 validation databases; it cannot substitute for the published checkout.
-[RESOURCE-PRESENTATION-001](resource-presentation-001.md) uses that separate path
-without claiming adoption of unpublished v0.14.0.
+[RESOURCE-PRESENTATION-001](resource-presentation-001.md) is now validated directly
+by normal published v0.14.0 conformance; no candidate environment variables are
+required. The optional tool remains available for future development only.
 
 Native tests, shared generic CRUD/navigation conformance, local Bruno, persistence,
 log secrecy, architecture and disposable database/container cleanup remain
@@ -63,7 +65,37 @@ joins/expansion, OR/NOT, projection, cursors, workflows, bulk CRUD and stale-wri
 protection remain outside this protocol. Action availability remains advisory;
 no business-specific availability providers are added here.
 
-## Published adoption verification
+## Published v0.14.0 adoption verification
+
+Normal `ERBAS_CONTRACT_DIR=<clean-published-v0.14.0-checkout> ./bin/check` is the
+single authoritative path, with the exact annotated object/target above. This
+adoption includes contextual presentation in shared conformance without changing
+its implementation. Java compatibility and client formal v0.14.0 adoption are not
+claimed; the client still formally pins v0.13.0.
+
+Local authoritative adoption verification on 2026-10-28 passed:
+
+- **1,139 native tests**: 177 architecture, 668 Host integration, 181 metadata,
+  113 Runtime; zero failures/skips and zero build warnings/errors. Assets and
+  contextual LIST/CREATE/EDIT/VIEW retain their existing implementation/tests.
+- Shared conformance ran once against published v0.14.0, including contextual
+  presentation. No candidate variables or additional candidate run were used.
+- OpenAPI, local Bruno, PostgreSQL migration/storage ownership and persisted data,
+  sensitive-log checks, validation Host and all four disposable database cleanup
+  passed. No development data was removed.
+- Eleven focused checkout-guard cases accepted the exact published identity and
+  rejected the old pin, missing checkout/tag, moved target, wrong tag object,
+  non-annotated type, dirty state, wrong HEAD/root/origin before Docker.
+- Shell syntax, local documentation links, final diff and secret-marker/NUL review
+  passed. Production code, functional tests, dependencies and migrations are
+  unchanged; the CI checkout now selects the same published v0.14.0 tag.
+
+## Historical published v0.13.0 adoption verification
+
+That adoption used annotated tag object
+`919684db4f607a575397576b87577cd9582e1f86`, target commit
+`29bd8de3e5c5772fea5096ab2c60abc6a10e55f7`. The following evidence retains its
+original release and test counts; it is not the current v0.14.0 check.
 
 Authoritative `ERBAS_CONTRACT_DIR=<clean-published-v0.13.0-checkout> ./bin/check`
 passed after verifying the exact tag object, target commit and clean HEAD above:

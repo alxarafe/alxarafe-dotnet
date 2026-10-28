@@ -2,18 +2,19 @@
 
 ## Contract identity and status
 
-The adopted published release remains **erbas-contract v0.13.0** in
-[`contract.revision`](../contract.revision). Its annotated tag object remains
-`919684db4f607a575397576b87577cd9582e1f86`, targeting
-`29bd8de3e5c5772fea5096ab2c60abc6a10e55f7`.
+The backend formally adopts **published immutable erbas-contract v0.14.0** in
+[`contract.revision`](../contract.revision), normal `bin/check` and CI.
 
-This implementation develops RESOURCE-PRESENTATION-001 against the **unpublished
-v0.14.0 candidate** at exact commit
-`9919ad3725e50d63e7a19befbe0d81b4d91df0cc`.
+- Annotated tag object: `22191afb8ab477fef319093b8c212264f4019816`.
+- Target commit: `9919ad3725e50d63e7a19befbe0d81b4d91df0cc`.
+
 The normative document is
-[RESOURCE-PRESENTATION-001 at that commit](https://github.com/alxarafe/erbas-contract/blob/9919ad3725e50d63e7a19befbe0d81b4d91df0cc/docs/core/resource-presentation-001.md).
-This is not formal adoption of v0.14.0, a tag or a publication. Java and client
-implementation/adoption are not asserted.
+[RESOURCE-PRESENTATION-001 in v0.14.0](https://github.com/alxarafe/erbas-contract/blob/v0.14.0/docs/core/resource-presentation-001.md).
+Normal conformance verifies this clean published tag directly. No second candidate
+run is required. The implementation was prepared against the same commit before
+publication; that historical development evidence is retained below.
+Java compatibility/adoption is not claimed. `erbas-client` implemented/tested the
+capability but still formally pins v0.13.0; this backend adoption does not update it.
 
 ## Model and HTTP boundary
 
@@ -107,13 +108,24 @@ Runtime tests enforce that execution does not depend on contextual presentation.
 
 ## Verification
 
-Use [full published validation and additional exact-SHA verification](usage.md#additional-candidate-verification).
+Use [normal full published validation](usage.md#full-validation) against v0.14.0.
+Optional candidate verification is reserved for future development. Current
+[published-adoption results](generic-resource-contract.md#published-v0140-adoption-verification)
+record the single v0.14.0 conformance run and unchanged 1,139-test suite.
 Focused coverage includes all contexts/order, explicit empty versus absent,
 legacy coexistence, labels, static hints, reference/container/scope rejection,
 canonical golden vectors and mutations, closed DTOs, authentication/query/lookup
 precedence, tenant/permission-independent discovery, definition binding,
 ETag/304 and actual Assets creation/editing/persistence. No new dependency,
 migration, lifecycle rule, field permission or frontend implementation is added.
+
+### Historical pre-publication verification
+
+The following evidence records the original implementation before publication and
+formal v0.14.0 adoption. Its published release was v0.13.0 (tag object
+`919684db4f607a575397576b87577cd9582e1f86`, target
+`29bd8de3e5c5772fea5096ab2c60abc6a10e55f7`); its candidate was the exact commit now
+published as v0.14.0. The original two runs do not describe the current normal path.
 
 Local authoritative verification completed on 2026-10-28:
 

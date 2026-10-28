@@ -20,7 +20,7 @@ case "$contract_origin" in
     git@github.com:alxarafe/erbas-contract.git|https://github.com/alxarafe/erbas-contract|https://github.com/alxarafe/erbas-contract.git|ssh://git@github.com/alxarafe/erbas-contract.git) ;;
     *) echo 'ERROR: unexpected contract origin' >&2; exit 2 ;;
 esac
-if [[ "$contract_revision" != v0.13.0 ]]; then
+if [[ "$contract_revision" != v0.14.0 ]]; then
     echo 'ERROR: unsupported release in contract.revision' >&2
     exit 2
 fi
@@ -28,13 +28,17 @@ contract_commit=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract
     echo 'ERROR: contract checkout is missing the configured release tag' >&2
     exit 2
 }
-if [[ "$contract_commit" != 29bd8de3e5c5772fea5096ab2c60abc6a10e55f7 ]]; then
+if [[ "$contract_commit" != 9919ad3725e50d63e7a19befbe0d81b4d91df0cc ]]; then
     echo 'ERROR: contract release tag does not resolve to its immutable commit' >&2
     exit 2
 fi
 contract_tag=$(git -C "$CONTRACT_DIR" rev-parse --verify "refs/tags/$contract_revision")
-if [[ "$contract_tag" != 919684db4f607a575397576b87577cd9582e1f86 ]]; then
+if [[ "$contract_tag" != 22191afb8ab477fef319093b8c212264f4019816 ]]; then
     echo 'ERROR: contract release tag object does not match its immutable identity' >&2
+    exit 2
+fi
+if [[ "$(git -C "$CONTRACT_DIR" cat-file -t "$contract_tag")" != tag ]]; then
+    echo 'ERROR: contract release must be an annotated tag object' >&2
     exit 2
 fi
 contract_head=$(git -C "$CONTRACT_DIR" rev-parse HEAD)

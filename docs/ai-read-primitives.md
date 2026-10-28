@@ -1,6 +1,6 @@
 # Authorized READ primitives (AI-API-001)
 
-The backend adopts **published shared v0.13.0** through `contract.revision`, the
+The backend adopts **published shared v0.14.0** through `contract.revision`, the
 immutable release checks in `bin/check` and the matching CI checkout. Deterministic
 conformance validates the controlled READ semantics and typed provenance. This
 does not establish production readiness or deterministic real-provider quality.
@@ -137,7 +137,7 @@ are not exposed. This remains general handling, not a question-specific rule.
 
 ## Published release verification
 
-Run normal `bin/check` with an explicit clean checkout of the published v0.13.0
+Run normal `bin/check` with an explicit clean checkout of the published v0.14.0
 release. It verifies the expected origin, immutable tag object, target commit,
 matching HEAD and clean state before executing conformance. Local validation and
 CI use that same release. To run conformance separately, use the published
@@ -145,7 +145,7 @@ checkout against a fresh backend-owned validation Host/database/network:
 
 ```sh
 ERBAS_TEST_EMAIL=... ERBAS_TEST_PASSWORD=... \
-  /absolute/path/to/published-v0.13.0-contract/bin/test --network NETWORK http://HOST:8080
+  /absolute/path/to/published-v0.14.0-contract/bin/test --network NETWORK http://HOST:8080
 ```
 
 No copied OpenAPI/Bruno, invented tag or consumer revision override is needed.

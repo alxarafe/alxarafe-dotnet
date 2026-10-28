@@ -1,7 +1,7 @@
 # Normalized AI usage metering
 
 AI-USAGE-001 adds internal technical usage telemetry, not Budget Guard, quotas,
-pricing, invoicing or a billable ledger. The public `erbas-contract v0.13.0`
+pricing, invoicing or a billable ledger. The public `erbas-contract v0.14.0`
 assistant request/response and `toolsUsed` semantics are unchanged. No usage,
 provider IDs or billing mode are added to the public response.
 

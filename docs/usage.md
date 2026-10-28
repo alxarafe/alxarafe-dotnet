@@ -5,12 +5,14 @@
 Docker and Docker Compose are required; host .NET, Bruno, Node and PostgreSQL are not.
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.13.0-checkout ./bin/check
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.14.0-checkout ./bin/check
 ```
 
-The checkout must have the expected origin, no tracked/nonignored changes, HEAD and
-v0.13.0 tag object at 919684db4f607a575397576b87577cd9582e1f86, resolving to commit
-29bd8de3e5c5772fea5096ab2c60abc6a10e55f7. bin/check never modifies it.
+The checkout must have the expected origin and no tracked/nonignored changes.
+The v0.14.0 annotated tag object must be
+22191afb8ab477fef319093b8c212264f4019816, targeting commit
+9919ad3725e50d63e7a19befbe0d81b4d91df0cc; HEAD must equal that commit.
+`bin/check` checks the tag's object type and never modifies the checkout.
 CI uses the same authority and pinned release. Check executes restore/build/native
 architecture and integration tests, clean migrations, isolated Host startup, full
 shared Bruno, local Core Bruno (three requests), OpenAPI/persistence/secrecy checks
@@ -33,8 +35,8 @@ mathematical endpoints.
 
 Shared conformance executes the sole published collection, including UoM,
 Storage Attribute and Item Family coverage, CORE capability discovery, synchronous
-READ/AI assistant invocation, Generic Resource Runtime and effective navigation.
-The optional candidate check below additionally verifies contextual presentation.
+READ/AI assistant invocation, Generic Resource Runtime, effective navigation and
+RESOURCE-PRESENTATION-001 contextual presentation. No candidate opt-in is required.
 All three WMS catalogues and associations start empty
 in the disposable validation database. Post-conformance SQL verifies retained data and enabled state.
 See [AI-001 evidence](verification/ai-001-dotnet.md) and
@@ -42,13 +44,15 @@ See [AI-001 evidence](verification/ai-001-dotnet.md) and
 
 ## Additional candidate verification
 
-`contract.revision` and CI remain pinned to published immutable **v0.13.0**.
-Development can explicitly validate an unpublished candidate in addition to it:
+`contract.revision` and CI remain pinned to published immutable **v0.14.0**.
+This optional tool is only for future unpublished development. It is not needed
+for RESOURCE-PRESENTATION-001 or current official conformance. Set the full SHA
+explicitly (replace the placeholder below; never use a branch):
 
 ```bash
-ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.13.0-checkout \
+ERBAS_CONTRACT_DIR=/absolute/path/to/clean-v0.14.0-checkout \
 ERBAS_CONTRACT_CANDIDATE_DIR=/absolute/path/to/clean-candidate-checkout \
-ERBAS_CONTRACT_CANDIDATE_COMMIT=9919ad3725e50d63e7a19befbe0d81b4d91df0cc \
+ERBAS_CONTRACT_CANDIDATE_COMMIT='REPLACE_WITH_EXACT_40_CHARACTER_COMMIT_SHA' \
 ./bin/check
 ```
 
@@ -186,7 +190,7 @@ See the [effective access matrix](wms-inventory.md#development-identities).
 ## API and diagnostics
 
 Health is public process liveness, independent of database/modules. Auth login,
-current identity, user/module administration, WMS catalogues, contextual capability discovery, synchronous READ invocation and AI assistant invocation implement v0.13.0.
+current identity, user/module administration, WMS catalogues, contextual capability discovery, synchronous READ invocation and AI assistant invocation implement v0.14.0.
 POST /api/auth/register remains .NET-specific; portable clients must not depend on it.
 The WMS read discovery permissions map explicitly to the CORE administrator policy. Authentication/authorization
 precede parsing/lookup and functional gating. Local OpenAPI is available at
@@ -233,7 +237,7 @@ IDs. Responses are closed JSON with `Cache-Control: no-store`; only 401 carries 
 Bearer challenge.
 
 AI-API-001 exposes effective module READ primitives through a neutral controlled
-router under published v0.13.0. Existing capabilities retain CORE-CAP-002 execution;
+router under published v0.14.0. Existing capabilities retain CORE-CAP-002 execution;
 primitives have distinct typed provenance. See [design and validation](ai-read-primitives.md).
 The server exposes only authorized READ tools. It re-evaluates module state and
 permissions before every call, enforces finite turn/tool budgets and fails safely

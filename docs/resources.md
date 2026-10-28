@@ -1,8 +1,9 @@
 # Resource Platform
 
 The backend formally adopts published immutable
-[erbas-contract v0.13.0](generic-resource-contract.md), including the shared generic
-protocol, explicit filterOperators metadata and separate effective navigation.
+[erbas-contract v0.14.0](generic-resource-contract.md), including the shared generic
+protocol, explicit filterOperators metadata, effective navigation and contextual
+presentation.
 Authoritative local and CI checks use the published tag directly. Historical
 implementation/verification sections below retain their original scope and pins;
 they do not describe the current adoption state.
@@ -215,7 +216,7 @@ and includes ordered LIST columns/actions and CREATE/EDIT/VIEW forms in the same
 canonical projection. Context changes therefore invalidate both detailed metadata
 and contextual presentation identity; no independent layout hash is introduced.
 See [contextual presentation](resource-presentation-001.md) for the separate
-endpoint, absent-versus-empty behavior and exact unpublished candidate validation.
+endpoint, absent-versus-empty behavior and published v0.14.0 conformance.
 
 ### Future frontend metadata cache coherence
 
