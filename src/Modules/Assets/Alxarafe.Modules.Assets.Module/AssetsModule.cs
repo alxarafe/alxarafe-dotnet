@@ -4,6 +4,7 @@ using Alxarafe.Modularity;
 using Alxarafe.Resources;
 using Alxarafe.Resources.Runtime;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Alxarafe.Modules.Assets;
@@ -44,6 +45,8 @@ public sealed class AssetsModule : IAlxarafeModule, IModuleServiceContributor, I
             await context.Database.OpenConnectionAsync(ct);
             await context.Database.MigrateAsync(ct);
             await AssetsSeed.InitializeAsync(context, ct);
+            if (services.GetRequiredService<IConfiguration>().GetValue<bool>(AssetsDemoSeed.EnabledKey))
+                await AssetsDemoSeed.InitializeAsync(context, ct);
         }, cancellationToken);
     }
 }

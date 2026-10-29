@@ -23,6 +23,7 @@ echo "==> Restoring, building and testing against ephemeral databases"
 # Serialize projects to avoid concurrent schema/seed initialization.
 docker compose run --rm --no-deps \
     -e ASPNETCORE_ENVIRONMENT=Testing \
+    -e Assets__DemoData__Enabled=false \
     -e Tenancy__DevelopmentBootstrap=true \
     -e "ConnectionStrings__Tenant_development=Host=postgres;Port=5432;Database=$validation_business_db;Username=alxarafe;Password=alxarafe_dev_only" \
     -e "ConnectionStrings__Tenant_test_b=Host=postgres;Port=5432;Database=$validation_business_b_db;Username=alxarafe;Password=alxarafe_dev_only" \

@@ -24,6 +24,7 @@ services:
       target: development
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Assets__DemoData__Enabled: ${ERBAS_ASSETS_DEMO_DATA:-false}
       ConnectionStrings__Platform: Host=postgres;Port=5432;Database=alxarafe;Username=alxarafe;Password=alxarafe_dev_only
       Tenancy__DevelopmentBootstrap: "true"
       ConnectionStrings__Tenant_development: Host=postgres;Port=5432;Database=alxarafe_business;Username=alxarafe;Password=alxarafe_dev_only
