@@ -17,7 +17,14 @@ ports, registry and invocation contracts. Module composition validates owner,
 unique operation IDs, provider-safe semantic names, closed input schemas and
 permission requirements. WMS owns declarations in `WmsReadPrimitives` and the
 executor in `WmsReadPrimitiveExecutor`. It reuses `IInventoryStore` and WMS
-filter/pagination/domain rules. AI has no WMS or EF reference.
+filter/pagination/domain rules. AI has no business-module or EF reference.
+
+Resource Runtime modules can now explicitly contribute LIST primitives through the
+same provider port. Assets opts in nine existing resources; the generic descriptor
+and executor reuse ResourceDefinition, ResourceQuery, ResourceRuntime and canonical
+transport without business-module branches or direct database access. See
+[Resource Runtime READ and Assets](ai-assets-read.md) for schemas, security,
+composition proofs and limits. The following WMS vocabulary remains unchanged.
 
 The Host owns the controlled routing/security adapters. AI combines effective
 capabilities and primitives into the model's vocabulary. Model requests can

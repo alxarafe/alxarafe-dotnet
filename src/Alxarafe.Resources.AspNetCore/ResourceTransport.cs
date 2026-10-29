@@ -165,20 +165,23 @@ public static class ResourceTransport
                     {
                         if (item is null || item.Length > MaximumBodyBytes) throw new ResourceTransportException(pair.Key);
                         using var document = ParseDocument(Encoding.UTF8.GetBytes(item), MaximumFilterDepth);
-                        var root = document.RootElement;
-                        if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != 3
-                            || !root.TryGetProperty("field", out var name) || name.ValueKind != JsonValueKind.String
-                            || !root.TryGetProperty("operator", out var op) || op.ValueKind != JsonValueKind.String
-                            || !root.TryGetProperty("value", out var value)) throw new ResourceTransportException(pair.Key);
-                        var fieldName = ReadString(name);
-                        var field = definition.Fields.SingleOrDefault(field => field.Name == fieldName);
-                        filters.Add(new(fieldName, Operator(ReadString(op)), field is null ? new NullValue() : Parse(field.Type, value)));
+                        filters.Add(Filter(definition, document.RootElement));
                     }
                     break;
                 default: throw new ResourceTransportException(pair.Key);
             }
         }
         return new(offset, limit, filters, sorting, search);
+    }
+    internal static ResourceFilter Filter(ResourceDefinition definition, JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != 3
+            || !root.TryGetProperty("field", out var name) || name.ValueKind != JsonValueKind.String
+            || !root.TryGetProperty("operator", out var op) || op.ValueKind != JsonValueKind.String
+            || !root.TryGetProperty("value", out var value)) throw new ResourceTransportException("filter");
+        var fieldName = ReadString(name);
+        var field = definition.Fields.SingleOrDefault(field => field.Name == fieldName);
+        return new(fieldName, Operator(ReadString(op)), field is null ? new NullValue() : Parse(field.Type, value));
     }
     internal static string OperatorName(ResourceFilterOperator value) => value switch
     {

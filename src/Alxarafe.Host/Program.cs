@@ -101,6 +101,7 @@ builder.Services.AddSingleton<ResourceRepositoryCatalog>();
 builder.Services.AddScoped<ResourceRepositoryRegistry>();
 builder.Services.AddScoped<IResourceAuthorization, CurrentResourceAuthorization>();
 builder.Services.AddScoped<ResourceRuntime>();
+builder.Services.AddScoped<IReadPrimitiveExecutor, ResourceReadPrimitiveExecutor>();
 builder.Services.AddScoped<ResourceActionRegistry>();
 builder.Services.AddScoped<ResourceActionRuntime>();
 builder.Services.AddScoped<ResourceMetadataProjection>();

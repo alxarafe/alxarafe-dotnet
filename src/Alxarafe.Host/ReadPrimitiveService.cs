@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Alxarafe.Core;
 using Alxarafe.Modularity;
+using Alxarafe.Resources.Runtime;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Alxarafe.Host;
@@ -63,6 +64,17 @@ internal sealed partial class ReadPrimitiveService(ReadPrimitiveRegistry registr
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (TenantAccessException failure) { return Finish(failure.ConfigurationFailure ? ReadPrimitiveOutcome.Unavailable : ReadPrimitiveOutcome.Denied); }
+        catch (ResourceRuntimeException failure)
+        {
+            return Finish(failure.Code switch
+            {
+                ResourceRuntimeError.Forbidden or ResourceRuntimeError.TenantRequired => ReadPrimitiveOutcome.Denied,
+                ResourceRuntimeError.ModuleDisabled => ReadPrimitiveOutcome.Unavailable,
+                ResourceRuntimeError.ValidationFailed => ReadPrimitiveOutcome.InvalidRequest,
+                ResourceRuntimeError.ResourceNotFound => ReadPrimitiveOutcome.NotFound,
+                _ => ReadPrimitiveOutcome.Failed
+            });
+        }
         catch (ReadPrimitiveInputException) { return Finish(ReadPrimitiveOutcome.InvalidRequest); }
         catch (Exception) { return Finish(ReadPrimitiveOutcome.Failed); }
         finally

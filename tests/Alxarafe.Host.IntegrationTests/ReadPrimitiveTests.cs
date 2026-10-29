@@ -125,7 +125,7 @@ public sealed class ReadPrimitiveTests(TenantApplicationFactory factory) : IClas
     [Fact]
     public async Task PersistedPermissionCataloguesAndRealReadOutputsAreDifferential()
     {
-        Assert.Equal(5, (await router.EffectiveAsync(admin)).Count);
+        Assert.Equal(5, (await router.EffectiveAsync(admin)).Count(primitive => primitive.Module == WmsModule.Id));
         var effective = await router.EffectiveAsync(user);
         Assert.Equal(4, effective.Count);
         Assert.Contains(effective, primitive => primitive.Id == WmsReadPrimitives.Inventory);
@@ -147,7 +147,7 @@ public sealed class ReadPrimitiveTests(TenantApplicationFactory factory) : IClas
         Assert.Equal(ReadPrimitiveOutcome.Denied, (await router.InvokeAsync(Command(WmsReadPrimitives.Movements, forged))).Outcome);
         Assert.Equal(ReadPrimitiveOutcome.NotFound, (await router.InvokeAsync(Command("wms.movements.create", admin))).Outcome);
         await application.Services.GetRequiredService<ModuleStateService>().DisableAsync(WmsModule.Id);
-        Assert.Empty(await router.EffectiveAsync(admin));
+        Assert.DoesNotContain(await router.EffectiveAsync(admin), primitive => primitive.Module == WmsModule.Id);
         Assert.Equal(ReadPrimitiveOutcome.Unavailable, (await router.InvokeAsync(Command(WmsReadPrimitives.Inventory, admin))).Outcome);
     }
 

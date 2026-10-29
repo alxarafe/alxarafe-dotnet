@@ -2,6 +2,7 @@ using Alxarafe.Core;
 using Alxarafe.Navigation;
 using Alxarafe.Modularity;
 using Alxarafe.Resources;
+using Alxarafe.Resources.AspNetCore;
 using Alxarafe.Resources.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -9,11 +10,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Alxarafe.Modules.Assets;
 
-public sealed class AssetsModule : IAlxarafeModule, IModuleServiceContributor, IModuleInitializer
+public sealed class AssetsModule : IAlxarafeModule, IModuleServiceContributor, IModuleInitializer, IReadPrimitiveProvider
 {
     public const string Id = "erbas.assets";
     public const string Version = "1.0.0";
     public ModuleDescriptor Descriptor { get; } = new(Id, Version, ModuleApi.CurrentVersion, [], ModulePersistence.Tenant);
+    private static readonly string[] AssistantResources =
+    [
+        AssetResources.Asset, AssetResources.Type, AssetResources.Manufacturer, AssetResources.Model,
+        AssetResources.Location, AssetResources.Status, AssetResources.FieldDefinition, AssetResources.FieldValue, AssetResources.Assignment
+    ];
+    public IEnumerable<ReadPrimitiveDescriptor> GetReadPrimitives() => new AssetsDefinitions().GetResourceDefinitions()
+        .Where(resource => AssistantResources.Contains(resource.Id, StringComparer.Ordinal)).Select(ResourceReadPrimitives.List);
+
     public void ConfigureServices(IServiceCollection services)
     {
         AssetsPermissions.Configure(services);
