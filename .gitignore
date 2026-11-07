@@ -9,6 +9,7 @@
 !bin/check
 !bin/validation-db
 .vs/
+.openidea/
 .idea/
 *.user
 *.suo
